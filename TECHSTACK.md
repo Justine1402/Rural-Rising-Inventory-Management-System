@@ -33,6 +33,7 @@
 | `@types/react` | ^19.2.14 | React type definitions |
 | `@types/react-dom` | ^19.2.3 | React DOM type definitions |
 | `globals` | ^17.4.0 | Global variable definitions for ESLint |
+| `@eslint/js` | ^9.39.4 | ESLint core JS rules |
 
 ### Key Config Files (Frontend)
 
@@ -195,6 +196,12 @@ Rural Rising Inventory Management System/   ← project root
 ### Running the project locally
 
 ```bash
+# All-in-one (backend + frontend + queue + log watcher)
+cd ruriims-backend
+composer dev
+
+# Or manually:
+
 # Backend
 cd ruriims-backend
 php artisan serve          # starts on http://127.0.0.1:8000
@@ -203,6 +210,8 @@ php artisan serve          # starts on http://127.0.0.1:8000
 cd ruriims-frontend
 npm run dev                # starts on http://localhost:5173
 ```
+
+> `composer dev` uses `concurrently` to run `php artisan serve`, `php artisan queue:listen`, `php artisan pail`, and `npm run dev` in parallel.
 
 ### First-time database setup
 
