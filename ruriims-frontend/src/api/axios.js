@@ -10,8 +10,8 @@ const axiosClient = axios.create({
 });
 
 export async function getCsrfCookie() {
-  await axios.get('http://127.0.0.1:8000/sanctum/csrf-cookie', {
-    withCredentials: true,
+  await axiosClient.get('/sanctum/csrf-cookie', {
+    baseURL: '/',
   });
 }
 

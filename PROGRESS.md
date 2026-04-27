@@ -7,18 +7,24 @@
 - [x] Sanctum CSRF flow set up
 - [x] MySQL database created (`ruriims_db`)
 - [x] Pre-development config fixes applied
+- [x] `react-router-dom` installed + routing wired in `App.jsx`
+- [x] `AuthController` — `login`, `logout`, `user`
+- [x] Auth routes in `api.php` (`POST /login`, `POST /logout`, `GET /user`)
+- [x] User seeder (test account: `admin@ruriims.com` / `password`)
+- [x] Protected route guard + guest route guard in `App.jsx`
+- [x] `LoginPage.jsx` — email + password form, CSRF flow, error display
 
 ---
 
 ## In Progress
-- [ ] *(none yet)*
+- [ ] *(none)*
 
 ---
 
 ## Not Started
 
 ### 1. Authentication
-- [ ] Sign In screen
+- [x] Sign In screen ← done
 
 ### 2. Inventory Dashboard
 - [ ] Main table view

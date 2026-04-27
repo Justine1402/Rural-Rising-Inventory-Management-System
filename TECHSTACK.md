@@ -15,6 +15,7 @@
 |---|---|---|
 | `react` | ^19.2.4 | UI framework |
 | `react-dom` | ^19.2.4 | DOM rendering |
+| `react-router-dom` | ^7.6.0 | Client-side routing (v6 API) |
 | `axios` | ^1.15.0 | HTTP client for API calls |
 | `jspdf` | ^4.2.1 | PDF generation (reports) |
 
