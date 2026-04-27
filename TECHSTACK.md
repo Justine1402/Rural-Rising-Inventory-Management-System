@@ -15,7 +15,7 @@
 |---|---|---|
 | `react` | ^19.2.4 | UI framework |
 | `react-dom` | ^19.2.4 | DOM rendering |
-| `react-router-dom` | ^7.6.0 | Client-side routing (v6 API) |
+| `react-router-dom` | ^7.14.2 | Client-side routing (v6-compatible API) |
 | `axios` | ^1.15.0 | HTTP client for API calls |
 | `jspdf` | ^4.2.1 | PDF generation (reports) |
 
@@ -40,11 +40,11 @@
 
 | File | Purpose |
 |---|---|
-| `vite.config.js` | Vite build and dev server config |
+| `vite.config.js` | Vite build and dev server config; includes proxy (`/api` + `/sanctum` → `http://127.0.0.1:8000`) |
 | `tailwind.config.js` | Tailwind CSS theme and content paths |
 | `postcss.config.js` | PostCSS plugin chain |
 | `eslint.config.js` | ESLint rules and parser config |
-| `.env` | Environment variables (gitignored) — sets `VITE_API_URL` |
+| `.env` | Environment variables (gitignored) — `VITE_API_URL=/api` (relative, proxied through Vite) |
 | `.gitignore` | Excludes `node_modules`, `dist`, `.env`, `.env.local` |
 
 ---
@@ -90,7 +90,7 @@
 | `routes/api.php` | All `/api/*` route definitions |
 | `routes/web.php` | Web (non-API) routes |
 | `.env` | Environment config — DB, app URL, session, mail |
-| `bootstrap/app.php` | Application bootstrapping and middleware binding |
+| `bootstrap/app.php` | Application bootstrapping and middleware binding; `statefulApi()` enabled for Sanctum SPA auth |
 
 ---
 
@@ -138,7 +138,9 @@ Routes defined in `ruriims-backend/routes/api.php`:
 | Method | Path | Auth | Response |
 |---|---|---|---|
 | `GET` | `/api/test` | None | `{ "message": "Laravel is connected!" }` |
-| `GET` | `/api/user` | `auth:sanctum` | Authenticated user object |
+| `POST` | `/api/login` | None | `{ "user": {...} }` |
+| `GET` | `/api/user` | `auth:sanctum` | `{ "user": {...} }` |
+| `POST` | `/api/logout` | `auth:sanctum` | `{ "message": "Logged out" }` |
 
 ---
 
@@ -148,36 +150,50 @@ Routes defined in `ruriims-backend/routes/api.php`:
 Rural Rising Inventory Management System/   ← project root
 ├── TECHSTACK.md                            ← this file
 ├── PROGRESS.md                             ← feature development tracker
+├── STRUCTURE.md                            ← frontend architecture spec
 ├── ruriims-frontend/                       ← React app
-│   ├── public/                             ← static assets served as-is
 │   ├── src/
 │   │   ├── api/
 │   │   │   └── axios.js                   ← axios client + getCsrfCookie()
 │   │   ├── assets/                         ← images and SVGs
-│   │   ├── App.jsx                         ← root component
-│   │   └── main.jsx                        ← React DOM entry point
-│   ├── .env                                ← VITE_API_URL (gitignored)
-│   ├── vite.config.js
+│   │   ├── components/
+│   │   │   └── layout/
+│   │   │       ├── Navbar.jsx             ← top navigation bar (static UI)
+│   │   │       └── WarehouseTabs.jsx      ← warehouse tab switcher (static UI)
+│   │   ├── context/
+│   │   │   ├── AuthContext.jsx            ← user session state
+│   │   │   └── WarehouseContext.jsx       ← active warehouse state
+│   │   ├── pages/
+│   │   │   ├── auth/
+│   │   │   │   └── LoginPage.jsx          ← sign in form
+│   │   │   └── dashboard/
+│   │   │       └── DashboardPage.jsx      ← inventory table (static UI)
+│   │   ├── routes/
+│   │   │   └── ProtectedRoute.jsx         ← auth + admin route guard
+│   │   ├── App.jsx                        ← router + context providers
+│   │   └── main.jsx                       ← React DOM entry point
+│   ├── .env                               ← VITE_API_URL=/api (gitignored)
+│   ├── vite.config.js                     ← includes dev proxy
 │   ├── tailwind.config.js
 │   └── package.json
 │
 └── ruriims-backend/                        ← Laravel app
     ├── app/
     │   ├── Http/
-    │   │   └── Controllers/               ← request handlers
-    │   ├── Models/
-    │   │   └── User.php                   ← Eloquent models
-    │   └── Providers/                     ← service providers
-    ├── config/                             ← framework config files
+    │   │   └── Controllers/
+    │   │       └── AuthController.php     ← login, logout, user
+    │   └── Models/
+    │       └── User.php
+    ├── bootstrap/
+    │   └── app.php                        ← statefulApi() enabled
+    ├── config/                             ← cors, sanctum, session, database, etc.
     ├── database/
-    │   ├── migrations/                    ← schema version history
-    │   ├── factories/                     ← model factories for testing
-    │   └── seeders/                       ← database seed data
+    │   ├── migrations/                    ← users, sessions, cache, jobs, tokens
+    │   └── seeders/
+    │       └── UserSeeder.php             ← seeds admin@ruriims.com
     ├── routes/
-    │   ├── api.php                        ← API routes (/api/*)
-    │   └── web.php                        ← web routes
-    ├── storage/                            ← logs, cache, uploaded files
-    ├── .env                                ← environment config (gitignored)
+    │   └── api.php                        ← login, logout, user routes
+    ├── .env                               ← environment config (gitignored)
     └── composer.json
 ```
 

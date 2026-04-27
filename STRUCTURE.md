@@ -298,8 +298,11 @@ The Settings icon (⚙) is visible only to admin users and navigates to
 Bottom row of tabs. Active tab highlighted dark green. Clicking updates
 `WarehouseContext`. Reads from `WarehouseContext` directly — no props needed.
 
-Tabs shown: Main Warehouse (Quezon City) | Warehouse 2 (Alabang) |
-Warehouse 3 (Mandaluyong) | [Active Temporary Warehouse name, if any]
+**Admin account tabs:** All Warehouses | Quezon City Warehouse | Alabang Warehouse |
+Mandaluyong Warehouse | [Active Temporary Warehouse name, if any]
+
+**Manager account tabs:** Only the single warehouse the manager is assigned to.
+No tab switcher is shown for manager accounts.
 
 ---
 
@@ -1084,25 +1087,11 @@ PDF export uses `barryvdh/laravel-dompdf` (already installed). Frontend uses
 
 ---
 
-## Pre-Start Requirement
-
-`react-router-dom` is not listed in TECHSTACK.md but is required for routing.
-Install version 6 before starting development:
-
-```bash
-cd ruriims-frontend
-npm install react-router-dom@6
-```
-
-Add the installed version to TECHSTACK.md after installation.
-
----
-
 ## Build Order
 
 Build in strict sequence — each step depends on the previous being complete:
 
-1. Install `react-router-dom@6` → scaffold `App.jsx` with `BrowserRouter` + all routes
+1. `react-router-dom` (^7.14.2) + `App.jsx` with `BrowserRouter` + all routes
 2. `AuthContext` + `WarehouseContext` + `ProtectedRoute`
 3. `LoginPage` + `AuthController` (login, logout, GET /api/user)
 4. `Navbar` + `WarehouseTabs` + `DashboardPage` (static data first, then real API)
