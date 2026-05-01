@@ -30,7 +30,7 @@ export default function DashboardPage() {
           {/* Inventory Table */}
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-[#1B4D2E] text-white">
+              <tr className="bg-[#1A381E] text-white">
                 <th className="text-left font-semibold px-5 py-3">Name</th>
                 <th className="text-left font-semibold px-5 py-3">Main Warehouse</th>
                 <th className="text-left font-semibold px-5 py-3">Alabang Warehouse</th>

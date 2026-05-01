@@ -35,10 +35,10 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-green-100">
-      <div className="bg-white rounded-2xl shadow-lg border border-green-700 w-full max-w-md px-10 py-10">
+    <div className="min-h-screen flex items-center justify-center bg-[#F3F4F6]">
+      <div className="bg-white rounded-2xl shadow-lg border border-[#1A381E] w-full max-w-md px-10 py-10">
 
-        <h1 className="text-2xl font-bold text-center text-gray-900 mb-8">
+        <h1 className="text-2xl font-bold text-center uppercase tracking-widest mb-8" style={{ color: '#FAA31A' }}>
           Rural Rising IMS
         </h1>
 
@@ -62,7 +62,7 @@ export default function LoginPage() {
                 onChange={handleChange}
                 required
                 placeholder="Enter your email"
-                className="w-full bg-gray-100 border border-transparent rounded-lg pl-10 pr-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-green-700 focus:bg-white transition"
+                className="w-full bg-gray-100 border border-transparent rounded-lg pl-10 pr-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#1A381E] focus:bg-white transition"
               />
             </div>
           </div>
@@ -83,7 +83,7 @@ export default function LoginPage() {
                 onChange={handleChange}
                 required
                 placeholder="Enter your password"
-                className="w-full bg-gray-100 border border-transparent rounded-lg pl-10 pr-10 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-green-700 focus:bg-white transition"
+                className="w-full bg-gray-100 border border-transparent rounded-lg pl-10 pr-10 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#1A381E] focus:bg-white transition"
               />
               <button
                 type="button"
@@ -111,11 +111,11 @@ export default function LoginPage() {
                 type="checkbox"
                 checked={remember}
                 onChange={(e) => setRemember(e.target.checked)}
-                className="w-4 h-4 rounded accent-green-700 cursor-pointer"
+                className="w-4 h-4 rounded accent-[#409645] cursor-pointer"
               />
               <span className="text-sm text-gray-600">Remember me</span>
             </label>
-            <a href="#" className="text-sm text-green-700 hover:underline font-medium">
+            <a href="#" className="text-sm text-[#409645] hover:underline font-medium">
               Forgot password?
             </a>
           </div>
@@ -129,18 +129,24 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[#2d6a2d] hover:bg-[#245724] text-white font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-60 text-sm tracking-wide"
+            className="w-full text-white font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-60 text-sm tracking-wide bg-[#409645] hover:bg-[#367a38]"
           >
             {loading ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
 
         <div className="flex justify-center mt-8">
-          <div className="w-16 h-16 rounded-full bg-green-700 flex flex-col items-center justify-center gap-0.5 shadow-md">
-            <span className="text-yellow-400 text-[11px] font-extrabold tracking-wider uppercase leading-none">Rural</span>
-            <span className="text-white text-[7px] font-medium tracking-widest uppercase leading-none">Philippines</span>
-            <span className="text-yellow-400 text-[11px] font-extrabold tracking-wider uppercase leading-none">Rising</span>
-          </div>
+          <svg width="76" height="90" viewBox="0 0 76 90" xmlns="http://www.w3.org/2000/svg">
+            {/* Outer shield — dark green border */}
+            <path d="M38 1 L74 14 L74 52 Q74 74 38 89 Q2 74 2 52 L2 14 Z" fill="#1A381E"/>
+            {/* Middle ring — medium green */}
+            <path d="M38 7 L68 19 L68 52 Q68 70 38 83 Q8 70 8 52 L8 19 Z" fill="#409645"/>
+            {/* Inner panel — dark green */}
+            <path d="M38 12 L63 23 L63 52 Q63 67 38 78 Q13 67 13 52 L13 23 Z" fill="#1A381E"/>
+            <text x="38" y="40" textAnchor="middle" fill="#FAA31A" fontSize="13" fontWeight="bold" fontFamily="Arial, sans-serif" letterSpacing="1">RURAL</text>
+            <text x="38" y="50" textAnchor="middle" fill="white" fontSize="5" fontFamily="Arial, sans-serif" letterSpacing="2">PHILIPPINES</text>
+            <text x="38" y="62" textAnchor="middle" fill="#FAA31A" fontSize="13" fontWeight="bold" fontFamily="Arial, sans-serif" letterSpacing="1">RISING</text>
+          </svg>
         </div>
 
       </div>

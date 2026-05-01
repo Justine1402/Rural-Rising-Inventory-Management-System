@@ -28,7 +28,7 @@
 - [x] `routes/api.php` — `POST /login`, `POST /logout` (auth-guarded), `GET /user` (auth-guarded)
 
 ### Build Step 4 — Navbar + WarehouseTabs + DashboardPage (static UI only)
-- [x] `Navbar.jsx` — two-row static UI: brand row + action buttons + filter controls (no wiring yet)
+- [x] `Navbar.jsx` — two-row UI: brand row + action buttons + filter controls; avatar circle wired to `AuthContext` — dropdown shows user name/email + Log out button (calls `logout()` → redirects to `/login`)
 - [x] `WarehouseTabs.jsx` — static tabs with hardcoded `isAdmin = true`; admin sees 4 tabs, manager sees 1
 - [x] `DashboardPage.jsx` — static inventory table with hardcoded rows and `StatusBadge`
 

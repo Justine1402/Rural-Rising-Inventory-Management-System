@@ -47,11 +47,11 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-[#1B4D2E] w-full">
+    <nav className="bg-[#1A381E] w-full">
 
       {/* Row 1 — Brand + Warehouse + Icons */}
       <div className="flex items-center justify-between px-6 py-3">
-        <span className="text-white font-bold text-base tracking-widest">
+        <span className="font-bold text-base tracking-widest uppercase" style={{ color: '#FAA31A' }}>
           RURAL RISING
         </span>
         <div className="flex items-center gap-3">
@@ -95,7 +95,7 @@ export default function Navbar() {
           {ACTION_BUTTONS.map((label) => (
             <button
               key={label}
-              className="bg-green-700 hover:bg-green-600 text-white text-xs font-medium px-3 py-1.5 rounded transition-colors"
+              className="bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded transition-colors"
             >
               {label}
             </button>
@@ -104,16 +104,16 @@ export default function Navbar() {
 
         {/* Center-right controls */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          <button className="flex items-center gap-1 bg-green-700 hover:bg-green-600 text-white text-xs font-medium px-3 py-1.5 rounded-full transition-colors">
+          <button className="flex items-center gap-1 bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded-full transition-colors">
             All Products <ChevronDown />
           </button>
-          <button className="flex items-center gap-1 bg-green-700 hover:bg-green-600 text-white text-xs font-medium px-3 py-1.5 rounded-full transition-colors">
+          <button className="flex items-center gap-1 bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded-full transition-colors">
             Inventory <ChevronDown />
           </button>
-          <button className="flex items-center gap-1 bg-green-700 hover:bg-green-600 text-white text-xs font-medium px-3 py-1.5 rounded-full transition-colors">
+          <button className="flex items-center gap-1 bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded-full transition-colors">
             LIFO <ChevronDown />
           </button>
-          <button className="text-white text-xs font-medium px-3 py-1.5 rounded border border-white hover:bg-green-700 transition-colors">
+          <button className="text-white text-xs font-medium px-3 py-1.5 rounded border border-white hover:bg-[#409645] transition-colors">
             Reports History
           </button>
         </div>

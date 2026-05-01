@@ -21,8 +21,8 @@ export default function WarehouseTabs() {
           key={tab}
           className={
             index === 0
-              ? 'bg-[#1B4D2E] text-white text-sm font-medium px-5 py-2 rounded transition-colors'
-              : 'bg-white text-[#1B4D2E] border border-[#1B4D2E] text-sm font-medium px-5 py-2 rounded transition-colors hover:bg-green-50'
+              ? 'bg-[#409645] text-white text-sm font-medium px-5 py-2 rounded transition-colors'
+              : 'bg-white text-[#1A381E] border border-[#1A381E] text-sm font-medium px-5 py-2 rounded transition-colors hover:bg-green-50'
           }
         >
           {tab}
