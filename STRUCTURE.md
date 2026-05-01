@@ -217,6 +217,7 @@ On mount, calls `GET /api/user` to restore session from the existing Sanctum coo
     name: string,           // e.g. "James Clark"
     email: string,
     position: string,       // e.g. "Main Warehouse Manager"
+    position_title: string, // nullable — e.g. "Warehouse Manager"
     employeeId: string,     // e.g. "2361927"
     warehouseId: number,
     warehouseName: string,  // e.g. "Main Warehouse (Quezon City)"
@@ -288,8 +289,14 @@ Contextual button changes on list pages:
 **Right:** Settings icon (⚙) + circular user avatar → click opens `ProfileModal`.
 Active warehouse name displayed as text in the top-right area.
 
-The Settings icon (⚙) is visible only to admin users and navigates to
-`/admin/users`.
+The Settings icon (⚙) is visible only to admin users. Clicking it opens a
+small dropdown containing a "Manage Accounts" item that navigates to
+`/admin/users`. Click-outside closes the dropdown.
+
+**Avatar dropdown menu items (top to bottom):**
+1. User name + email (read-only header, non-clickable)
+2. "View Profile" — opens `ProfileModal`
+3. "Log out" — calls `logout()` then navigates to `/login`
 
 ---
 
@@ -395,7 +402,7 @@ Used by: `TransferRequestFormPage`, `IssueProductFormPage`
 Props:
 ```js
 columns       [{ key: string, label: string, render?: (value, row) => ReactNode }]
-rows          object[]
+data          object[]            // NOTE: prop is named `data`, not `rows`
 onRowClick    function(row)?      // navigates to detail/form page on click
 selectedRow   object?             // highlights this row (single-select lists)
 onRowSelect   function(row)?      // drives single-select behavior (Receive, Transfer,
@@ -403,6 +410,8 @@ onRowSelect   function(row)?      // drives single-select behavior (Receive, Tra
 emptyMessage  string?
 loading       boolean?
 ```
+
+**Current implementation status:** basic only — `columns` and `data` props work; all other props not yet implemented. Add remaining props when the first list page (Step 8) is built.
 
 ---
 
@@ -428,8 +437,16 @@ status   string
 Opened by clicking the user avatar in the Navbar. Reads user from `AuthContext`
 internally.
 
-Content: "RURAL RISING PH" header, X button, profile photo placeholder, Name,
-Email Address, Position, Employee ID, Verification PIN shown as `****** ✎`
+Content:
+- "PROFILE" header (dark green bar) + X close button
+- Avatar circle with user initial, name, email, role badge, warehouse name,
+  and `position_title` (read-only gray text; shows "—" until wired to backend)
+- **Change Password** — collapsible section triggered by a full-width toggle button
+  (dark green border/text, chevron rotates ▼/▲). Expanding reveals 3 password
+  fields with show/hide toggles (Current, New, Confirm). Uses CSS `max-height`
+  transition for smooth animation.
+- **Change PIN** — always visible; 2-column layout (Current PIN, New PIN);
+  4-digit numeric inputs, centered and masked
 
 Props:
 ```js

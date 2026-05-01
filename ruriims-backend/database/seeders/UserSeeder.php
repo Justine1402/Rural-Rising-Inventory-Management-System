@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -10,12 +11,18 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        User::firstOrCreate(
+        Warehouse::firstOrCreate(['code' => 'QC'],  ['name' => 'Quezon City Warehouse']);
+        Warehouse::firstOrCreate(['code' => 'ALA'], ['name' => 'Alabang Warehouse']);
+        Warehouse::firstOrCreate(['code' => 'MAN'], ['name' => 'Mandaluyong Warehouse']);
+
+        $admin = User::firstOrCreate(
             ['email' => 'admin@ruriims.com'],
             [
                 'name'     => 'Admin User',
                 'password' => Hash::make('password'),
+                'role'     => 'admin',
             ]
         );
+        $admin->update(['role' => 'admin']);
     }
 }

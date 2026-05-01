@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useWarehouse } from '../../context/WarehouseContext';
+import ProfileModal from '../modals/ProfileModal';
 
 const ChevronDown = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
   </svg>
 );
+
 
 const GearIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -25,16 +28,18 @@ const ACTION_BUTTONS = [
 
 export default function Navbar() {
   const { user, logout } = useAuth();
+  const { activeWarehouse } = useWarehouse();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [gearOpen, setGearOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const menuRef = useRef(null);
+  const gearRef = useRef(null);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(e) {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
-        setMenuOpen(false);
-      }
+      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
+      if (gearRef.current && !gearRef.current.contains(e.target)) setGearOpen(false);
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -47,6 +52,7 @@ export default function Navbar() {
   };
 
   return (
+    <>
     <nav className="bg-[#1A381E] w-full">
 
       {/* Row 1 — Brand + Warehouse + Icons */}
@@ -55,10 +61,27 @@ export default function Navbar() {
           RURAL RISING
         </span>
         <div className="flex items-center gap-3">
-          <span className="text-white font-semibold text-sm">Main Warehouse</span>
-          <button className="text-white hover:text-green-300 transition-colors">
-            <GearIcon />
-          </button>
+          <span className="text-white font-semibold text-sm">{activeWarehouse?.name ?? 'All Warehouses'}</span>
+          {user?.role === 'admin' && (
+            <div className="relative" ref={gearRef}>
+              <button
+                onClick={() => setGearOpen((v) => !v)}
+                className="text-white hover:text-green-300 transition-colors"
+              >
+                <GearIcon />
+              </button>
+              {gearOpen && (
+                <div className="absolute right-0 top-8 w-48 bg-white rounded-lg shadow-lg z-50 overflow-hidden">
+                  <button
+                    onClick={() => { setGearOpen(false); navigate('/admin/users'); }}
+                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    Manage Accounts
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Avatar + dropdown */}
           <div className="relative" ref={menuRef}>
@@ -76,8 +99,14 @@ export default function Navbar() {
                   <p className="text-xs text-gray-500 truncate">{user?.email ?? ''}</p>
                 </div>
                 <button
+                  onClick={() => { setMenuOpen(false); setProfileOpen(true); }}
+                  className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  View Profile
+                </button>
+                <button
                   onClick={handleLogout}
-                  className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                  className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors border-t border-gray-100"
                 >
                   Log out
                 </button>
@@ -120,5 +149,8 @@ export default function Navbar() {
 
       </div>
     </nav>
+
+    <ProfileModal isOpen={profileOpen} onClose={() => setProfileOpen(false)} />
+    </>
   );
 }

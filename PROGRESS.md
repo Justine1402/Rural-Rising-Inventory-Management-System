@@ -27,21 +27,28 @@
 - [x] `AuthController.php` — `login`, `logout`, `user`
 - [x] `routes/api.php` — `POST /login`, `POST /logout` (auth-guarded), `GET /user` (auth-guarded)
 
-### Build Step 4 — Navbar + WarehouseTabs + DashboardPage (static UI only)
-- [x] `Navbar.jsx` — two-row UI: brand row + action buttons + filter controls; avatar circle wired to `AuthContext` — dropdown shows user name/email + Log out button (calls `logout()` → redirects to `/login`)
-- [x] `WarehouseTabs.jsx` — static tabs with hardcoded `isAdmin = true`; admin sees 4 tabs, manager sees 1
-- [x] `DashboardPage.jsx` — static inventory table with hardcoded rows and `StatusBadge`
+### Build Step 4 — Navbar + WarehouseTabs + DashboardPage + Wiring
+- [x] `Navbar.jsx` — two-row UI; avatar dropdown wired to `AuthContext` (name/email + View Profile + Log out); warehouse label wired to `WarehouseContext.activeWarehouse.name`; gear icon (⚙) visible only to admin, navigates to `/admin/users`; action buttons (Create Product, Receive Order, etc.) and filter dropdowns (All Products, Inventory, LIFO, Reports History) are **UI-only — no navigation wired yet**
+- [x] `WarehouseTabs.jsx` — reads real warehouse list from `WarehouseContext`; admin sees "All Warehouses" + 3 warehouse tabs, manager sees 1; clicking a tab calls `setActiveWarehouse`; active tab highlighted
+- [x] `DashboardPage.jsx` — static layout with 7 hardcoded product rows; `StatusBadge` implemented **inline** (not yet a separate file); no API calls
+- [x] `warehouses` migration + `Warehouse` model — 3 permanent warehouses seeded (QC, ALA, MAN)
+- [x] `add_role_to_users` migration — `role` enum added to `users` table; `admin@ruriims.com` set to `admin`
+- [x] `WarehouseController@index` — `GET /api/warehouses` (auth:sanctum) returns all warehouses
+- [x] `WarehouseContext` — fetches from real API; `activeWarehouse` defaults to first warehouse; `null` = All Warehouses
+- [x] `App.jsx` — `/admin/users` route wired with `adminOnly` guard but currently renders `DashboardPage` as placeholder (UserManagementPage not built yet)
 
----
-
-## In Progress
-- [ ] Build Step 4 (cont.) — wire `Navbar`, `WarehouseTabs`, and `DashboardPage` to real API data via `AuthContext` and `WarehouseContext`
+### Build Step 5 — Shared Components
+- [x] `ProfileModal.jsx` (`src/components/modals/`) — collapsible Change Password (chevron toggle, CSS max-height animation); position_title read-only display (shows "—" until backend wired); Change PIN (4-digit numeric, always visible); wired to Navbar avatar dropdown; **user info (name, email, warehouse) is still hardcoded — not yet reading from AuthContext**; Save Changes and PIN/password fields are UI-only (no API calls)
+- [x] `ConfirmModal.jsx` (`src/components/modals/`) — reusable dialog; props: `isOpen`, `title`, `message`, `onConfirm`, `onCancel`; Confirm (green) + Cancel (gray) buttons; **not yet used anywhere in the app**
+- [x] `DataTable.jsx` (`src/components/ui/`) — basic implementation; props: `columns` (`[{ key, label }]`), `data`; dark green header, "No data available" empty state; **missing from spec: `onRowClick`, `selectedRow`, `onRowSelect`, `render` function, `loading`, `emptyMessage` props — to be added when list pages are built**; **not yet used anywhere in the app**
+- [x] `Navbar.jsx` — gear icon (⚙) visible only to admin; opens a dropdown with "Manage Accounts" item → navigates to `/admin/users`; click-outside closes it; avatar dropdown has no admin items (View Profile + Log out only)
+- [x] `add_position_title_to_users_table` migration — nullable `position_title` string added to `users` table; `User` model `#[Fillable]` updated; migration run
+- [ ] `StatusBadge.jsx` — currently implemented **inline** inside `DashboardPage.jsx`; needs to be extracted to `src/components/ui/StatusBadge.jsx` before Step 6
 
 ---
 
 ## Not Started
 
-- [ ] Step 5 — `ProfileModal` + `StatusBadge` + `DataTable` + `ConfirmModal`
 - [ ] Step 6 — `CreateProductPage` + `ProductController` + `PinVerificationModal`
 - [ ] Step 7 — `AddProductsModal` + `StockInUseModal`
 - [ ] Step 8 — `ReceiveOrderListPage` + `ReceiveOrderFormPage` + `ReceiveOrderController`
