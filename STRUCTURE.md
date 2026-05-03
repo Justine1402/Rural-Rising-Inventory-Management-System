@@ -564,15 +564,17 @@ dropdown remain in the Navbar. The Navbar action buttons change to only:
 
 ### `CreateProductPage` (proto p.5-9, SRS §3.3)
 
-Overlays the dashboard — the dashboard remains visible but dimmed behind the form
-panel. RETURN button navigates back without saving.
+Overlays the dashboard — a blur overlay (`bg-black/20 backdrop-blur-sm`) covers
+the entire screen at z-40, blocking all interaction with the dashboard, table, and
+navbar buttons. The form card sits above it at z-50 as a centered fixed-width panel
+(`w-[900px]`, content-height). RETURN button navigates back without saving.
 
 Form title: "Create Product"
 
 | Field | Type | Options |
 |---|---|---|
 | Name | Text | e.g., "Mango" |
-| Unit | Dropdown | kg, g, pcs |
+| Unit | Dropdown + custom | kg, g, pcs, Other (specify) — selecting "Other (specify)" replaces the dropdown with a free-text input; a "← Use dropdown instead" link reverts it |
 | Category | Dropdown | Fruits, Vegetables, Poultry, Herbs & Spices, Processed Goods |
 | Shelf Life | Number | number of days, e.g., 14 |
 
@@ -1063,8 +1065,8 @@ All styling uses **Tailwind CSS utility classes only**. No custom CSS files.
 - PIN inputs: `w-10 h-12 border-2 border-gray-300 rounded text-center text-xl font-bold focus:border-green-600 focus:outline-none`
 
 **Form overlay panel (Create Product pattern):**
-- Background dim: `fixed inset-0 bg-black/30 z-40`
-- Panel: `fixed left-44 right-36 top-[110px] bg-white rounded-2xl shadow-2xl z-50 p-8` (content-height; no `bottom` so warehouse tabs remain visible below the panel)
+- Blur overlay: `fixed inset-0 bg-black/20 backdrop-blur-sm z-40` (blocks all pointer events on content behind)
+- Panel: `fixed top-[115px] left-1/2 -translate-x-1/2 w-[900px] bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 p-8 flex flex-col` (content-height; no `bottom` so it shrinks to fit its fields)
 
 ---
 

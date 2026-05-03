@@ -13,12 +13,35 @@ export default function CreateProductPage() {
   const navigate = useNavigate();
 
   const [form, setForm] = useState({ name: '', category: '', unit: '', shelf_life: '' });
+  const [useCustomUnit, setUseCustomUnit] = useState(false);
+  const [customUnitInput, setCustomUnitInput] = useState('');
   const [pinOpen, setPinOpen] = useState(false);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [successCode, setSuccessCode] = useState(null);
 
   const set = (field) => (e) => setForm((prev) => ({ ...prev, [field]: e.target.value }));
+
+  const handleUnitChange = (e) => {
+    if (e.target.value === '__other__') {
+      setUseCustomUnit(true);
+      setCustomUnitInput('');
+      setForm((prev) => ({ ...prev, unit: '' }));
+    } else {
+      setForm((prev) => ({ ...prev, unit: e.target.value }));
+    }
+  };
+
+  const handleCustomUnitChange = (e) => {
+    setCustomUnitInput(e.target.value);
+    setForm((prev) => ({ ...prev, unit: e.target.value }));
+  };
+
+  const switchBackToDropdown = () => {
+    setUseCustomUnit(false);
+    setCustomUnitInput('');
+    setForm((prev) => ({ ...prev, unit: '' }));
+  };
 
   const handleCreate = () => {
     setError(null);
@@ -45,17 +68,17 @@ export default function CreateProductPage() {
 
   return (
     <>
-      {/* Dim overlay — clicking it goes back */}
-      <div className="fixed inset-0 bg-black/30 z-40" onClick={() => navigate('/')} />
+      {/* Blur overlay — blocks interaction with everything behind */}
+      <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40" />
 
-      {/* Panel — floats over the dashboard; content-height so tabs stay visible below */}
-      <div className="fixed left-44 right-36 top-[110px] bg-white rounded-2xl shadow-2xl z-50 p-8">
+      {/* Card */}
+      <div className="fixed top-[115px] left-1/2 -translate-x-1/2 w-[900px] bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 p-8 flex flex-col">
 
         {/* Header row */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-8">
           <button
             onClick={() => navigate('/')}
-            className="px-6 py-2 text-sm font-semibold text-white rounded-lg"
+            className="px-6 py-2.5 text-sm font-semibold text-white rounded-lg"
             style={{ backgroundColor: '#409645' }}
           >
             RETURN
@@ -64,10 +87,10 @@ export default function CreateProductPage() {
         </div>
 
         {/* 2-column form */}
-        <div className="grid grid-cols-2 gap-x-16 gap-y-5 max-w-3xl">
+        <div className="grid grid-cols-2 gap-x-16 gap-y-7">
 
           <div>
-            <label className="block text-sm text-gray-500 mb-1.5">Name</label>
+            <label className="block text-sm text-gray-500 mb-2">Name</label>
             <input
               type="text"
               value={form.name}
@@ -77,15 +100,34 @@ export default function CreateProductPage() {
           </div>
 
           <div>
-            <label className="block text-sm text-gray-500 mb-1.5">Unit</label>
-            <select value={form.unit} onChange={set('unit')} className={fieldClass}>
-              <option value="" />
-              {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
-            </select>
+            <label className="block text-sm text-gray-500 mb-2">Unit</label>
+            {useCustomUnit ? (
+              <div>
+                <input
+                  type="text"
+                  value={customUnitInput}
+                  onChange={handleCustomUnitChange}
+                  placeholder="Enter custom unit"
+                  className={fieldClass}
+                />
+                <button
+                  onClick={switchBackToDropdown}
+                  className="mt-2 text-xs text-gray-500 hover:text-gray-700 underline"
+                >
+                  ← Use dropdown instead
+                </button>
+              </div>
+            ) : (
+              <select value={form.unit} onChange={handleUnitChange} className={fieldClass}>
+                <option value="" />
+                {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+                <option value="__other__">Other (specify)</option>
+              </select>
+            )}
           </div>
 
           <div>
-            <label className="block text-sm text-gray-500 mb-1.5">Category</label>
+            <label className="block text-sm text-gray-500 mb-2">Category</label>
             <select value={form.category} onChange={set('category')} className={fieldClass}>
               <option value="" />
               {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -93,7 +135,7 @@ export default function CreateProductPage() {
           </div>
 
           <div>
-            <label className="block text-sm text-gray-500 mb-1.5">Shelf Life</label>
+            <label className="block text-sm text-gray-500 mb-2">Shelf Life</label>
             <input
               type="number"
               min="1"
@@ -106,10 +148,10 @@ export default function CreateProductPage() {
 
         </div>
 
-        {error && <p className="text-red-600 text-sm mt-4">{error}</p>}
+        {error && <p className="text-red-600 text-sm mt-6">{error}</p>}
 
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-3 mt-6 max-w-3xl">
+        {/* Footer — pushed to bottom */}
+        <div className="flex items-center justify-end gap-3 mt-auto pt-6">
           {successCode && (
             <span className="px-4 py-2 text-sm font-medium text-gray-500 bg-gray-200 rounded-lg">
               Created {successCode}
@@ -118,7 +160,7 @@ export default function CreateProductPage() {
           <button
             onClick={handleCreate}
             disabled={loading || !!successCode}
-            className="px-6 py-2 text-sm font-bold text-white rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
+            className="px-8 py-2.5 text-sm font-bold text-white rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
             style={{ backgroundColor: '#409645' }}
           >
             {loading ? 'Saving…' : 'CREATE'}
