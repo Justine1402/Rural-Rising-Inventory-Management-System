@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Models\StockInUse;
+use App\Models\Warehouse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
@@ -10,7 +12,44 @@ class ProductController extends Controller
 {
     public function index()
     {
-        return response()->json(['products' => Product::all()]);
+        $warehouses = Warehouse::all();
+
+        // Sum of quantities per product per warehouse, keyed by [product_id][warehouse_id]
+        $stock = StockInUse::selectRaw('product_id, warehouse_id, SUM(quantity) as total')
+            ->groupBy('product_id', 'warehouse_id')
+            ->get()
+            ->groupBy('product_id')
+            ->map(fn ($rows) => $rows->keyBy('warehouse_id')->map(fn ($r) => (float) $r->total));
+
+        // Most recent harvest date per product across all warehouses
+        $latestHarvest = StockInUse::selectRaw('product_id, MAX(harvest_date) as latest_harvest')
+            ->groupBy('product_id')
+            ->pluck('latest_harvest', 'product_id');
+
+        $products = Product::all()->map(function ($p) use ($warehouses, $stock, $latestHarvest) {
+            $productStock = $stock->get($p->id, collect());
+            $warehouseStock = $warehouses->mapWithKeys(
+                fn ($w) => [$w->id => $productStock->get($w->id, 0.0)]
+            );
+            $totalQty = $warehouseStock->sum();
+
+            return [
+                'id'             => $p->id,
+                'sku_code'       => $p->sku_code,
+                'name'           => $p->name,
+                'category'       => $p->category,
+                'unit'           => $p->unit,
+                'shelf_life'     => $p->shelf_life,
+                'warehouse_stock' => $warehouseStock,
+                'harvest_date'   => $latestHarvest->get($p->id),
+                'status'         => $totalQty > 0 ? 'In Stock' : 'Out of Stock',
+            ];
+        });
+
+        return response()->json([
+            'products'   => $products,
+            'warehouses' => $warehouses->map(fn ($w) => ['id' => $w->id, 'name' => $w->name, 'code' => $w->code]),
+        ]);
     }
 
     public function store(Request $request)

@@ -9,7 +9,7 @@ const UNITS = ['kg', 'g', 'pcs'];
 const fieldClass =
   'w-full bg-gray-100 border border-transparent rounded-lg px-4 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#1A381E] focus:bg-white transition';
 
-export default function CreateProductPage() {
+export default function CreateProductPage({ onClose }) {
   const navigate = useNavigate();
 
   const [form, setForm] = useState({ name: '', category: '', unit: '', shelf_life: '' });
@@ -77,7 +77,7 @@ export default function CreateProductPage() {
         {/* Header row */}
         <div className="flex items-center justify-between mb-8">
           <button
-            onClick={() => navigate('/')}
+            onClick={() => onClose?.()}
             className="px-6 py-2.5 text-sm font-semibold text-white rounded-lg"
             style={{ backgroundColor: '#409645' }}
           >

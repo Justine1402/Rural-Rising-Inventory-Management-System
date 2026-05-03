@@ -94,7 +94,8 @@ ruriims-frontend/
     │
     ├── context/
     │   ├── AuthContext.jsx              ← User session state: user, login(), logout()
-    │   └── WarehouseContext.jsx         ← Active warehouse shared across all pages
+    │   ├── WarehouseContext.jsx         ← Active warehouse shared across all pages
+    │   └── UIContext.jsx                ← Global overlay state: controls which form overlays are open without URL navigation
     │
     ├── components/
     │   ├── layout/
@@ -102,8 +103,7 @@ ruriims-frontend/
     │   │   └── WarehouseTabs.jsx        ← Bottom warehouse switcher tabs
     │   │
     │   ├── modals/
-    │   │   ├── ProfileModal.jsx         ← Profile overlay (avatar click)
-    │   │   └── ConfirmModal.jsx         ← Generic yes/no confirmation dialog
+    │   │   └── ProfileModal.jsx         ← Profile overlay (avatar click)
     │   │
     │   ├── shared/
     │   │   ├── PinVerificationModal.jsx     ← 6-digit PIN modal (all transactions)
@@ -113,7 +113,6 @@ ruriims-frontend/
     │   │                                        (Transfer and Issue flows)
     │   │
     │   └── ui/
-    │       ├── DataTable.jsx            ← Reusable table with configurable columns
     │       └── StatusBadge.jsx          ← Colored pill badge for all statuses
     │
     ├── pages/
@@ -176,11 +175,9 @@ ruriims-frontend/
 /login                              → LoginPage                        (public)
 /                                   → DashboardPage                    (protected)
 /admin/users                        → UserManagementPage               (protected, admin only)
-/products/create                    → CreateProductPage                (protected)
 /products/:id                       → ProductDetailPage                (protected)
 /receive-orders                     → ReceiveOrderListPage             (protected)
-/receive-orders/new                 → ReceiveOrderFormPage (create)    (protected)
-/receive-orders/:id                 → ReceiveOrderFormPage (accomplish) (protected)
+/receive-orders/:id                 → ReceiveOrderListPage + ReceiveOrderFormPage overlay (accomplish) (protected)
 /transfer-requests                  → TransferRequestListPage          (protected)
 /transfer-requests/new              → TransferRequestFormPage (create)  (protected)
 /transfer-requests/:id              → TransferRequestFormPage (accomplish) (protected)
@@ -200,6 +197,14 @@ ruriims-frontend/
 /reports/reconciliation             → ReconciliationReportsPage        (protected)
 /reports/inventory-summary          → InventorySummaryPage             (protected)
 ```
+
+**Note on overlay forms vs routed pages:**
+`CreateProductPage` and `ReceiveOrderFormPage` (create mode) open as overlays via
+`UIContext` — no URL change. The Navbar `+ Create Product` and `+ Receive Order`
+buttons set `createProductFormOpen` / `receiveOrderFormOpen` flags respectively.
+`GlobalOverlays` in `App.jsx` renders whichever overlay is open. This means there
+are no `/products/create` or `/receive-orders/new` routes. Accomplish mode for
+Receive Orders still uses a route (`/receive-orders/:id`) since it needs an ID.
 
 **Note on `/temporary-warehouses/:id` vs `/temporary-warehouses/:id/close`:**
 React Router evaluates these in order. Place the `/close` route before `/:id` in
@@ -234,6 +239,26 @@ On mount, calls `GET /api/user` to restore session from the existing Sanctum coo
 }
 ```
 
+### `UIContext.jsx`
+
+Controls which form overlays are open globally, without changing the URL.
+
+```js
+{
+  receiveOrderFormOpen: boolean,
+  setReceiveOrderFormOpen: function,
+  createProductFormOpen: boolean,
+  setCreateProductFormOpen: function,
+}
+```
+
+`GlobalOverlays` in `App.jsx` renders `CreateProductPage` when `createProductFormOpen`
+is true, and `ReceiveOrderFormPage` (create mode) when `receiveOrderFormOpen` is true.
+The Navbar buttons set these flags. RETURN inside each overlay clears the flag via
+the `onClose` prop — no `navigate()` call.
+
+---
+
 ### `WarehouseContext.jsx`
 
 Updated when the user clicks a `WarehouseTabs` item. All transaction forms
@@ -265,11 +290,11 @@ Persistent top bar on every protected page. Reads from `AuthContext` and
 **Center-left action buttons:**
 
 Default state (permanent warehouse active):
-- `+ Create Product` → `/products/create`
-- `+ Receive Order` → `/receive-orders/new`
-- `+ Issue Product` → `/issue-products/new`
-- `+ Transfer Request` → `/transfer-requests/new`
-- `+ Create Temporary Warehouse` → `/temporary-warehouses/new`
+- `+ Create Product` → opens `CreateProductPage` overlay via `UIContext` (no URL change)
+- `+ Receive Order` → opens `ReceiveOrderFormPage` overlay via `UIContext` (no URL change)
+- `+ Issue Product` → `/issue-products/new` (not yet built)
+- `+ Transfer Request` → `/transfer-requests/new` (not yet built)
+- `+ Create Temporary Warehouse` → `/temporary-warehouses/new` (not yet built)
 
 When a **Temporary Warehouse tab is active**, Navbar shows only:
 - `+ Issue Product` → `/issue-products/new`
@@ -401,24 +426,6 @@ Used by: `TransferRequestFormPage`, `IssueProductFormPage`
 
 ---
 
-### `DataTable.jsx`
-
-Props:
-```js
-columns       [{ key: string, label: string, render?: (value, row) => ReactNode }]
-data          object[]            // NOTE: prop is named `data`, not `rows`
-onRowClick    function(row)?      // navigates to detail/form page on click
-selectedRow   object?             // highlights this row (single-select lists)
-onRowSelect   function(row)?      // drives single-select behavior (Receive, Transfer,
-                                  // Reconciliation lists)
-emptyMessage  string?
-loading       boolean?
-```
-
-**Current implementation status:** basic only — `columns` and `data` props work; all other props not yet implemented. Add remaining props when the first list page (Step 8) is built.
-
----
-
 ### `StatusBadge.jsx`
 
 Props:
@@ -429,10 +436,11 @@ status   string
 | Status | Badge Color |
 |---|---|
 | `"In Stock"` | green |
+| `"Accomplished"` | green |
 | `"Out of Stock"` | red |
-| `"Accomplished"` / `"Complete"` / `"Closed"` / `"Reviewed"` | green |
-| `"Incomplete"` | red/orange |
-| `"Pending Review"` | orange |
+| `"Incomplete"` | red |
+| `"Complete"` / `"Closed"` / `"Reviewed"` | green (planned) |
+| `"Pending Review"` | orange (planned) |
 
 ---
 
@@ -456,19 +464,6 @@ Props:
 ```js
 isOpen   boolean
 onClose  function
-```
-
----
-
-### `ConfirmModal.jsx`
-
-Props:
-```js
-isOpen      boolean
-title       string
-message     string
-onConfirm   function
-onCancel    function
 ```
 
 ---
@@ -606,16 +601,18 @@ Verified By | Status
 
 Status: `Incomplete` (red-orange) / `Accomplished` (green)
 
-**Single-row select behavior:** Clicking a row selects it (highlights light green).
-With exactly one Incomplete row selected, the `+ Receive Order` Navbar button changes
-to `+ Accomplish Order` → navigates to `/receive-orders/:id`. Clicking a selected
-row again deselects it. Only one row can be selected at a time.
+**Single-row select behavior:** Clicking a row selects it (highlights light green
+with left border). With exactly one Incomplete row selected, a contextual action bar
+appears above the table showing the selected order code and an "ACCOMPLISH ORDER"
+button → navigates to `/receive-orders/:id`. Clicking the selected row again
+deselects it. Only one row can be selected at a time. Selection and list data are
+both cleared on `location.key` change (i.e., every navigation to this page).
 
 ---
 
 ### `ReceiveOrderFormPage` (proto p.12-21, SRS §3.4.3-3.4.6)
 
-**Create mode** (`/receive-orders/new`):
+**Create mode** (UIContext overlay — no URL change):
 
 Header: RETURN button (left) + "Receive Order" title (right)
 
@@ -628,11 +625,12 @@ Form fields:
 - Total (auto-computed: Order Cost + Delivery Fee, read-only)
 
 Product Details section:
+- Warehouse dropdown (pre-fills from `activeWarehouse`, drives `warehouse_id` in API call)
 - "Add Product" button → opens `AddProductsModal`
 - After selection, product rows appear in table:
-  Product Code | Product Name | Quantity Ordered (user input) |
-  Quantity Arrived (disabled in Stage 1, defaults to 0) |
-  Harvest Date (date picker per row, calendar icon) |
+  Product Code | Product Name | Quantity Ordered (user input, step=1) + unit label |
+  Quantity Arrived (disabled in Stage 1) |
+  Harvest Date (date picker per row) |
   Product Cost (PHP, user input)
 - Order Cost auto-updates as product costs are entered/changed
 
@@ -644,7 +642,8 @@ record saved as Incomplete status.
 
 The Receiving Order # is shown as the header title (e.g., "RO-QC-000-003").
 All header fields are pre-filled and read-only. In the product table, only
-**Date Arrived** (header field) and **Quantity Arrived** (per product row) are
+**Date Arrived** (header field) and **Quantity Arrived** (per product row, step=1,
+unit label shown beside input, initial value parsed to integer to avoid `.000`) are
 editable — all other fields are read-only.
 
 COMPLETE button → `PinVerificationModal` (different manager, same branch) →

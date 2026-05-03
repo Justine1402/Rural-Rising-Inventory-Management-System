@@ -10,61 +10,75 @@
 - [x] Vite dev proxy configured (`/api` + `/sanctum` → `127.0.0.1:8000`) — resolves CSRF cookie cross-origin issue
 - [x] `VITE_API_URL=/api` (relative — routes through Vite proxy)
 - [x] MySQL database `ruriims_db` created + all default migrations run
-- [x] `UserSeeder` — test account: `admin@ruriims.com` / `password`
+- [x] `UserSeeder` — two accounts seeded:
+  - `admin@ruriims.com` / password: `password` / PIN: `123456` (role: admin)
+  - `manager@ruriims.com` / password: `password` / PIN: `123456` (role: admin) — used to accomplish orders created by admin
 
 ### Build Step 1 — Routing Scaffold
 - [x] `react-router-dom` installed (`^7.14.2`)
-- [x] `App.jsx` — `BrowserRouter` + `AuthProvider` + `WarehouseProvider` + `AppRoutes`
-- [x] Routes stubbed: `/login`, `/`, `/admin/users`, catch-all
+- [x] `App.jsx` — `BrowserRouter` + `AuthProvider` + `WarehouseProvider` + `UIProvider` + `AppRoutes` + `GlobalOverlays`
+- [x] Routes: `/login`, `/`, `/receive-orders`, `/receive-orders/:id`, `/admin/users`, catch-all
 
 ### Build Step 2 — Contexts + Route Guards
 - [x] `src/context/AuthContext.jsx` — `user`, `login()`, `logout()`, `isAuthenticated`, `loading`
-- [x] `src/context/WarehouseContext.jsx` — `activeWarehouse`, `warehouses`, `setActiveWarehouse` (awaits `WarehouseController`)
-- [x] `src/routes/ProtectedRoute.jsx` — redirects unauthenticated to `/login`; supports `adminOnly` prop (redirects non-admin to `/`)
+- [x] `src/context/WarehouseContext.jsx` — `activeWarehouse`, `warehouses`, `setActiveWarehouse`
+- [x] `src/context/UIContext.jsx` — `receiveOrderFormOpen`, `createProductFormOpen` and their setters; controls global overlay forms without URL navigation
+- [x] `src/routes/ProtectedRoute.jsx` — redirects unauthenticated to `/login`; supports `adminOnly` prop
 
 ### Build Step 3 — LoginPage + AuthController
-- [x] `LoginPage.jsx` — prototype-matched UI: email + password with show/hide toggle, remember me, forgot password link, brand logo
+- [x] `LoginPage.jsx` — email + password with show/hide toggle, remember me checkbox (UI-only placeholder), forgot password link, brand logo
 - [x] `AuthController.php` — `login`, `logout`, `user`
 - [x] `routes/api.php` — `POST /login`, `POST /logout` (auth-guarded), `GET /user` (auth-guarded)
 
 ### Build Step 4 — Navbar + WarehouseTabs + DashboardPage + Wiring
-- [x] `Navbar.jsx` — two-row UI; avatar dropdown wired to `AuthContext` (name/email + View Profile + Log out); warehouse label wired to `WarehouseContext.activeWarehouse.name`; gear icon (⚙) visible only to admin, opens dropdown with "Manage Accounts" → `/admin/users`; `+ Create Product` button wired to `/products/create`; all other action buttons and filter dropdowns (Receive Order, Issue Product, Transfer Request, Create Temp Warehouse, All Products, Inventory, LIFO, Reports History) are **UI-only — no navigation wired yet**
+- [x] `Navbar.jsx` — two-row UI; avatar dropdown wired to `AuthContext`; warehouse label wired to `WarehouseContext`; gear icon (⚙) visible only to admin → "Manage Accounts" → `/admin/users`; `+ Create Product` opens `CreateProductPage` overlay via `UIContext` (no URL change); `+ Receive Order` opens `ReceiveOrderFormPage` overlay via `UIContext` (no URL change); button order fixed: Create Product | Receive Order | Issue Product | Transfer Request | Create Temporary Warehouse; Inventory dropdown: "Inventory" → `/`, "Receive Orders" → `/receive-orders`; `inventoryLabel` dynamically shows "Receive Orders" when on `/receive-orders*`
 - [x] `WarehouseTabs.jsx` — reads real warehouse list from `WarehouseContext`; admin sees "All Warehouses" + 3 warehouse tabs, manager sees 1; clicking a tab calls `setActiveWarehouse`; active tab highlighted
-- [x] `DashboardPage.jsx` — static layout with 7 hardcoded product rows; `StatusBadge` implemented **inline** (not yet a separate file); no API calls
+- [x] `DashboardPage.jsx` — fetches `GET /api/products` on mount and on every `location.key` change (re-fetches after navigation); shows real stock quantities per warehouse from `StockInUse`; warehouse columns are dynamic (driven by API response); harvest date from latest batch; "In Stock" / "Out of Stock" status from real quantities; loading/empty/error states
 - [x] `warehouses` migration + `Warehouse` model — 3 permanent warehouses seeded (QC, ALA, MAN)
-- [x] `add_role_to_users` migration — `role` enum added to `users` table; `admin@ruriims.com` set to `admin`
-- [x] `WarehouseController@index` — `GET /api/warehouses` (auth:sanctum) returns all warehouses
-- [x] `WarehouseContext` — fetches from real API; `activeWarehouse` defaults to first warehouse; `null` = All Warehouses
-- [x] `App.jsx` — `/admin/users` route wired with `adminOnly` guard but currently renders `DashboardPage` as placeholder (UserManagementPage not built yet)
+- [x] `add_role_to_users_table` migration — `role` enum added to `users` table
+- [x] `WarehouseController@index` — `GET /api/warehouses` returns all warehouses
+- [x] `App.jsx` — `GlobalOverlays` component renders `CreateProductPage` and `ReceiveOrderFormPage` as context-controlled overlays; no URL change on open; `/admin/users` renders `DashboardPage` as placeholder
 
 ### Build Step 5 — Shared Components
-- [x] `ProfileModal.jsx` (`src/components/modals/`) — collapsible Change Password (chevron toggle, CSS max-height animation); position_title read-only display (shows "—" until backend wired); Change PIN (6-digit numeric, always visible); wired to Navbar avatar dropdown; **user info (name, email, warehouse) is still hardcoded — not yet reading from AuthContext**; Save Changes and PIN/password fields are UI-only (no API calls)
-- [x] `ConfirmModal.jsx` (`src/components/modals/`) — reusable dialog; props: `isOpen`, `title`, `message`, `onConfirm`, `onCancel`; Confirm (green) + Cancel (gray) buttons; **not yet used anywhere in the app**
-- [x] `DataTable.jsx` (`src/components/ui/`) — basic implementation; props: `columns` (`[{ key, label }]`), `data`; dark green header, "No data available" empty state; **missing from spec: `onRowClick`, `selectedRow`, `onRowSelect`, `render` function, `loading`, `emptyMessage` props — to be added when list pages are built**; **not yet used anywhere in the app**
-- [x] `Navbar.jsx` — gear icon (⚙) visible only to admin; opens a dropdown with "Manage Accounts" item → navigates to `/admin/users`; click-outside closes it; avatar dropdown has no admin items (View Profile + Log out only)
-- [x] `add_position_title_to_users_table` migration — nullable `position_title` string added to `users` table; `User` model `#[Fillable]` updated; migration run
-- [x] `StatusBadge.jsx` (`src/components/ui/`) — extracted from `DashboardPage.jsx`; props: `status` (string); green badge for "In Stock", red for all others
+- [x] `ProfileModal.jsx` (`src/components/modals/`) — collapsible Change Password (chevron toggle, CSS max-height animation); Change PIN (6-digit numeric); wired to Navbar avatar dropdown
+- [x] `StatusBadge.jsx` (`src/components/ui/`) — green badge for `"In Stock"` and `"Accomplished"`; red for all others (Incomplete, Out of Stock)
+
+### Build Step 6 — PinVerificationModal + CreateProductPage + ProductController
+- [x] `PinVerificationModal.jsx` (`src/components/shared/`) — 6 individual digit inputs; auto-advance on entry; backspace support; CLEAR + VERIFY; z-[60]
+- [x] `CreateProductPage.jsx` (`src/pages/products/`) — opens as overlay via `UIContext` (no routing); blur overlay z-40 + card z-50; fields: Name, Category, Unit (dropdown + "Other (specify)" free-text with revert link), Shelf Life; PIN-verified; shows `"Created SKU-XXX"` on success; CREATE disabled after success
+- [x] `add_pin_to_users_table` migration + `create_products_table` migration — run
+- [x] `Product` model — fillable: sku_code, name, category, unit, shelf_life, created_by
+- [x] `ProductController` — `index` (returns all products with real `warehouse_stock` per warehouse, `harvest_date` from latest batch, `status`; also returns `warehouses` list in same response), `store` (PIN-verified, generates SKU-XXX), `show`
+- [x] `PinController` — `verify` standalone endpoint
+- [x] `UserSeeder` — PIN `123456` (hashed) seeded for both accounts
+
+### Build Step 7 — AddProductsModal + StockInUseModal + StockInUseController
+- [x] `create_stock_in_use_codes_table` migration — columns: code (unique), product_id, warehouse_id, quantity (decimal 10,3), harvest_date; run
+- [x] `StockInUse` model — table: `stock_in_use_codes`; fillable: code, product_id, warehouse_id, quantity, harvest_date
+- [x] `StockInUseController` — `index`: filters by sku_code + warehouse_id; returns batches where quantity > 0, ordered by harvest_date (FEFO)
+- [x] `routes/api.php` — `GET /stock-in-use` added
+- [x] `AddProductsModal.jsx` (`src/components/shared/`) — multi-select product picker; fetches `GET /api/products` on open; returns `[{ productCode, productName, unit, category }]` via `onSelect`; z-[70]
+- [x] `StockInUseModal.jsx` (`src/components/shared/`) — single-select batch picker; fetches `GET /api/stock-in-use?sku_code&warehouse_id`; returns selected batch via `onSelect`; z-[70]; planned for Transfer and Issue flows
+
+### Build Step 8 — ReceiveOrderListPage + ReceiveOrderFormPage + ReceiveOrderController
+- [x] `create_receive_orders_table` migration — code, warehouse_id, supplier_name, delivery_fee, order_cost, total, date_ordered, date_arrived (nullable), status (incomplete/accomplished), created_by, verified_by (nullable); run
+- [x] `create_receive_order_items_table` migration — receive_order_id, product_id, quantity_ordered, quantity_arrived (default 0), harvest_date (nullable), product_cost; run
+- [x] `ReceiveOrder` model — fillable; date casts; belongsTo warehouse/creator/verifier; hasMany items
+- [x] `ReceiveOrderItem` model — fillable; date casts; belongsTo product/receiveOrder
+- [x] `ReceiveOrderController` — `index` (all orders with warehouse/user names), `store` (same-manager PIN + generates `RO-[WH]-000-[SEQ]` + DB transaction), `show` (order + items + product details), `complete` (different-manager PIN enforced + updates order + generates `SKU-[WH]-[SKU_SEQ]-[BATCH_SEQ]` StockInUse records for arrived quantities)
+- [x] `routes/api.php` — `GET/POST /receive-orders`, `GET /receive-orders/{receiveOrder}`, `POST /receive-orders/{receiveOrder}/complete`
+- [x] `ReceiveOrderListPage.jsx` — standalone full page (Navbar + WarehouseTabs); fetches on `location.key` (re-fetches after accomplishing); clears selection on re-fetch; single-select on Incomplete rows; contextual action bar appears when a row is selected showing order code + "ACCOMPLISH ORDER" button → navigates to `/receive-orders/:id`
+- [x] `ReceiveOrderFormPage.jsx` — dual-mode overlay (create = no route, UIContext-controlled; accomplish = `/receive-orders/:id`); RETURN closes overlay in create mode, navigates to `/receive-orders` in accomplish mode; warehouse dropdown in Product Details header (pre-fills from `activeWarehouse`, drives `warehouse_id` in API call); unit label shown beside Qty Ordered and Qty Arrived inputs; Qty Ordered step=1; Qty Arrived step=1; `quantity_arrived` parsed to float on load (no trailing zeros); order cost and total auto-computed
+- [x] `App.jsx` — routes: `/receive-orders` (list), `/receive-orders/:id` (list + form overlay); no `/receive-orders/new` route (create form opens via UIContext)
+
+### Code Audit & Cleanup
+- [x] `ConfirmModal.jsx` — deleted (never imported anywhere)
+- [x] `DataTable.jsx` — deleted (never imported anywhere; all tables use inline markup)
 
 ---
 
-### Build Step 6 — PinVerificationModal + CreateProductPage + ProductController
-- [x] `PinVerificationModal.jsx` (`src/components/shared/`) — 6 individual digit inputs; auto-advance on entry; backspace clears current digit or moves back; CLEAR resets all; VERIFY calls `onVerify(pin)`; parent handles API call; props: `isOpen`, `onVerify`, `onClose`; z-[60] so it renders above form panels
-- [x] `CreateProductPage.jsx` (`src/pages/products/`) — centered card panel (`fixed top-[115px] left-1/2 -translate-x-1/2 w-[900px]`, content-height so it shrinks to fit its fields); blur overlay behind (`bg-black/20 backdrop-blur-sm z-40`) blocks all interaction with the dashboard, table, and navbar buttons beneath it; fields: Product Name, Category (dropdown), Unit of Measure (dropdown with "Other (specify)" option — selecting it swaps the dropdown for a free-text input with a "← Use dropdown instead" toggle), Shelf Life (days); `created_by` set server-side from authenticated user — no visible field; opens PinVerificationModal on CREATE; on verify → `POST /api/products` with form data + PIN; shows `"Created SKU-XXX"` label on success; CREATE button disabled after success; shows inline error on failure
-- [x] `add_pin_to_users_table` migration — nullable `pin` string column added to `users` table; run
-- [x] `create_products_table` migration — columns: `sku_code` (unique), `name`, `category`, `unit`, `shelf_life`, `created_by` (FK → users); run
-- [x] `Product` model — fillable: sku_code, name, category, unit, shelf_life, created_by; `creator()` belongsTo User
-- [x] `ProductController` — `index` (all products), `store` (validate → verify PIN via Hash::check → generate SKU-XXX → save), `show`
-- [x] `PinController` — `verify(pin)` standalone endpoint; returns 422 with `{ message: 'Incorrect PIN.' }` on failure
-- [x] `UserSeeder` — updated to seed default PIN `123456` (hashed) for `admin@ruriims.com`; reseeded
-- [x] `User` model — `pin` added to fillable and hidden
-- [x] `routes/api.php` — added `GET/POST /products`, `GET /products/{product}`, `POST /pin/verify` under `auth:sanctum`
-- [x] `Navbar.jsx` — `+ Create Product` button wired to navigate `/products/create`
-- [x] `App.jsx` — `/products/create` route renders `DashboardPage` + `CreateProductPage` together (dashboard stays visible dimmed behind the panel)
-
 ## Not Started
 
-- [ ] Step 7 — `AddProductsModal` + `StockInUseModal`
-- [ ] Step 8 — `ReceiveOrderListPage` + `ReceiveOrderFormPage` + `ReceiveOrderController`
 - [ ] Step 9 — `TransferRequestListPage` + `TransferRequestFormPage` + `TransferRequestController`
 - [ ] Step 10 — `IssueProductFormPage` + `IssueProductController`
 - [ ] Step 11 — Temporary Warehouse pages + `TemporaryWarehouseController`

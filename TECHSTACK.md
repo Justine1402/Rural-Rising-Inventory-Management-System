@@ -142,10 +142,15 @@ Routes defined in `ruriims-backend/routes/api.php`:
 | `GET` | `/api/user` | `auth:sanctum` | `{ "user": {...} }` |
 | `POST` | `/api/logout` | `auth:sanctum` | `{ "message": "Logged out" }` |
 | `GET` | `/api/warehouses` | `auth:sanctum` | `{ "warehouses": [...] }` |
-| `GET` | `/api/products` | `auth:sanctum` | `{ "products": [...] }` |
+| `GET` | `/api/products` | `auth:sanctum` | `{ "products": [...], "warehouses": [...] }` — includes real stock per warehouse |
 | `POST` | `/api/products` | `auth:sanctum` | `{ "product": {...} }` — validates + PIN check + generates SKU |
 | `GET` | `/api/products/{product}` | `auth:sanctum` | `{ "product": {...} }` |
 | `POST` | `/api/pin/verify` | `auth:sanctum` | `{ "verified": true }` or 422 |
+| `GET` | `/api/stock-in-use` | `auth:sanctum` | `{ "batches": [...] }` — filters by `sku_code` + `warehouse_id`, quantity > 0, FEFO order |
+| `GET` | `/api/receive-orders` | `auth:sanctum` | `{ "orders": [...] }` |
+| `POST` | `/api/receive-orders` | `auth:sanctum` | `{ "order": { "code": "RO-..." } }` — PIN (same manager) + generates code |
+| `GET` | `/api/receive-orders/{id}` | `auth:sanctum` | `{ "order": { ...with items } }` |
+| `POST` | `/api/receive-orders/{id}/complete` | `auth:sanctum` | `{ "message": "Accomplished RO-..." }` — PIN (different manager) + generates StockInUse codes |
 
 ---
 
@@ -164,29 +169,33 @@ Rural Rising Inventory Management System/   ← project root
 │   │   ├── assets/                         ← images and SVGs
 │   │   ├── components/
 │   │   │   ├── layout/
-│   │   │   │   ├── Navbar.jsx             ← two-row nav; wired to AuthContext + WarehouseContext
+│   │   │   │   ├── Navbar.jsx             ← two-row nav; UIContext for overlay buttons; UIContext + WarehouseContext + AuthContext
 │   │   │   │   └── WarehouseTabs.jsx      ← warehouse tab switcher; wired to WarehouseContext
 │   │   │   ├── modals/
-│   │   │   │   ├── ProfileModal.jsx       ← profile overlay (change password + change PIN)
-│   │   │   │   └── ConfirmModal.jsx       ← generic yes/no dialog
+│   │   │   │   └── ProfileModal.jsx       ← profile overlay (change password + change PIN)
 │   │   │   ├── shared/
-│   │   │   │   └── PinVerificationModal.jsx ← 6-digit PIN entry modal
+│   │   │   │   ├── PinVerificationModal.jsx ← 6-digit PIN entry modal (z-[60])
+│   │   │   │   ├── AddProductsModal.jsx   ← multi-select master SKU picker (z-[70])
+│   │   │   │   └── StockInUseModal.jsx    ← single-select batch picker (z-[70])
 │   │   │   └── ui/
-│   │   │       ├── DataTable.jsx          ← reusable table (columns + data props)
-│   │   │       └── StatusBadge.jsx        ← colored pill badge
+│   │   │       └── StatusBadge.jsx        ← colored pill: green for In Stock/Accomplished, red otherwise
 │   │   ├── context/
 │   │   │   ├── AuthContext.jsx            ← user session state (user, login, logout)
-│   │   │   └── WarehouseContext.jsx       ← active warehouse; fetches from /api/warehouses
+│   │   │   ├── WarehouseContext.jsx       ← active warehouse; fetches from /api/warehouses
+│   │   │   └── UIContext.jsx              ← overlay open/close flags (no URL navigation)
 │   │   ├── pages/
 │   │   │   ├── auth/
 │   │   │   │   └── LoginPage.jsx          ← sign in form
 │   │   │   ├── dashboard/
-│   │   │   │   └── DashboardPage.jsx      ← inventory table (7 hardcoded rows; not yet API-driven)
-│   │   │   └── products/
-│   │   │       └── CreateProductPage.jsx  ← floating card form; PIN-verified product creation
+│   │   │   │   └── DashboardPage.jsx      ← real-time inventory; stock from StockInUse per warehouse; re-fetches on location.key
+│   │   │   ├── products/
+│   │   │   │   └── CreateProductPage.jsx  ← overlay card; PIN-verified product creation; opened via UIContext
+│   │   │   └── receiveOrder/
+│   │   │       ├── ReceiveOrderListPage.jsx ← standalone page; re-fetches on location.key; contextual accomplish bar
+│   │   │       └── ReceiveOrderFormPage.jsx ← dual-mode: create (UIContext overlay) + accomplish (/receive-orders/:id)
 │   │   ├── routes/
 │   │   │   └── ProtectedRoute.jsx         ← auth + adminOnly route guard
-│   │   ├── App.jsx                        ← BrowserRouter + AuthProvider + WarehouseProvider + routes
+│   │   ├── App.jsx                        ← BrowserRouter + providers + AppRoutes + GlobalOverlays
 │   │   └── main.jsx                       ← React DOM entry point
 │   ├── .env                               ← VITE_API_URL=/api (gitignored)
 │   ├── vite.config.js                     ← includes proxy (/api + /sanctum → 127.0.0.1:8000)
@@ -197,17 +206,22 @@ Rural Rising Inventory Management System/   ← project root
     ├── app/
     │   ├── Http/
     │   │   └── Controllers/
-    │   │       ├── AuthController.php     ← login, logout, user
-    │   │       ├── WarehouseController.php ← index (returns all warehouses)
-    │   │       ├── ProductController.php  ← index, store (PIN-verified), show
-    │   │       └── PinController.php      ← verify (standalone PIN check endpoint)
+    │   │       ├── AuthController.php          ← login, logout, user
+    │   │       ├── WarehouseController.php     ← index (returns all warehouses)
+    │   │       ├── ProductController.php       ← index (with warehouse_stock + harvest_date), store (PIN-verified), show
+    │   │       ├── PinController.php           ← verify (standalone PIN check endpoint)
+    │   │       ├── StockInUseController.php    ← index (batches by sku_code + warehouse_id, FEFO)
+    │   │       └── ReceiveOrderController.php  ← index, store, show, complete
     │   └── Models/
-    │       ├── User.php                   ← fillable: name, email, password, role, position_title, pin
-    │       ├── Warehouse.php              ← fillable: name, code
-    │       └── Product.php                ← fillable: sku_code, name, category, unit, shelf_life, created_by
+    │       ├── User.php                        ← fillable: name, email, password, role, position_title, pin
+    │       ├── Warehouse.php                   ← fillable: name, code
+    │       ├── Product.php                     ← fillable: sku_code, name, category, unit, shelf_life, created_by
+    │       ├── StockInUse.php                  ← table: stock_in_use_codes; fillable: code, product_id, warehouse_id, quantity, harvest_date
+    │       ├── ReceiveOrder.php                ← fillable; belongsTo warehouse/creator/verifier; hasMany items
+    │       └── ReceiveOrderItem.php            ← fillable; belongsTo product/receiveOrder
     ├── bootstrap/
-    │   └── app.php                        ← statefulApi() enabled for Sanctum SPA auth
-    ├── config/                             ← cors, sanctum, session, database, etc.
+    │   └── app.php                            ← statefulApi() enabled for Sanctum SPA auth
+    ├── config/                                 ← cors, sanctum, session, database, etc.
     ├── database/
     │   ├── migrations/
     │   │   ├── (default Laravel migrations)
@@ -215,12 +229,17 @@ Rural Rising Inventory Management System/   ← project root
     │   │   ├── add_role_to_users_table
     │   │   ├── add_position_title_to_users_table
     │   │   ├── add_pin_to_users_table
-    │   │   └── create_products_table
+    │   │   ├── create_products_table
+    │   │   ├── create_stock_in_use_codes_table
+    │   │   ├── create_receive_orders_table
+    │   │   └── create_receive_order_items_table
     │   └── seeders/
-    │       └── UserSeeder.php             ← seeds 3 warehouses + admin@ruriims.com (role=admin, PIN=123456)
+    │       └── UserSeeder.php                 ← seeds 3 warehouses + 2 accounts:
+    │                                              admin@ruriims.com (role=admin, PIN=123456)
+    │                                              manager@ruriims.com (role=admin, PIN=123456)
     ├── routes/
-    │   └── api.php                        ← all API routes (see §5 above)
-    ├── .env                               ← environment config (gitignored)
+    │   └── api.php                            ← all API routes (see §5 above)
+    ├── .env                                   ← environment config (gitignored)
     └── composer.json
 ```
 

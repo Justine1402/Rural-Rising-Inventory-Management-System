@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useWarehouse } from '../../context/WarehouseContext';
+import { useUI } from '../../context/UIContext';
 import ProfileModal from '../modals/ProfileModal';
 
 const ChevronDown = () => (
@@ -18,28 +19,35 @@ const GearIcon = () => (
   </svg>
 );
 
-const ACTION_BUTTONS = [
-  { label: '+ Create Product',             to: '/products/create' },
-  { label: '+ Receive Order',              to: null },
+const STATIC_ACTION_BUTTONS = [
   { label: '+ Issue Product',              to: null },
   { label: '+ Transfer Request',           to: null },
   { label: '+ Create Temporary Warehouse', to: null },
 ];
 
+const BUTTON_ORDER = ['+ Create Product', '+ Receive Order', '+ Issue Product', '+ Transfer Request', '+ Create Temporary Warehouse'];
+
 export default function Navbar() {
   const { user, logout } = useAuth();
   const { activeWarehouse } = useWarehouse();
+  const { setReceiveOrderFormOpen, setCreateProductFormOpen } = useUI();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const inventoryLabel = location.pathname.startsWith('/receive-orders') ? 'Receive Orders' : 'Inventory';
   const [menuOpen, setMenuOpen] = useState(false);
   const [gearOpen, setGearOpen] = useState(false);
+  const [inventoryOpen, setInventoryOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const menuRef = useRef(null);
   const gearRef = useRef(null);
+  const inventoryRef = useRef(null);
 
   useEffect(() => {
     function handleClickOutside(e) {
       if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
       if (gearRef.current && !gearRef.current.contains(e.target)) setGearOpen(false);
+      if (inventoryRef.current && !inventoryRef.current.contains(e.target)) setInventoryOpen(false);
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -121,15 +129,31 @@ export default function Navbar() {
 
         {/* Action buttons */}
         <div className="flex items-center gap-2 flex-wrap">
-          {ACTION_BUTTONS.map(({ label, to }) => (
-            <button
-              key={label}
-              onClick={() => to && navigate(to)}
-              className="bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded transition-colors"
-            >
-              {label}
-            </button>
-          ))}
+          {BUTTON_ORDER.map((label) => {
+            if (label === '+ Create Product') {
+              return (
+                <button key={label} onClick={() => setCreateProductFormOpen(true)}
+                  className="bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
+                  {label}
+                </button>
+              );
+            }
+            if (label === '+ Receive Order') {
+              return (
+                <button key={label} onClick={() => setReceiveOrderFormOpen(true)}
+                  className="bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
+                  {label}
+                </button>
+              );
+            }
+            const btn = STATIC_ACTION_BUTTONS.find((b) => b.label === label);
+            return (
+              <button key={label} onClick={() => btn?.to && navigate(btn.to)}
+                className="bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
+                {label}
+              </button>
+            );
+          })}
         </div>
 
         {/* Center-right controls */}
@@ -137,9 +161,30 @@ export default function Navbar() {
           <button className="flex items-center gap-1 bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded-full transition-colors">
             All Products <ChevronDown />
           </button>
-          <button className="flex items-center gap-1 bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded-full transition-colors">
-            Inventory <ChevronDown />
-          </button>
+          <div className="relative" ref={inventoryRef}>
+            <button
+              onClick={() => setInventoryOpen((v) => !v)}
+              className="flex items-center gap-1 bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
+            >
+              {inventoryLabel} <ChevronDown />
+            </button>
+            {inventoryOpen && (
+              <div className="absolute left-0 top-8 w-48 bg-white rounded-lg shadow-lg z-50 overflow-hidden">
+                <button
+                  onClick={() => { setInventoryOpen(false); navigate('/'); }}
+                  className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Inventory
+                </button>
+                <button
+                  onClick={() => { setInventoryOpen(false); navigate('/receive-orders'); }}
+                  className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Receive Orders
+                </button>
+              </div>
+            )}
+          </div>
           <button className="flex items-center gap-1 bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded-full transition-colors">
             LIFO <ChevronDown />
           </button>

@@ -25,5 +25,16 @@ class UserSeeder extends Seeder
             ]
         );
         $admin->update(['role' => 'admin', 'pin' => Hash::make('123456')]);
+
+        $manager = User::firstOrCreate(
+            ['email' => 'manager@ruriims.com'],
+            [
+                'name'     => 'Manager User',
+                'password' => Hash::make('password'),
+                'role'     => 'admin',
+                'pin'      => Hash::make('123456'),
+            ]
+        );
+        $manager->update(['role' => 'admin', 'pin' => Hash::make('123456')]);
     }
 }
