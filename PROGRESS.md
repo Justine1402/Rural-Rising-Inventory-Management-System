@@ -28,7 +28,7 @@
 - [x] `routes/api.php` — `POST /login`, `POST /logout` (auth-guarded), `GET /user` (auth-guarded)
 
 ### Build Step 4 — Navbar + WarehouseTabs + DashboardPage + Wiring
-- [x] `Navbar.jsx` — two-row UI; avatar dropdown wired to `AuthContext` (name/email + View Profile + Log out); warehouse label wired to `WarehouseContext.activeWarehouse.name`; gear icon (⚙) visible only to admin, navigates to `/admin/users`; action buttons (Create Product, Receive Order, etc.) and filter dropdowns (All Products, Inventory, LIFO, Reports History) are **UI-only — no navigation wired yet**
+- [x] `Navbar.jsx` — two-row UI; avatar dropdown wired to `AuthContext` (name/email + View Profile + Log out); warehouse label wired to `WarehouseContext.activeWarehouse.name`; gear icon (⚙) visible only to admin, opens dropdown with "Manage Accounts" → `/admin/users`; `+ Create Product` button wired to `/products/create`; all other action buttons and filter dropdowns (Receive Order, Issue Product, Transfer Request, Create Temp Warehouse, All Products, Inventory, LIFO, Reports History) are **UI-only — no navigation wired yet**
 - [x] `WarehouseTabs.jsx` — reads real warehouse list from `WarehouseContext`; admin sees "All Warehouses" + 3 warehouse tabs, manager sees 1; clicking a tab calls `setActiveWarehouse`; active tab highlighted
 - [x] `DashboardPage.jsx` — static layout with 7 hardcoded product rows; `StatusBadge` implemented **inline** (not yet a separate file); no API calls
 - [x] `warehouses` migration + `Warehouse` model — 3 permanent warehouses seeded (QC, ALA, MAN)
@@ -38,18 +38,31 @@
 - [x] `App.jsx` — `/admin/users` route wired with `adminOnly` guard but currently renders `DashboardPage` as placeholder (UserManagementPage not built yet)
 
 ### Build Step 5 — Shared Components
-- [x] `ProfileModal.jsx` (`src/components/modals/`) — collapsible Change Password (chevron toggle, CSS max-height animation); position_title read-only display (shows "—" until backend wired); Change PIN (4-digit numeric, always visible); wired to Navbar avatar dropdown; **user info (name, email, warehouse) is still hardcoded — not yet reading from AuthContext**; Save Changes and PIN/password fields are UI-only (no API calls)
+- [x] `ProfileModal.jsx` (`src/components/modals/`) — collapsible Change Password (chevron toggle, CSS max-height animation); position_title read-only display (shows "—" until backend wired); Change PIN (6-digit numeric, always visible); wired to Navbar avatar dropdown; **user info (name, email, warehouse) is still hardcoded — not yet reading from AuthContext**; Save Changes and PIN/password fields are UI-only (no API calls)
 - [x] `ConfirmModal.jsx` (`src/components/modals/`) — reusable dialog; props: `isOpen`, `title`, `message`, `onConfirm`, `onCancel`; Confirm (green) + Cancel (gray) buttons; **not yet used anywhere in the app**
 - [x] `DataTable.jsx` (`src/components/ui/`) — basic implementation; props: `columns` (`[{ key, label }]`), `data`; dark green header, "No data available" empty state; **missing from spec: `onRowClick`, `selectedRow`, `onRowSelect`, `render` function, `loading`, `emptyMessage` props — to be added when list pages are built**; **not yet used anywhere in the app**
 - [x] `Navbar.jsx` — gear icon (⚙) visible only to admin; opens a dropdown with "Manage Accounts" item → navigates to `/admin/users`; click-outside closes it; avatar dropdown has no admin items (View Profile + Log out only)
 - [x] `add_position_title_to_users_table` migration — nullable `position_title` string added to `users` table; `User` model `#[Fillable]` updated; migration run
-- [ ] `StatusBadge.jsx` — currently implemented **inline** inside `DashboardPage.jsx`; needs to be extracted to `src/components/ui/StatusBadge.jsx` before Step 6
+- [x] `StatusBadge.jsx` (`src/components/ui/`) — extracted from `DashboardPage.jsx`; props: `status` (string); green badge for "In Stock", red for all others
 
 ---
 
+### Build Step 6 — PinVerificationModal + CreateProductPage + ProductController
+- [x] `PinVerificationModal.jsx` (`src/components/shared/`) — 6 individual digit inputs; auto-advance on entry; backspace clears current digit or moves back; CLEAR resets all; VERIFY calls `onVerify(pin)`; parent handles API call; props: `isOpen`, `onVerify`, `onClose`; z-[60] so it renders above form panels
+- [x] `CreateProductPage.jsx` (`src/pages/products/`) — floating card panel (`fixed left-44 right-36 top-[110px]`, content-height so warehouse tabs remain visible below); dim overlay behind (z-40, clicking dim navigates back); fields: Product Name, Category (dropdown), Unit of Measure (dropdown), Shelf Life (days); `created_by` set server-side from authenticated user — no visible field; opens PinVerificationModal on CREATE; on verify → `POST /api/products` with form data + PIN; shows `"Created SKU-XXX"` label on success; CREATE button disabled after success; shows inline error on failure
+- [x] `add_pin_to_users_table` migration — nullable `pin` string column added to `users` table; run
+- [x] `create_products_table` migration — columns: `sku_code` (unique), `name`, `category`, `unit`, `shelf_life`, `created_by` (FK → users); run
+- [x] `Product` model — fillable: sku_code, name, category, unit, shelf_life, created_by; `creator()` belongsTo User
+- [x] `ProductController` — `index` (all products), `store` (validate → verify PIN via Hash::check → generate SKU-XXX → save), `show`
+- [x] `PinController` — `verify(pin)` standalone endpoint; returns 422 with `{ message: 'Incorrect PIN.' }` on failure
+- [x] `UserSeeder` — updated to seed default PIN `123456` (hashed) for `admin@ruriims.com`; reseeded
+- [x] `User` model — `pin` added to fillable and hidden
+- [x] `routes/api.php` — added `GET/POST /products`, `GET /products/{product}`, `POST /pin/verify` under `auth:sanctum`
+- [x] `Navbar.jsx` — `+ Create Product` button wired to navigate `/products/create`
+- [x] `App.jsx` — `/products/create` route renders `DashboardPage` + `CreateProductPage` together (dashboard stays visible dimmed behind the panel)
+
 ## Not Started
 
-- [ ] Step 6 — `CreateProductPage` + `ProductController` + `PinVerificationModal`
 - [ ] Step 7 — `AddProductsModal` + `StockInUseModal`
 - [ ] Step 8 — `ReceiveOrderListPage` + `ReceiveOrderFormPage` + `ReceiveOrderController`
 - [ ] Step 9 — `TransferRequestListPage` + `TransferRequestFormPage` + `TransferRequestController`

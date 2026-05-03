@@ -141,6 +141,11 @@ Routes defined in `ruriims-backend/routes/api.php`:
 | `POST` | `/api/login` | None | `{ "user": {...} }` |
 | `GET` | `/api/user` | `auth:sanctum` | `{ "user": {...} }` |
 | `POST` | `/api/logout` | `auth:sanctum` | `{ "message": "Logged out" }` |
+| `GET` | `/api/warehouses` | `auth:sanctum` | `{ "warehouses": [...] }` |
+| `GET` | `/api/products` | `auth:sanctum` | `{ "products": [...] }` |
+| `POST` | `/api/products` | `auth:sanctum` | `{ "product": {...} }` — validates + PIN check + generates SKU |
+| `GET` | `/api/products/{product}` | `auth:sanctum` | `{ "product": {...} }` |
+| `POST` | `/api/pin/verify` | `auth:sanctum` | `{ "verified": true }` or 422 |
 
 ---
 
@@ -151,29 +156,40 @@ Rural Rising Inventory Management System/   ← project root
 ├── TECHSTACK.md                            ← this file
 ├── PROGRESS.md                             ← feature development tracker
 ├── STRUCTURE.md                            ← frontend architecture spec
+├── DESIGN.md                               ← brand colors and styling rules
 ├── ruriims-frontend/                       ← React app
 │   ├── src/
 │   │   ├── api/
 │   │   │   └── axios.js                   ← axios client + getCsrfCookie()
 │   │   ├── assets/                         ← images and SVGs
 │   │   ├── components/
-│   │   │   └── layout/
-│   │   │       ├── Navbar.jsx             ← top navigation bar (static UI)
-│   │   │       └── WarehouseTabs.jsx      ← warehouse tab switcher (static UI)
+│   │   │   ├── layout/
+│   │   │   │   ├── Navbar.jsx             ← two-row nav; wired to AuthContext + WarehouseContext
+│   │   │   │   └── WarehouseTabs.jsx      ← warehouse tab switcher; wired to WarehouseContext
+│   │   │   ├── modals/
+│   │   │   │   ├── ProfileModal.jsx       ← profile overlay (change password + change PIN)
+│   │   │   │   └── ConfirmModal.jsx       ← generic yes/no dialog
+│   │   │   ├── shared/
+│   │   │   │   └── PinVerificationModal.jsx ← 6-digit PIN entry modal
+│   │   │   └── ui/
+│   │   │       ├── DataTable.jsx          ← reusable table (columns + data props)
+│   │   │       └── StatusBadge.jsx        ← colored pill badge
 │   │   ├── context/
-│   │   │   ├── AuthContext.jsx            ← user session state
-│   │   │   └── WarehouseContext.jsx       ← active warehouse state
+│   │   │   ├── AuthContext.jsx            ← user session state (user, login, logout)
+│   │   │   └── WarehouseContext.jsx       ← active warehouse; fetches from /api/warehouses
 │   │   ├── pages/
 │   │   │   ├── auth/
 │   │   │   │   └── LoginPage.jsx          ← sign in form
-│   │   │   └── dashboard/
-│   │   │       └── DashboardPage.jsx      ← inventory table (static UI)
+│   │   │   ├── dashboard/
+│   │   │   │   └── DashboardPage.jsx      ← inventory table (7 hardcoded rows; not yet API-driven)
+│   │   │   └── products/
+│   │   │       └── CreateProductPage.jsx  ← floating card form; PIN-verified product creation
 │   │   ├── routes/
-│   │   │   └── ProtectedRoute.jsx         ← auth + admin route guard
-│   │   ├── App.jsx                        ← router + context providers
+│   │   │   └── ProtectedRoute.jsx         ← auth + adminOnly route guard
+│   │   ├── App.jsx                        ← BrowserRouter + AuthProvider + WarehouseProvider + routes
 │   │   └── main.jsx                       ← React DOM entry point
 │   ├── .env                               ← VITE_API_URL=/api (gitignored)
-│   ├── vite.config.js                     ← includes dev proxy
+│   ├── vite.config.js                     ← includes proxy (/api + /sanctum → 127.0.0.1:8000)
 │   ├── tailwind.config.js
 │   └── package.json
 │
@@ -181,18 +197,29 @@ Rural Rising Inventory Management System/   ← project root
     ├── app/
     │   ├── Http/
     │   │   └── Controllers/
-    │   │       └── AuthController.php     ← login, logout, user
+    │   │       ├── AuthController.php     ← login, logout, user
+    │   │       ├── WarehouseController.php ← index (returns all warehouses)
+    │   │       ├── ProductController.php  ← index, store (PIN-verified), show
+    │   │       └── PinController.php      ← verify (standalone PIN check endpoint)
     │   └── Models/
-    │       └── User.php
+    │       ├── User.php                   ← fillable: name, email, password, role, position_title, pin
+    │       ├── Warehouse.php              ← fillable: name, code
+    │       └── Product.php                ← fillable: sku_code, name, category, unit, shelf_life, created_by
     ├── bootstrap/
-    │   └── app.php                        ← statefulApi() enabled
+    │   └── app.php                        ← statefulApi() enabled for Sanctum SPA auth
     ├── config/                             ← cors, sanctum, session, database, etc.
     ├── database/
-    │   ├── migrations/                    ← users, sessions, cache, jobs, tokens
+    │   ├── migrations/
+    │   │   ├── (default Laravel migrations)
+    │   │   ├── create_warehouses_table
+    │   │   ├── add_role_to_users_table
+    │   │   ├── add_position_title_to_users_table
+    │   │   ├── add_pin_to_users_table
+    │   │   └── create_products_table
     │   └── seeders/
-    │       └── UserSeeder.php             ← seeds admin@ruriims.com
+    │       └── UserSeeder.php             ← seeds 3 warehouses + admin@ruriims.com (role=admin, PIN=123456)
     ├── routes/
-    │   └── api.php                        ← login, logout, user routes
+    │   └── api.php                        ← all API routes (see §5 above)
     ├── .env                               ← environment config (gitignored)
     └── composer.json
 ```

@@ -70,7 +70,7 @@ export default function ProfileModal({ isOpen, onClose }) {
   };
 
   const handlePinChange = (field) => (e) => {
-    const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+    const val = e.target.value.replace(/\D/g, '').slice(0, 6);
     setPins((prev) => ({ ...prev, [field]: val }));
   };
 
@@ -163,15 +163,15 @@ export default function ProfileModal({ isOpen, onClose }) {
             >
               Change PIN
             </h3>
-            <p className="text-xs text-gray-400 mb-3">PIN is a 4-digit number used to authorize transactions.</p>
+            <p className="text-xs text-gray-400 mb-3">PIN is a 6-digit number used to authorize transactions.</p>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Current PIN</label>
                 <input
                   type="password"
                   inputMode="numeric"
-                  maxLength={4}
-                  placeholder="••••"
+                  maxLength={6}
+                  placeholder="••••••"
                   value={pins.current}
                   onChange={handlePinChange('current')}
                   className="w-full bg-gray-100 border border-transparent rounded-lg px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#1A381E] focus:bg-white transition tracking-[0.4em] text-center"
@@ -182,8 +182,8 @@ export default function ProfileModal({ isOpen, onClose }) {
                 <input
                   type="password"
                   inputMode="numeric"
-                  maxLength={4}
-                  placeholder="••••"
+                  maxLength={6}
+                  placeholder="••••••"
                   value={pins.newPin}
                   onChange={handlePinChange('newPin')}
                   className="w-full bg-gray-100 border border-transparent rounded-lg px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#1A381E] focus:bg-white transition tracking-[0.4em] text-center"

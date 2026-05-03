@@ -19,11 +19,11 @@ const GearIcon = () => (
 );
 
 const ACTION_BUTTONS = [
-  '+ Create Product',
-  '+ Receive Order',
-  '+ Issue Product',
-  '+ Transfer Request',
-  '+ Create Temporary Warehouse',
+  { label: '+ Create Product',             to: '/products/create' },
+  { label: '+ Receive Order',              to: null },
+  { label: '+ Issue Product',              to: null },
+  { label: '+ Transfer Request',           to: null },
+  { label: '+ Create Temporary Warehouse', to: null },
 ];
 
 export default function Navbar() {
@@ -121,9 +121,10 @@ export default function Navbar() {
 
         {/* Action buttons */}
         <div className="flex items-center gap-2 flex-wrap">
-          {ACTION_BUTTONS.map((label) => (
+          {ACTION_BUTTONS.map(({ label, to }) => (
             <button
               key={label}
+              onClick={() => to && navigate(to)}
               className="bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded transition-colors"
             >
               {label}

@@ -101,16 +101,20 @@ ruriims-frontend/
     │   │   ├── Navbar.jsx               ← Top navigation bar (all protected pages)
     │   │   └── WarehouseTabs.jsx        ← Bottom warehouse switcher tabs
     │   │
-    │   └── shared/
-    │       ├── PinVerificationModal.jsx     ← 6-digit PIN modal (all transactions)
-    │       ├── AddProductsModal.jsx         ← Master product picker (Receive, Transfer, Issue)
-    │       ├── StockInUseModal.jsx          ← Batch picker — opened by clicking the
-    │       │                                   Stock-In-Use Code cell per product row
-    │       │                                   (Transfer and Issue flows)
-    │       ├── DataTable.jsx                ← Reusable table with configurable columns
-    │       ├── StatusBadge.jsx              ← Colored pill badge for all statuses
-    │       ├── ConfirmModal.jsx             ← Generic yes/no confirmation dialog
-    │       └── ProfileModal.jsx             ← Profile overlay (avatar click)
+    │   ├── modals/
+    │   │   ├── ProfileModal.jsx         ← Profile overlay (avatar click)
+    │   │   └── ConfirmModal.jsx         ← Generic yes/no confirmation dialog
+    │   │
+    │   ├── shared/
+    │   │   ├── PinVerificationModal.jsx     ← 6-digit PIN modal (all transactions)
+    │   │   ├── AddProductsModal.jsx         ← Master product picker (Receive, Transfer, Issue)
+    │   │   └── StockInUseModal.jsx          ← Batch picker — opened by clicking the
+    │   │                                        Stock-In-Use Code cell per product row
+    │   │                                        (Transfer and Issue flows)
+    │   │
+    │   └── ui/
+    │       ├── DataTable.jsx            ← Reusable table with configurable columns
+    │       └── StatusBadge.jsx          ← Colored pill badge for all statuses
     │
     ├── pages/
     │   ├── auth/
@@ -446,7 +450,7 @@ Content:
   fields with show/hide toggles (Current, New, Confirm). Uses CSS `max-height`
   transition for smooth animation.
 - **Change PIN** — always visible; 2-column layout (Current PIN, New PIN);
-  4-digit numeric inputs, centered and masked
+  6-digit numeric inputs, centered and masked
 
 Props:
 ```js
@@ -1060,7 +1064,7 @@ All styling uses **Tailwind CSS utility classes only**. No custom CSS files.
 
 **Form overlay panel (Create Product pattern):**
 - Background dim: `fixed inset-0 bg-black/30 z-40`
-- Panel: `fixed right-0 top-0 h-full w-2/3 bg-white shadow-xl z-50 p-6 overflow-y-auto`
+- Panel: `fixed left-44 right-36 top-[110px] bg-white rounded-2xl shadow-2xl z-50 p-8` (content-height; no `bottom` so warehouse tabs remain visible below the panel)
 
 ---
 

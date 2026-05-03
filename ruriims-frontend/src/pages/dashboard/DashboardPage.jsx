@@ -1,5 +1,6 @@
 import Navbar from '../../components/layout/Navbar';
 import WarehouseTabs from '../../components/layout/WarehouseTabs';
+import StatusBadge from '../../components/ui/StatusBadge';
 
 const ROWS = [
   { name: 'Mango',    main: '25 KG', alabang: '50 KG', mandaluyong: '0 KG',  harvest: 'Dec 14, 2025', status: 'In Stock' },
@@ -11,13 +12,6 @@ const ROWS = [
   { name: 'Cabbage',  main: '0 KG',  alabang: '0 KG',  mandaluyong: '0 KG',  harvest: '—',            status: 'Out of Stock' },
 ];
 
-function StatusBadge({ status }) {
-
-  const base = 'inline-block rounded-full px-3 py-0.5 text-xs font-medium';
-  if (status === 'In Stock')
-    return <span className={`${base} bg-green-100 text-green-800`}>{status}</span>;
-  return <span className={`${base} bg-red-100 text-red-700`}>{status}</span>;
-}
 
 export default function DashboardPage() {
   return (

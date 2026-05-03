@@ -21,8 +21,9 @@ class UserSeeder extends Seeder
                 'name'     => 'Admin User',
                 'password' => Hash::make('password'),
                 'role'     => 'admin',
+                'pin'      => Hash::make('123456'),
             ]
         );
-        $admin->update(['role' => 'admin']);
+        $admin->update(['role' => 'admin', 'pin' => Hash::make('123456')]);
     }
 }
