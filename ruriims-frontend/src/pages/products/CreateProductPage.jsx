@@ -9,7 +9,7 @@ const UNITS = ['kg', 'g', 'pcs'];
 const fieldClass =
   'w-full bg-gray-100 border border-transparent rounded-lg px-4 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#1A381E] focus:bg-white transition';
 
-export default function CreateProductPage({ onClose }) {
+export default function CreateProductPage({ onClose, onSuccess }) {
   const navigate = useNavigate();
 
   const [form, setForm] = useState({ name: '', category: '', unit: '', shelf_life: '' });
@@ -59,6 +59,7 @@ export default function CreateProductPage({ onClose }) {
       setLoading(true);
       const res = await api.post('/products', { ...form, pin });
       setSuccessCode(res.data.product.sku_code);
+      onSuccess?.();
     } catch (err) {
       setError(err.response?.data?.message ?? 'Something went wrong. Please try again.');
     } finally {

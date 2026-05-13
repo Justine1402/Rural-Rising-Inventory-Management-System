@@ -16,11 +16,11 @@ function GuestRoute({ children }) {
 }
 
 function GlobalOverlays() {
-  const { receiveOrderFormOpen, setReceiveOrderFormOpen, createProductFormOpen, setCreateProductFormOpen } = useUI();
+  const { receiveOrderFormOpen, setReceiveOrderFormOpen, createProductFormOpen, setCreateProductFormOpen, refreshProducts } = useUI();
   return (
     <>
       {createProductFormOpen && (
-        <CreateProductPage onClose={() => setCreateProductFormOpen(false)} />
+        <CreateProductPage onClose={() => setCreateProductFormOpen(false)} onSuccess={refreshProducts} />
       )}
       {receiveOrderFormOpen && (
         <ReceiveOrderFormPage onClose={() => setReceiveOrderFormOpen(false)} />

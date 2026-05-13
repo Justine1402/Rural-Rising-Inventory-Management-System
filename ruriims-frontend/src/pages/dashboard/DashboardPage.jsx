@@ -4,9 +4,11 @@ import Navbar from '../../components/layout/Navbar';
 import WarehouseTabs from '../../components/layout/WarehouseTabs';
 import StatusBadge from '../../components/ui/StatusBadge';
 import api from '../../api/axios';
+import { useUI } from '../../context/UIContext';
 
 export default function DashboardPage() {
   const location = useLocation();
+  const { productRefreshKey } = useUI();
   const [products, setProducts] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -22,7 +24,7 @@ export default function DashboardPage() {
       })
       .catch(() => setError('Failed to load products. Please refresh.'))
       .finally(() => setLoading(false));
-  }, [location.key]);
+  }, [location.key, productRefreshKey]);
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">

@@ -52,13 +52,17 @@ class ReceiveOrderController extends Controller
         }
 
         $warehouse = \App\Models\Warehouse::findOrFail($request->warehouse_id);
-        $seq = ReceiveOrder::count() + 1;
-        $code = 'RO-' . $warehouse->code . '-000-' . str_pad($seq, 3, '0', STR_PAD_LEFT);
 
         $orderCost = collect($request->items)->sum('product_cost');
         $total = $orderCost + $request->delivery_fee;
 
-        $order = DB::transaction(function () use ($request, $code, $orderCost, $total, $user) {
+        $order = DB::transaction(function () use ($request, $warehouse, $orderCost, $total, $user) {
+            // TODO: extract into GeneratesTransactionCode trait when TRF/ISS/TWH are built
+            $seq = ReceiveOrder::where('warehouse_id', $warehouse->id)
+                ->lockForUpdate()
+                ->count() + 1;
+            $code = 'RO-' . $warehouse->code . '-000-' . str_pad($seq, 3, '0', STR_PAD_LEFT);
+
             $order = ReceiveOrder::create([
                 'code'          => $code,
                 'warehouse_id'  => $request->warehouse_id,
