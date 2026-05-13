@@ -24,7 +24,7 @@ const STATIC_ACTION_BUTTONS = [
   { label: '+ Create Temporary Warehouse', to: null },
 ];
 
-const BUTTON_ORDER = ['+ Create Product', '+ Receive Order', '+ Issue Product', '+ Transfer Request', '+ Create Temporary Warehouse'];
+const BUTTON_ORDER = ['+ Create Product', '+ Receive Order', '+ Transfer Request', '+ Issue Product', '+ Create Temporary Warehouse'];
 
 export default function Navbar() {
   const { user, logout } = useAuth();

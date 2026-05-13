@@ -84,13 +84,13 @@ export default function TransferRequestListPage() {
                   <tr
                     key={transfer.id}
                     onClick={() => handleRowClick(transfer)}
-                    className="border-b border-gray-100 transition-colors"
+                    className="border-b border-gray-100 odd:bg-white even:bg-gray-50 transition-colors"
                     style={{
                       backgroundColor: isSelected ? '#f0fdf4' : undefined,
                       borderLeft: isSelected ? '4px solid #409645' : '4px solid transparent',
                       cursor: transfer.status === 'incomplete' ? 'pointer' : 'default',
                     }}
-                    onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.backgroundColor = '#f9fafb'; }}
+                    onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.backgroundColor = '#f3f4f6'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = isSelected ? '#f0fdf4' : ''; }}
                   >
                     <td className="px-5 py-3 font-mono text-xs text-gray-700">{transfer.code}</td>

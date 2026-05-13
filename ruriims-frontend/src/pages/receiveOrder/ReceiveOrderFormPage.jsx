@@ -93,12 +93,12 @@ export default function ReceiveOrderFormPage({ onClose, onSuccess }) {
         setSuccessCode(res.data.order.code);
         onSuccess?.();
       } else {
-        await api.post(`/receive-orders/${id}/complete`, {
+        const res = await api.post(`/receive-orders/${id}/complete`, {
           date_arrived: form.date_arrived,
           pin,
           items: items.map((i) => ({ id: i.id, quantity_arrived: parseFloat(i.quantity_arrived) || 0 })),
         });
-        navigate('/receive-orders');
+        setSuccessCode(res.data.message);
       }
     } catch (err) {
       setError(err.response?.data?.message ?? 'Something went wrong. Please try again.');
@@ -261,7 +261,7 @@ export default function ReceiveOrderFormPage({ onClose, onSuccess }) {
               <div className="flex items-center justify-end gap-3">
                 {successCode && (
                   <span className="px-4 py-2 text-sm font-medium text-gray-500 bg-gray-200 rounded-lg">
-                    Created {successCode}
+                    {isAccomplish ? successCode : `Created ${successCode}`}
                   </span>
                 )}
                 <button

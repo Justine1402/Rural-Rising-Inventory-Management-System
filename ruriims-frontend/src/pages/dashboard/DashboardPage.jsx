@@ -67,7 +67,7 @@ export default function DashboardPage() {
                 </tr>
               )}
               {!loading && !error && products.map((product) => (
-                <tr key={product.sku_code} className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer">
+                <tr key={product.sku_code} className="border-b border-gray-100 odd:bg-white even:bg-gray-50 hover:bg-gray-100 cursor-pointer">
                   <td className="px-5 py-3 text-gray-800">{product.name}</td>
                   {warehouses.map((w) => (
                     <td key={w.id} className="px-5 py-3 text-gray-600">

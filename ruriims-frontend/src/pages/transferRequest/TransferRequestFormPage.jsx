@@ -11,7 +11,7 @@ import { useWarehouse } from '../../context/WarehouseContext';
 const fieldClass =
   'w-full bg-gray-100 border border-transparent rounded-lg px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#1A381E] focus:bg-white transition';
 const readonlyClass =
-  'w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-500 cursor-not-allowed';
+  'w-full bg-gray-100 border border-transparent rounded-lg px-4 py-2.5 text-sm text-gray-500 cursor-not-allowed';
 
 export default function TransferRequestFormPage({ onClose, onSuccess }) {
   const { id } = useParams();
@@ -138,14 +138,14 @@ export default function TransferRequestFormPage({ onClose, onSuccess }) {
         setSuccessCode(res.data.transfer.code);
         onSuccess?.();
       } else {
-        await api.post(`/transfer-requests/${id}/accomplish`, {
+        const res = await api.post(`/transfer-requests/${id}/accomplish`, {
           date_received: dateReceived,
           pin,
           items: items.map((i) => ({ id: i.id, quantity_received: parseFloat(i.quantity_received) || 0 })),
         });
         refreshProducts();
         refreshTransferRequests();
-        navigate('/transfer-requests');
+        setSuccessCode(res.data.message);
       }
     } catch (err) {
       setError(err.response?.data?.message ?? 'Something went wrong. Please try again.');
@@ -198,18 +198,22 @@ export default function TransferRequestFormPage({ onClose, onSuccess }) {
                   {isAccomplish ? (
                     <div className={readonlyClass}>{transferData?.source_warehouse}</div>
                   ) : (
-                    <select
-                      value={sourceWarehouseId}
-                      onChange={(e) => { setSourceWarehouseId(e.target.value); if (e.target.value === destinationWarehouseId) setDestinationWarehouseId(''); }}
-                      className={fieldClass}
-                    >
-                      <option value="">Select source warehouse</option>
-                      {permanentWarehouses.map((w) => (
-                        <option key={w.id} value={w.id} disabled={String(w.id) === String(destinationWarehouseId)}>
-                          {w.name}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="relative">
+                      <select
+                        value={sourceWarehouseId}
+                        onChange={(e) => { setSourceWarehouseId(e.target.value); if (e.target.value === destinationWarehouseId) setDestinationWarehouseId(''); }}
+                        className={`${fieldClass} appearance-none pr-8`}
+                        style={{ color: sourceWarehouseId ? '#1f2937' : '#9ca3af' }}
+                      >
+                        <option value="">Select source warehouse</option>
+                        {permanentWarehouses.map((w) => (
+                          <option key={w.id} value={w.id} disabled={String(w.id) === String(destinationWarehouseId)}>
+                            {w.name}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">▾</span>
+                    </div>
                   )}
                 </div>
                 <div>
@@ -217,18 +221,22 @@ export default function TransferRequestFormPage({ onClose, onSuccess }) {
                   {isAccomplish ? (
                     <div className={readonlyClass}>{transferData?.destination_warehouse}</div>
                   ) : (
-                    <select
-                      value={destinationWarehouseId}
-                      onChange={(e) => { setDestinationWarehouseId(e.target.value); if (e.target.value === sourceWarehouseId) setSourceWarehouseId(''); }}
-                      className={fieldClass}
-                    >
-                      <option value="">Select destination warehouse</option>
-                      {warehouses.map((w) => (
-                        <option key={w.id} value={w.id} disabled={String(w.id) === String(sourceWarehouseId)}>
-                          {w.name}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="relative">
+                      <select
+                        value={destinationWarehouseId}
+                        onChange={(e) => { setDestinationWarehouseId(e.target.value); if (e.target.value === sourceWarehouseId) setSourceWarehouseId(''); }}
+                        className={`${fieldClass} appearance-none pr-8`}
+                        style={{ color: destinationWarehouseId ? '#1f2937' : '#9ca3af' }}
+                      >
+                        <option value="">Select destination warehouse</option>
+                        {warehouses.map((w) => (
+                          <option key={w.id} value={w.id} disabled={String(w.id) === String(sourceWarehouseId)}>
+                            {w.name}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">▾</span>
+                    </div>
                   )}
                 </div>
                 {isAccomplish && (
@@ -359,7 +367,7 @@ export default function TransferRequestFormPage({ onClose, onSuccess }) {
               <div className="flex items-center justify-end gap-3">
                 {successCode && (
                   <span className="px-4 py-2 text-sm font-medium text-gray-500 bg-gray-200 rounded-lg">
-                    Created {successCode}
+                    {isAccomplish ? successCode : `Created ${successCode}`}
                   </span>
                 )}
                 <button
