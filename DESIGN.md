@@ -37,7 +37,7 @@ For colors not covered by Tailwind defaults, use inline `style={{ backgroundColo
 - Buttons: Medium green (`#409645`) background, white text, rounded corners
 - Cards: White background, subtle shadow, rounded corners
 - Page background: Light gray (`#F3F4F6` / `bg-gray-100`)
-- Tables: Dark green header row with white text; alternating white rows
+- Tables: Dark green header row with white text; zebra-striped body rows (odd rows white, even rows light gray `bg-gray-50`)
 - Status badges: Green pill for active/in-stock, red pill for inactive/out-of-stock
 
 ---

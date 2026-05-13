@@ -89,9 +89,6 @@ ruriims-frontend/
     ├── api/
     │   └── axios.js                     ← Axios instance + getCsrfCookie()
     │
-    ├── assets/
-    │   └── logo.png                     ← Rural Rising Philippines logo
-    │
     ├── context/
     │   ├── AuthContext.jsx              ← User session state: user, login(), logout()
     │   ├── WarehouseContext.jsx         ← Active warehouse shared across all pages
@@ -179,8 +176,7 @@ ruriims-frontend/
 /receive-orders                     → ReceiveOrderListPage             (protected)
 /receive-orders/:id                 → ReceiveOrderListPage + ReceiveOrderFormPage overlay (accomplish) (protected)
 /transfer-requests                  → TransferRequestListPage          (protected)
-/transfer-requests/new              → TransferRequestFormPage (create)  (protected)
-/transfer-requests/:id              → TransferRequestFormPage (accomplish) (protected)
+/transfer-requests/:id              → TransferRequestListPage + TransferRequestFormPage overlay (accomplish) (protected)
 /issue-products/new                 → IssueProductFormPage             (protected)
 /temporary-warehouses/:id           → TemporaryWarehouseDetailPage     (protected, read-only)
 /temporary-warehouses/new           → TemporaryWarehouseFormPage       (protected)
@@ -206,6 +202,9 @@ respectively. `GlobalOverlays` in `App.jsx` renders whichever overlay is open. T
 means there are no `/products/create`, `/receive-orders/new`, or `/transfer-requests/new`
 routes. Accomplish mode for Receive Orders and Transfer Requests still uses routes
 (`/receive-orders/:id`, `/transfer-requests/:id`) since they need IDs.
+Both list pages render beneath the overlay when the accomplish route is active —
+`ReceiveOrderListPage` + `ReceiveOrderFormPage` share the `/receive-orders/:id` route,
+and `TransferRequestListPage` + `TransferRequestFormPage` share `/transfer-requests/:id`.
 
 **Note on `/temporary-warehouses/:id` vs `/temporary-warehouses/:id/close`:**
 React Router evaluates these in order. Place the `/close` route before `/:id` in
@@ -220,23 +219,20 @@ React Router evaluates these in order. Place the `/close` route before `/:id` in
 On mount, calls `GET /api/user` to restore session from the existing Sanctum cookie.
 
 ```js
-// Value shape
+// Value shape (reflects actual API response from Auth::user())
 {
   user: {
     id: number,
-    name: string,           // e.g. "James Clark"
+    name: string,
     email: string,
-    position: string,       // e.g. "Main Warehouse Manager"
-    position_title: string, // nullable — e.g. "Warehouse Manager"
-    employeeId: string,     // e.g. "2361927"
-    warehouseId: number,
-    warehouseName: string,  // e.g. "Main Warehouse (Quezon City)"
-    warehouseCode: string,  // e.g. "QC"
-    role: string,           // "admin" | "manager"
+    role: string,            // "admin" | "manager"
+    warehouse_id: number | null,
+    position_title: string | null,
   } | null,
   login: async (email, password) => void,
   logout: async () => void,
   isAuthenticated: boolean,
+  loading: boolean,
 }
 ```
 
@@ -256,6 +252,8 @@ a product is created — without navigating away.
   setTransferRequestFormOpen: function,
   productRefreshKey: number,              // increments on each successful product creation
   refreshProducts: function,              // call this to trigger a dashboard re-fetch
+  receiveOrderRefreshKey: number,         // increments on each successful RO create/accomplish
+  refreshReceiveOrders: function,         // call this to trigger an RO list re-fetch
   transferRequestRefreshKey: number,      // increments on each successful TRF create/accomplish
   refreshTransferRequests: function,      // call this to trigger a TRF list re-fetch
 }
@@ -289,6 +287,11 @@ non-null (i.e., after auth is confirmed). The `useEffect` depends on `[user]` �
 `[]` — so it never fires before the Sanctum session is established, and it clears the
 warehouse list on logout. Temporary warehouses are appended dynamically when active.
 
+> **Current state:** `activeWarehouse` defaults to `list[0]` (the first warehouse)
+> for all users on login, including admin. The intended "All Warehouses" null default
+> for admin is not yet implemented — it will be addressed alongside the manager
+> single-warehouse scoping in Step 13.
+
 ---
 
 ## Layout Components
@@ -305,8 +308,8 @@ Persistent top bar on every protected page. Reads from `AuthContext` and
 Default state (permanent warehouse active):
 - `+ Create Product` → opens `CreateProductPage` overlay via `UIContext` (no URL change)
 - `+ Receive Order` → opens `ReceiveOrderFormPage` overlay via `UIContext` (no URL change)
+- `+ Transfer Request` → opens `TransferRequestFormPage` overlay via `UIContext` (no URL change)
 - `+ Issue Product` → `/issue-products/new` (not yet built)
-- `+ Transfer Request` → `/transfer-requests/new` (not yet built)
 - `+ Create Temporary Warehouse` → `/temporary-warehouses/new` (not yet built)
 
 When a **Temporary Warehouse tab is active**, Navbar shows only:
@@ -350,8 +353,13 @@ Bottom row of tabs. Active tab highlighted dark green. Clicking updates
 **Admin account tabs:** All Warehouses | Quezon City Warehouse | Alabang Warehouse |
 Mandaluyong Warehouse | [Active Temporary Warehouse name, if any]
 
-**Manager account tabs:** Only the single warehouse the manager is assigned to.
+**Manager account tabs (planned):** Only the single warehouse the manager is assigned to.
 No tab switcher is shown for manager accounts.
+
+> **Current state:** Manager single-warehouse restriction is not yet implemented.
+> All users currently see all warehouse tabs (same as admin). The scoping logic
+> will be added in Step 13 when `UserManagementPage` and `warehouse_id` assignment
+> are wired up.
 
 ---
 
@@ -452,15 +460,15 @@ status   string
 | `"Accomplished"` | green |
 | `"Out of Stock"` | red |
 | `"Incomplete"` | red |
-| `"Complete"` / `"Closed"` / `"Reviewed"` | green (planned) |
+| `"Complete"` | green |
+| `"Closed"` / `"Reviewed"` | green (planned) |
 | `"Pending Review"` | orange (planned) |
 
 ---
 
 ### `ProfileModal.jsx`
 
-Opened by clicking the user avatar in the Navbar. Reads user from `AuthContext`
-internally.
+Opened by clicking the user avatar in the Navbar.
 
 Content:
 - "PROFILE" header (dark green bar) + X close button
@@ -472,6 +480,11 @@ Content:
   transition for smooth animation.
 - **Change PIN** — always visible; 2-column layout (Current PIN, New PIN);
   6-digit numeric inputs, centered and masked
+
+> **Current state:** User info (name, email, warehouse name) is hardcoded as
+> placeholder values — not yet reading from `AuthContext`. Change Password and
+> Change PIN are UI-only with no API calls. Both will be wired when
+> `UserManagementPage` (Step 13) establishes the full user management backend.
 
 Props:
 ```js
@@ -686,7 +699,7 @@ Incomplete row selected, `+ Transfer Request` Navbar button becomes
 
 ### `TransferRequestFormPage` (proto p.23-33, SRS §3.5.3-3.5.6)
 
-**Create mode** (`/transfer-requests/new`):
+**Create mode** (UIContext overlay — no URL change):
 
 Header: RETURN button + "Create Transfer Request" title
 
@@ -999,7 +1012,7 @@ endpoint via DomPDF.
 ### All list pages:
 1. `useEffect` on mount → fetch data from API
 2. Store in `useState`; show loading indicator while fetching
-3. Render `DataTable` with columns per spec above
+3. Render inline `<table>` markup with columns per spec above (no shared DataTable component)
 4. `useState` for `error` — show inline red message if fetch fails
 5. `onRowClick` → `useNavigate` to form/detail route
 6. **Single-row select behavior applies to: `ReceiveOrderListPage`,
@@ -1131,7 +1144,7 @@ Build in strict sequence — each step depends on the previous being complete:
 2. `AuthContext` + `WarehouseContext` + `ProtectedRoute`
 3. `LoginPage` + `AuthController` (login, logout, GET /api/user)
 4. `Navbar` + `WarehouseTabs` + `DashboardPage` (static data first, then real API)
-5. `ProfileModal` + `StatusBadge` + `DataTable` + `ConfirmModal`
+5. `ProfileModal` + `StatusBadge`
 6. `CreateProductPage` + `ProductController` + `PinVerificationModal`
 7. `AddProductsModal` + `StockInUseModal`
 8. `ReceiveOrderListPage` + `ReceiveOrderFormPage` + `ReceiveOrderController`

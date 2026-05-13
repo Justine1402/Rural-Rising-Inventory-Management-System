@@ -88,7 +88,6 @@
 | `config/auth.php` | Auth guards and providers |
 | `config/database.php` | Database connection definitions |
 | `routes/api.php` | All `/api/*` route definitions |
-| `routes/web.php` | Web (non-API) routes |
 | `.env` | Environment config — DB, app URL, session, mail |
 | `bootstrap/app.php` | Application bootstrapping and middleware binding; `statefulApi()` enabled for Sanctum SPA auth |
 
@@ -170,7 +169,6 @@ Rural Rising Inventory Management System/   ← project root
 │   ├── src/
 │   │   ├── api/
 │   │   │   └── axios.js                   ← axios client + getCsrfCookie()
-│   │   ├── assets/                         ← images and SVGs
 │   │   ├── components/
 │   │   │   ├── layout/
 │   │   │   │   ├── Navbar.jsx             ← two-row nav; UIContext for overlay buttons; UIContext + WarehouseContext + AuthContext
@@ -182,11 +180,11 @@ Rural Rising Inventory Management System/   ← project root
 │   │   │   │   ├── AddProductsModal.jsx   ← multi-select master SKU picker (z-[70])
 │   │   │   │   └── StockInUseModal.jsx    ← single-select batch picker (z-[70])
 │   │   │   └── ui/
-│   │   │       └── StatusBadge.jsx        ← colored pill: green for In Stock/Accomplished, red otherwise
+│   │   │       └── StatusBadge.jsx        ← colored pill: green for In Stock/Accomplished/Complete, red otherwise
 │   │   ├── context/
 │   │   │   ├── AuthContext.jsx            ← user session state (user, login, logout)
 │   │   │   ├── WarehouseContext.jsx       ← active warehouse; fetches /api/warehouses on user change (auth-safe)
-│   │   │   └── UIContext.jsx              ← overlay flags + productRefreshKey/refreshProducts for real-time dashboard updates
+│   │   │   └── UIContext.jsx              ← overlay flags (createProduct/receiveOrder/transferRequest); productRefreshKey, receiveOrderRefreshKey, transferRequestRefreshKey + matching refresh() functions
 │   │   ├── pages/
 │   │   │   ├── auth/
 │   │   │   │   └── LoginPage.jsx          ← sign in form
@@ -195,7 +193,7 @@ Rural Rising Inventory Management System/   ← project root
 │   │   │   ├── products/
 │   │   │   │   └── CreateProductPage.jsx  ← overlay card; PIN-verified product creation; opened via UIContext
 │   │   │   ├── receiveOrder/
-│   │   │   │   ├── ReceiveOrderListPage.jsx ← standalone page; re-fetches on location.key; contextual accomplish bar
+│   │   │   │   ├── ReceiveOrderListPage.jsx ← standalone page; re-fetches on location.key + receiveOrderRefreshKey; contextual accomplish bar
 │   │   │   │   └── ReceiveOrderFormPage.jsx ← dual-mode: create (UIContext overlay) + accomplish (/receive-orders/:id)
 │   │   │   └── transferRequest/
 │   │   │       ├── TransferRequestListPage.jsx ← standalone page; re-fetches on location.key + transferRequestRefreshKey; contextual accomplish bar
@@ -230,7 +228,7 @@ Rural Rising Inventory Management System/   ← project root
     │       ├── TransferRequest.php             ← fillable; date casts; belongsTo sourceWarehouse/destinationWarehouse/requester/verifier; hasMany items
     │       └── TransferRequestItem.php         ← fillable; date cast; belongsTo product/transferRequest/stockInUse
     ├── bootstrap/
-    │   └── app.php                            ← statefulApi() enabled for Sanctum SPA auth
+    │   └── app.php                            ← routes: api.php + health only; statefulApi() enabled for Sanctum SPA auth
     ├── config/                                 ← cors, sanctum, session, database, etc.
     ├── database/
     │   ├── migrations/

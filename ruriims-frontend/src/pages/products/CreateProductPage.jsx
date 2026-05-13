@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 import PinVerificationModal from '../../components/shared/PinVerificationModal';
 
@@ -10,7 +9,6 @@ const fieldClass =
   'w-full bg-gray-100 border border-transparent rounded-lg px-4 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#1A381E] focus:bg-white transition';
 
 export default function CreateProductPage({ onClose, onSuccess }) {
-  const navigate = useNavigate();
 
   const [form, setForm] = useState({ name: '', category: '', unit: '', shelf_life: '' });
   const [useCustomUnit, setUseCustomUnit] = useState(false);

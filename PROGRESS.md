@@ -17,7 +17,7 @@
 ### Build Step 1 — Routing Scaffold
 - [x] `react-router-dom` installed (`^7.14.2`)
 - [x] `App.jsx` — `BrowserRouter` + `AuthProvider` + `WarehouseProvider` + `UIProvider` + `AppRoutes` + `GlobalOverlays`
-- [x] Routes: `/login`, `/`, `/receive-orders`, `/receive-orders/:id`, `/admin/users`, catch-all
+- [x] Routes: `/login`, `/`, `/receive-orders`, `/receive-orders/:id`, `/transfer-requests`, `/transfer-requests/:id`, `/admin/users`, catch-all
 
 ### Build Step 2 — Contexts + Route Guards
 - [x] `src/context/AuthContext.jsx` — `user`, `login()`, `logout()`, `isAuthenticated`, `loading`
@@ -31,8 +31,8 @@
 - [x] `routes/api.php` — `POST /login`, `POST /logout` (auth-guarded), `GET /user` (auth-guarded)
 
 ### Build Step 4 — Navbar + WarehouseTabs + DashboardPage + Wiring
-- [x] `Navbar.jsx` — two-row UI; avatar dropdown wired to `AuthContext`; warehouse label wired to `WarehouseContext`; gear icon (⚙) visible only to admin → "Manage Accounts" → `/admin/users`; `+ Create Product` opens `CreateProductPage` overlay via `UIContext` (no URL change); `+ Receive Order` opens `ReceiveOrderFormPage` overlay via `UIContext` (no URL change); button order fixed: Create Product | Receive Order | Issue Product | Transfer Request | Create Temporary Warehouse; Inventory dropdown: "Inventory" → `/`, "Receive Orders" → `/receive-orders`; `inventoryLabel` dynamically shows "Receive Orders" when on `/receive-orders*`
-- [x] `WarehouseTabs.jsx` — reads real warehouse list from `WarehouseContext`; admin sees "All Warehouses" + 3 warehouse tabs, manager sees 1; clicking a tab calls `setActiveWarehouse`; active tab highlighted
+- [x] `Navbar.jsx` — two-row UI; avatar dropdown wired to `AuthContext`; warehouse label wired to `WarehouseContext`; gear icon (⚙) visible only to admin → "Manage Accounts" → `/admin/users`; `+ Create Product` opens `CreateProductPage` overlay via `UIContext` (no URL change); `+ Receive Order` opens `ReceiveOrderFormPage` overlay via `UIContext` (no URL change); `+ Transfer Request` opens `TransferRequestFormPage` overlay via `UIContext` (no URL change — wired in Step 9); button order: Create Product | Receive Order | Transfer Request | Issue Product | Create Temporary Warehouse; Inventory dropdown: "Inventory" → `/`, "Receive Orders" → `/receive-orders`, "Transfer Requests" → `/transfer-requests` (added in Step 9); `inventoryLabel` dynamically shows "Receive Orders" on `/receive-orders*`, "Transfer Requests" on `/transfer-requests*`, else "Inventory"
+- [x] `WarehouseTabs.jsx` — reads real warehouse list from `WarehouseContext`; admin sees "All Warehouses" + 3 warehouse tabs; all users currently see all warehouse tabs (manager single-warehouse restriction deferred to Step 13); clicking a tab calls `setActiveWarehouse`; active tab highlighted
 - [x] `DashboardPage.jsx` — fetches `GET /api/products` on `location.key` change (re-fetches after navigation) AND on `productRefreshKey` change (re-fetches instantly after product creation without navigation); shows real stock quantities per warehouse from `StockInUse`; warehouse columns are dynamic (driven by API response); harvest date from latest batch; "In Stock" / "Out of Stock" status from real quantities; loading/empty/error states
 - [x] `warehouses` migration + `Warehouse` model — 3 permanent warehouses seeded (QC, ALA, MAN)
 - [x] `add_role_to_users_table` migration — `role` enum added to `users` table
@@ -41,7 +41,7 @@
 
 ### Build Step 5 — Shared Components
 - [x] `ProfileModal.jsx` (`src/components/modals/`) — collapsible Change Password (chevron toggle, CSS max-height animation); Change PIN (6-digit numeric); wired to Navbar avatar dropdown
-- [x] `StatusBadge.jsx` (`src/components/ui/`) — green badge for `"In Stock"` and `"Accomplished"`; red for all others (Incomplete, Out of Stock)
+- [x] `StatusBadge.jsx` (`src/components/ui/`) — green badge for `"In Stock"`, `"Accomplished"`, and `"Complete"`; red for all others (Incomplete, Out of Stock)
 
 ### Build Step 6 — PinVerificationModal + CreateProductPage + ProductController
 - [x] `PinVerificationModal.jsx` (`src/components/shared/`) — 6 individual digit inputs; auto-advance on entry; backspace support; CLEAR + VERIFY; z-[60]
@@ -95,14 +95,38 @@
 - [x] `TransferRequestListPage.jsx` (`src/pages/transferRequest/`) — standalone full page (Navbar + WarehouseTabs); fetches on `[location.key, transferRequestRefreshKey]`; single-select on Incomplete rows; contextual action bar with ACCOMPLISH TRANSFER button → `/transfer-requests/:id`; loading/empty/error states mirror `ReceiveOrderListPage`
 - [x] `TransferRequestFormPage.jsx` (`src/pages/transferRequest/`) — dual-mode (create = UIContext overlay, accomplish = `/transfer-requests/:id`); create mode: Source/Destination warehouse dropdowns with mutual-disable logic, two-step product flow (AddProductsModal → StockInUseModal per row), source warehouse required before batch selection; accomplish mode: pre-filled read-only fields, Qty Received input with unit label, `quantity_received` parsed to float on load (no trailing zeros); PIN rules: same manager (create), different manager (accomplish); success label "Created TRF-..." / navigate to list on accomplish; calls `refreshProducts` + `refreshTransferRequests` on accomplish
 
+### Root Folder Cleanup — 2026-05-13
+
+#### Files removed
+- `ruriims-frontend/src/App.css` — 0-byte empty file; not imported anywhere
+- `ruriims-frontend/src/assets/react.svg` — Vite default template asset; no inbound imports
+- `ruriims-frontend/src/assets/vite.svg` — Vite default template asset; no inbound imports
+- `ruriims-frontend/src/assets/hero.png` — not imported anywhere
+- `ruriims-frontend/public/icons.svg` — Vite default SVG sprite (Bluesky/social icons); not referenced in any source file or HTML
+- `ruriims-backend/tests/Feature/ExampleTest.php` — scaffold placeholder; only tested `GET /` (welcome page), no project logic
+- `ruriims-backend/tests/Unit/ExampleTest.php` — scaffold placeholder; body was `assertTrue(true)`
+- `ruriims-backend/tests/TestCase.php` — orphaned base class after ExampleTests removed; no remaining subclasses
+- `ruriims-backend/resources/css/app.css` — Laravel frontend scaffold; unused by the React SPA
+- `ruriims-backend/resources/js/app.js` — Laravel frontend scaffold; unused by the React SPA
+- `ruriims-backend/resources/js/bootstrap.js` — Laravel frontend scaffold; unused by the React SPA
+- `ruriims-backend/resources/views/welcome.blade.php` — Laravel default welcome view; not served in production
+- `ruriims-backend/routes/web.php` — only served `welcome.blade.php` at `GET /`; backend is pure API
+- `ruriims-backend/routes/console.php` — only defined the default `inspire` artisan command; unused
+- `ruriims-backend/vite.config.js` — Laravel Vite plugin config for compiling blade assets; unused
+- `ruriims-backend/package.json` — npm scripts for Laravel Vite build; unused
+
+#### In-file dead code removed
+- `ruriims-backend/app/Models/Product.php` — removed `use Illuminate\Database\Eloquent\Factories\HasFactory` import and `use HasFactory` trait; no `ProductFactory` exists and `Product::factory()` is never called
+
+#### Coordinated code edit
+- `ruriims-backend/bootstrap/app.php` — removed `web:` and `commands:` lines from `->withRouting()`; only `api:` and `health:` remain
+
 ---
 
 ## Not Started
 
 - [ ] Step 10 — `IssueProductFormPage` + `IssueProductController`
-- [ ] Step 10 — `IssueProductFormPage` + `IssueProductController`
 - [ ] Step 11 — Temporary Warehouse pages + `TemporaryWarehouseController`
-
 - [ ] Step 12 — Reconciliation pages + `ReconciliationController`
 - [ ] Step 13 — `UserManagementPage` + `UserController`
 - [ ] Step 14 — All Reports pages + `ReportController`
