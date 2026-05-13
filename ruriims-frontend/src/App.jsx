@@ -8,6 +8,8 @@ import DashboardPage from './pages/dashboard/DashboardPage';
 import CreateProductPage from './pages/products/CreateProductPage';
 import ReceiveOrderListPage from './pages/receiveOrder/ReceiveOrderListPage';
 import ReceiveOrderFormPage from './pages/receiveOrder/ReceiveOrderFormPage';
+import TransferRequestListPage from './pages/transferRequest/TransferRequestListPage';
+import TransferRequestFormPage from './pages/transferRequest/TransferRequestFormPage';
 
 function GuestRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -16,14 +18,22 @@ function GuestRoute({ children }) {
 }
 
 function GlobalOverlays() {
-  const { receiveOrderFormOpen, setReceiveOrderFormOpen, createProductFormOpen, setCreateProductFormOpen, refreshProducts } = useUI();
+  const {
+    receiveOrderFormOpen, setReceiveOrderFormOpen,
+    createProductFormOpen, setCreateProductFormOpen,
+    transferRequestFormOpen, setTransferRequestFormOpen,
+    refreshProducts, refreshReceiveOrders, refreshTransferRequests,
+  } = useUI();
   return (
     <>
       {createProductFormOpen && (
         <CreateProductPage onClose={() => setCreateProductFormOpen(false)} onSuccess={refreshProducts} />
       )}
       {receiveOrderFormOpen && (
-        <ReceiveOrderFormPage onClose={() => setReceiveOrderFormOpen(false)} />
+        <ReceiveOrderFormPage onClose={() => setReceiveOrderFormOpen(false)} onSuccess={refreshReceiveOrders} />
+      )}
+      {transferRequestFormOpen && (
+        <TransferRequestFormPage onClose={() => setTransferRequestFormOpen(false)} onSuccess={() => { refreshProducts(); refreshTransferRequests(); }} />
       )}
     </>
   );
@@ -38,6 +48,12 @@ function AppRoutes() {
       <Route path="/receive-orders/:id" element={
         <ProtectedRoute>
           <><ReceiveOrderListPage /><ReceiveOrderFormPage /></>
+        </ProtectedRoute>
+      } />
+      <Route path="/transfer-requests" element={<ProtectedRoute><TransferRequestListPage /></ProtectedRoute>} />
+      <Route path="/transfer-requests/:id" element={
+        <ProtectedRoute>
+          <><TransferRequestListPage /><TransferRequestFormPage /></>
         </ProtectedRoute>
       } />
       <Route path="/admin/users" element={<ProtectedRoute adminOnly><DashboardPage /></ProtectedRoute>} />

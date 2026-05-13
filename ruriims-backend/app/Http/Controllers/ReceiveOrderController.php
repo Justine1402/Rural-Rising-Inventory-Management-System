@@ -167,7 +167,7 @@ class ReceiveOrderController extends Controller
                 if ($arrived > 0) {
                     $product = $item->product;
                     $warehouse = $receiveOrder->warehouse;
-                    $skuSeq = str_pad((int) filter_var($product->sku_code, FILTER_SANITIZE_NUMBER_INT), 3, '0', STR_PAD_LEFT);
+                    $skuSeq = substr($product->sku_code, 4);
                     $batchSeq = str_pad(StockInUse::where('product_id', $product->id)->where('warehouse_id', $receiveOrder->warehouse_id)->count() + 1, 3, '0', STR_PAD_LEFT);
                     $code = "SKU-{$warehouse->code}-{$skuSeq}-{$batchSeq}";
 

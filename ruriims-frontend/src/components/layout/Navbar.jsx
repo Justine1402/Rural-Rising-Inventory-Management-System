@@ -21,7 +21,6 @@ const GearIcon = () => (
 
 const STATIC_ACTION_BUTTONS = [
   { label: '+ Issue Product',              to: null },
-  { label: '+ Transfer Request',           to: null },
   { label: '+ Create Temporary Warehouse', to: null },
 ];
 
@@ -30,11 +29,15 @@ const BUTTON_ORDER = ['+ Create Product', '+ Receive Order', '+ Issue Product', 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const { activeWarehouse } = useWarehouse();
-  const { setReceiveOrderFormOpen, setCreateProductFormOpen } = useUI();
+  const { setReceiveOrderFormOpen, setCreateProductFormOpen, setTransferRequestFormOpen } = useUI();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const inventoryLabel = location.pathname.startsWith('/receive-orders') ? 'Receive Orders' : 'Inventory';
+  const inventoryLabel = location.pathname.startsWith('/transfer-requests')
+    ? 'Transfer Requests'
+    : location.pathname.startsWith('/receive-orders')
+      ? 'Receive Orders'
+      : 'Inventory';
   const [menuOpen, setMenuOpen] = useState(false);
   const [gearOpen, setGearOpen] = useState(false);
   const [inventoryOpen, setInventoryOpen] = useState(false);
@@ -146,6 +149,14 @@ export default function Navbar() {
                 </button>
               );
             }
+            if (label === '+ Transfer Request') {
+              return (
+                <button key={label} onClick={() => setTransferRequestFormOpen(true)}
+                  className="bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
+                  {label}
+                </button>
+              );
+            }
             const btn = STATIC_ACTION_BUTTONS.find((b) => b.label === label);
             return (
               <button key={label} onClick={() => btn?.to && navigate(btn.to)}
@@ -181,6 +192,12 @@ export default function Navbar() {
                   className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                   Receive Orders
+                </button>
+                <button
+                  onClick={() => { setInventoryOpen(false); navigate('/transfer-requests'); }}
+                  className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Transfer Requests
                 </button>
               </div>
             )}

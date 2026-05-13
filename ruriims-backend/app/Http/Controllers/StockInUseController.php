@@ -25,6 +25,7 @@ class StockInUseController extends Controller
 
         return response()->json([
             'batches' => $batches->map(fn ($b) => [
+                'id'           => $b->id,
                 'code'         => $b->code,
                 'harvest_date' => $b->harvest_date->format('M d, Y'),
                 'quantity'     => $b->quantity,

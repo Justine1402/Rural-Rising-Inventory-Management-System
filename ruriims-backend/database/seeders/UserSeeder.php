@@ -31,10 +31,10 @@ class UserSeeder extends Seeder
             [
                 'name'     => 'Manager User',
                 'password' => Hash::make('password'),
-                'role'     => 'admin',
+                'role'     => 'manager',
                 'pin'      => Hash::make('123456'),
             ]
         );
-        $manager->update(['role' => 'admin', 'pin' => Hash::make('123456')]);
+        $manager->update(['role' => 'manager', 'pin' => Hash::make('123456')]);
     }
 }

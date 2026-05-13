@@ -10,7 +10,7 @@ const fieldClass =
 const readonlyClass =
   'w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-500 cursor-not-allowed';
 
-export default function ReceiveOrderFormPage({ onClose }) {
+export default function ReceiveOrderFormPage({ onClose, onSuccess }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const { activeWarehouse, warehouses } = useWarehouse();
@@ -91,6 +91,7 @@ export default function ReceiveOrderFormPage({ onClose }) {
           items: items.map((i) => ({ product_code: i.product_code, quantity_ordered: parseFloat(i.quantity_ordered), harvest_date: i.harvest_date || null, product_cost: parseFloat(i.product_cost) })),
         });
         setSuccessCode(res.data.order.code);
+        onSuccess?.();
       } else {
         await api.post(`/receive-orders/${id}/complete`, {
           date_arrived: form.date_arrived,

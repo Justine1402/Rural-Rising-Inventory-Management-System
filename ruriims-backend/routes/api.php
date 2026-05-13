@@ -5,6 +5,7 @@ use App\Http\Controllers\PinController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ReceiveOrderController;
 use App\Http\Controllers\StockInUseController;
+use App\Http\Controllers\TransferRequestController;
 use App\Http\Controllers\WarehouseController;
 use Illuminate\Support\Facades\Route;
 
@@ -29,4 +30,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/receive-orders', [ReceiveOrderController::class, 'store']);
     Route::get('/receive-orders/{receiveOrder}', [ReceiveOrderController::class, 'show']);
     Route::post('/receive-orders/{receiveOrder}/complete', [ReceiveOrderController::class, 'complete']);
+
+    Route::get('/transfer-requests', [TransferRequestController::class, 'index']);
+    Route::post('/transfer-requests', [TransferRequestController::class, 'store']);
+    Route::get('/transfer-requests/{transferRequest}', [TransferRequestController::class, 'show']);
+    Route::post('/transfer-requests/{transferRequest}/accomplish', [TransferRequestController::class, 'accomplish']);
 });

@@ -199,12 +199,13 @@ ruriims-frontend/
 ```
 
 **Note on overlay forms vs routed pages:**
-`CreateProductPage` and `ReceiveOrderFormPage` (create mode) open as overlays via
-`UIContext` — no URL change. The Navbar `+ Create Product` and `+ Receive Order`
-buttons set `createProductFormOpen` / `receiveOrderFormOpen` flags respectively.
-`GlobalOverlays` in `App.jsx` renders whichever overlay is open. This means there
-are no `/products/create` or `/receive-orders/new` routes. Accomplish mode for
-Receive Orders still uses a route (`/receive-orders/:id`) since it needs an ID.
+`CreateProductPage`, `ReceiveOrderFormPage` (create mode), and `TransferRequestFormPage`
+(create mode) open as overlays via `UIContext` — no URL change. The Navbar buttons
+set `createProductFormOpen` / `receiveOrderFormOpen` / `transferRequestFormOpen` flags
+respectively. `GlobalOverlays` in `App.jsx` renders whichever overlay is open. This
+means there are no `/products/create`, `/receive-orders/new`, or `/transfer-requests/new`
+routes. Accomplish mode for Receive Orders and Transfer Requests still uses routes
+(`/receive-orders/:id`, `/transfer-requests/:id`) since they need IDs.
 
 **Note on `/temporary-warehouses/:id` vs `/temporary-warehouses/:id/close`:**
 React Router evaluates these in order. Place the `/close` route before `/:id` in
@@ -241,7 +242,9 @@ On mount, calls `GET /api/user` to restore session from the existing Sanctum coo
 
 ### `UIContext.jsx`
 
-Controls which form overlays are open globally, without changing the URL.
+Controls which form overlays are open globally, without changing the URL. Also
+exposes a product refresh signal so the dashboard can re-fetch immediately after
+a product is created — without navigating away.
 
 ```js
 {
@@ -249,13 +252,21 @@ Controls which form overlays are open globally, without changing the URL.
   setReceiveOrderFormOpen: function,
   createProductFormOpen: boolean,
   setCreateProductFormOpen: function,
+  transferRequestFormOpen: boolean,
+  setTransferRequestFormOpen: function,
+  productRefreshKey: number,              // increments on each successful product creation
+  refreshProducts: function,              // call this to trigger a dashboard re-fetch
+  transferRequestRefreshKey: number,      // increments on each successful TRF create/accomplish
+  refreshTransferRequests: function,      // call this to trigger a TRF list re-fetch
 }
 ```
 
 `GlobalOverlays` in `App.jsx` renders `CreateProductPage` when `createProductFormOpen`
 is true, and `ReceiveOrderFormPage` (create mode) when `receiveOrderFormOpen` is true.
 The Navbar buttons set these flags. RETURN inside each overlay clears the flag via
-the `onClose` prop — no `navigate()` call.
+the `onClose` prop — no `navigate()` call. `GlobalOverlays` passes `refreshProducts`
+as the `onSuccess` prop to `CreateProductPage`; `CreateProductPage` calls it after a
+successful `POST /api/products` so the dashboard re-fetches in real time.
 
 ---
 
@@ -273,8 +284,10 @@ auto-fill "Warehouse" from this context.
 }
 ```
 
-Permanent warehouses are fetched from `GET /api/warehouses` on app load.
-Temporary warehouses are appended dynamically when they are active/open.
+Permanent warehouses are fetched from `GET /api/warehouses` when `user` becomes
+non-null (i.e., after auth is confirmed). The `useEffect` depends on `[user]` — not
+`[]` — so it never fires before the Sanctum session is established, and it clears the
+warehouse list on logout. Temporary warehouses are appended dynamically when active.
 
 ---
 
@@ -575,8 +588,9 @@ Form title: "Create Product"
 
 Flow: Fill form → CREATE button → `PinVerificationModal` (same manager) →
 on verified → `POST /api/products` → "Created SKU-007" confirmation label
-appears next to CREATE button → new product appears on dashboard with 0 KG
-quantity and Out of Stock status.
+appears next to CREATE button → `onSuccess()` prop is called → dashboard
+re-fetches `/api/products` in real time via `UIContext.productRefreshKey` →
+new product appears on dashboard immediately with 0 quantity and Out of Stock status.
 
 ---
 

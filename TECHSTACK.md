@@ -148,9 +148,13 @@ Routes defined in `ruriims-backend/routes/api.php`:
 | `POST` | `/api/pin/verify` | `auth:sanctum` | `{ "verified": true }` or 422 |
 | `GET` | `/api/stock-in-use` | `auth:sanctum` | `{ "batches": [...] }` — filters by `sku_code` + `warehouse_id`, quantity > 0, FEFO order |
 | `GET` | `/api/receive-orders` | `auth:sanctum` | `{ "orders": [...] }` |
-| `POST` | `/api/receive-orders` | `auth:sanctum` | `{ "order": { "code": "RO-..." } }` — PIN (same manager) + generates code |
+| `POST` | `/api/receive-orders` | `auth:sanctum` | `{ "order": { "code": "RO-..." } }` — PIN (same manager) + generates per-warehouse scoped code inside DB transaction |
 | `GET` | `/api/receive-orders/{id}` | `auth:sanctum` | `{ "order": { ...with items } }` |
 | `POST` | `/api/receive-orders/{id}/complete` | `auth:sanctum` | `{ "message": "Accomplished RO-..." }` — PIN (different manager) + generates StockInUse codes |
+| `GET` | `/api/transfer-requests` | `auth:sanctum` | `{ "transfers": [...] }` |
+| `POST` | `/api/transfer-requests` | `auth:sanctum` | `{ "transfer": { "code": "TRF-..." } }` — PIN (same manager) + generates per-source-warehouse code |
+| `GET` | `/api/transfer-requests/{id}` | `auth:sanctum` | `{ "transfer": { ...with items } }` |
+| `POST` | `/api/transfer-requests/{id}/accomplish` | `auth:sanctum` | `{ "message": "Accomplished TRF-..." }` — PIN (different warehouse manager) + moves stock |
 
 ---
 
@@ -181,18 +185,21 @@ Rural Rising Inventory Management System/   ← project root
 │   │   │       └── StatusBadge.jsx        ← colored pill: green for In Stock/Accomplished, red otherwise
 │   │   ├── context/
 │   │   │   ├── AuthContext.jsx            ← user session state (user, login, logout)
-│   │   │   ├── WarehouseContext.jsx       ← active warehouse; fetches from /api/warehouses
-│   │   │   └── UIContext.jsx              ← overlay open/close flags (no URL navigation)
+│   │   │   ├── WarehouseContext.jsx       ← active warehouse; fetches /api/warehouses on user change (auth-safe)
+│   │   │   └── UIContext.jsx              ← overlay flags + productRefreshKey/refreshProducts for real-time dashboard updates
 │   │   ├── pages/
 │   │   │   ├── auth/
 │   │   │   │   └── LoginPage.jsx          ← sign in form
 │   │   │   ├── dashboard/
-│   │   │   │   └── DashboardPage.jsx      ← real-time inventory; stock from StockInUse per warehouse; re-fetches on location.key
+│   │   │   │   └── DashboardPage.jsx      ← real-time inventory; stock from StockInUse per warehouse; re-fetches on location.key and productRefreshKey
 │   │   │   ├── products/
 │   │   │   │   └── CreateProductPage.jsx  ← overlay card; PIN-verified product creation; opened via UIContext
-│   │   │   └── receiveOrder/
-│   │   │       ├── ReceiveOrderListPage.jsx ← standalone page; re-fetches on location.key; contextual accomplish bar
-│   │   │       └── ReceiveOrderFormPage.jsx ← dual-mode: create (UIContext overlay) + accomplish (/receive-orders/:id)
+│   │   │   ├── receiveOrder/
+│   │   │   │   ├── ReceiveOrderListPage.jsx ← standalone page; re-fetches on location.key; contextual accomplish bar
+│   │   │   │   └── ReceiveOrderFormPage.jsx ← dual-mode: create (UIContext overlay) + accomplish (/receive-orders/:id)
+│   │   │   └── transferRequest/
+│   │   │       ├── TransferRequestListPage.jsx ← standalone page; re-fetches on location.key + transferRequestRefreshKey; contextual accomplish bar
+│   │   │       └── TransferRequestFormPage.jsx ← dual-mode: create (UIContext overlay) + accomplish (/transfer-requests/:id); two-step product flow
 │   │   ├── routes/
 │   │   │   └── ProtectedRoute.jsx         ← auth + adminOnly route guard
 │   │   ├── App.jsx                        ← BrowserRouter + providers + AppRoutes + GlobalOverlays
@@ -210,15 +217,18 @@ Rural Rising Inventory Management System/   ← project root
     │   │       ├── WarehouseController.php     ← index (returns all warehouses)
     │   │       ├── ProductController.php       ← index (with warehouse_stock + harvest_date), store (PIN-verified), show
     │   │       ├── PinController.php           ← verify (standalone PIN check endpoint)
-    │   │       ├── StockInUseController.php    ← index (batches by sku_code + warehouse_id, FEFO)
-    │   │       └── ReceiveOrderController.php  ← index, store, show, complete
+    │   │       ├── StockInUseController.php    ← index (batches by sku_code + warehouse_id, FEFO; includes id in response)
+    │   │       ├── ReceiveOrderController.php  ← index, store (per-warehouse RO code with lockForUpdate), show, complete
+    │   │       └── TransferRequestController.php ← index, store (per-source-warehouse TRF code with lockForUpdate), show, accomplish
     │   └── Models/
-    │       ├── User.php                        ← fillable: name, email, password, role, position_title, pin
+    │       ├── User.php                        ← fillable: name, email, password, role, warehouse_id, position_title, pin
     │       ├── Warehouse.php                   ← fillable: name, code
     │       ├── Product.php                     ← fillable: sku_code, name, category, unit, shelf_life, created_by
     │       ├── StockInUse.php                  ← table: stock_in_use_codes; fillable: code, product_id, warehouse_id, quantity, harvest_date
     │       ├── ReceiveOrder.php                ← fillable; belongsTo warehouse/creator/verifier; hasMany items
-    │       └── ReceiveOrderItem.php            ← fillable; belongsTo product/receiveOrder
+    │       ├── ReceiveOrderItem.php            ← fillable; belongsTo product/receiveOrder
+    │       ├── TransferRequest.php             ← fillable; date casts; belongsTo sourceWarehouse/destinationWarehouse/requester/verifier; hasMany items
+    │       └── TransferRequestItem.php         ← fillable; date cast; belongsTo product/transferRequest/stockInUse
     ├── bootstrap/
     │   └── app.php                            ← statefulApi() enabled for Sanctum SPA auth
     ├── config/                                 ← cors, sanctum, session, database, etc.
@@ -232,11 +242,14 @@ Rural Rising Inventory Management System/   ← project root
     │   │   ├── create_products_table
     │   │   ├── create_stock_in_use_codes_table
     │   │   ├── create_receive_orders_table
-    │   │   └── create_receive_order_items_table
+    │   │   ├── create_receive_order_items_table
+    │   │   ├── add_warehouse_id_to_users_table
+    │   │   ├── create_transfer_requests_table
+    │   │   └── create_transfer_request_items_table
     │   └── seeders/
     │       └── UserSeeder.php                 ← seeds 3 warehouses + 2 accounts:
     │                                              admin@ruriims.com (role=admin, PIN=123456)
-    │                                              manager@ruriims.com (role=admin, PIN=123456)
+    │                                              manager@ruriims.com (role=manager, PIN=123456)
     ├── routes/
     │   └── api.php                            ← all API routes (see §5 above)
     ├── .env                                   ← environment config (gitignored)
