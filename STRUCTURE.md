@@ -177,7 +177,6 @@ ruriims-frontend/
 /receive-orders/:id                 → ReceiveOrderListPage + ReceiveOrderFormPage overlay (accomplish) (protected)
 /transfer-requests                  → TransferRequestListPage          (protected)
 /transfer-requests/:id              → TransferRequestListPage + TransferRequestFormPage overlay (accomplish) (protected)
-/issue-products/new                 → IssueProductFormPage             (protected)
 /temporary-warehouses/:id           → TemporaryWarehouseDetailPage     (protected, read-only)
 /temporary-warehouses/new           → TemporaryWarehouseFormPage       (protected)
 /temporary-warehouses/:id/close     → CloseTemporaryWarehousePage      (protected)
@@ -195,13 +194,14 @@ ruriims-frontend/
 ```
 
 **Note on overlay forms vs routed pages:**
-`CreateProductPage`, `ReceiveOrderFormPage` (create mode), and `TransferRequestFormPage`
-(create mode) open as overlays via `UIContext` — no URL change. The Navbar buttons
-set `createProductFormOpen` / `receiveOrderFormOpen` / `transferRequestFormOpen` flags
-respectively. `GlobalOverlays` in `App.jsx` renders whichever overlay is open. This
-means there are no `/products/create`, `/receive-orders/new`, or `/transfer-requests/new`
-routes. Accomplish mode for Receive Orders and Transfer Requests still uses routes
-(`/receive-orders/:id`, `/transfer-requests/:id`) since they need IDs.
+`CreateProductPage`, `ReceiveOrderFormPage` (create mode), `TransferRequestFormPage`
+(create mode), and `IssueProductFormPage` open as overlays via `UIContext` — no URL
+change. The Navbar buttons set `createProductFormOpen` / `receiveOrderFormOpen` /
+`transferRequestFormOpen` / `issueProductFormOpen` flags respectively. `GlobalOverlays`
+in `App.jsx` renders whichever overlay is open. This means there are no
+`/products/create`, `/receive-orders/new`, `/transfer-requests/new`, or
+`/issue-products/new` routes. Accomplish mode for Receive Orders and Transfer Requests
+still uses routes (`/receive-orders/:id`, `/transfer-requests/:id`) since they need IDs.
 Both list pages render beneath the overlay when the accomplish route is active —
 `ReceiveOrderListPage` + `ReceiveOrderFormPage` share the `/receive-orders/:id` route,
 and `TransferRequestListPage` + `TransferRequestFormPage` share `/transfer-requests/:id`.
@@ -746,7 +746,9 @@ batch codes auto-generated for the destination.
 
 ### `IssueProductFormPage` (proto p.34-39, SRS §3.6)
 
-Accessed via `+ Issue Product` Navbar button → `/issue-products/new`.
+Accessed via `+ Issue Product` Navbar button — opens as UIContext overlay (no URL
+change), mirrors the Create Product pattern. `issueProductFormOpen` flag in UIContext
+controls visibility; `GlobalOverlays` in `App.jsx` renders it.
 
 Header: RETURN button + "Issue Products" title
 

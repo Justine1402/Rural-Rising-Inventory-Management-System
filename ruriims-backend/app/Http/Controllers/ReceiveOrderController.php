@@ -6,12 +6,14 @@ use App\Models\Product;
 use App\Models\ReceiveOrder;
 use App\Models\ReceiveOrderItem;
 use App\Models\StockInUse;
+use App\Traits\GeneratesTransactionCode;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class ReceiveOrderController extends Controller
 {
+    use GeneratesTransactionCode;
     public function index()
     {
         $orders = ReceiveOrder::with(['warehouse', 'creator', 'verifier'])
@@ -57,11 +59,7 @@ class ReceiveOrderController extends Controller
         $total = $orderCost + $request->delivery_fee;
 
         $order = DB::transaction(function () use ($request, $warehouse, $orderCost, $total, $user) {
-            // TODO: extract into GeneratesTransactionCode trait when TRF/ISS/TWH are built
-            $seq = ReceiveOrder::where('warehouse_id', $warehouse->id)
-                ->lockForUpdate()
-                ->count() + 1;
-            $code = 'RO-' . $warehouse->code . '-000-' . str_pad($seq, 3, '0', STR_PAD_LEFT);
+            $code = $this->generateTransactionCode('RO', $warehouse->id, $warehouse->code, ReceiveOrder::class);
 
             $order = ReceiveOrder::create([
                 'code'          => $code,

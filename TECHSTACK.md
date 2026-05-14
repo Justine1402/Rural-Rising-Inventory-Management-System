@@ -154,6 +154,9 @@ Routes defined in `ruriims-backend/routes/api.php`:
 | `POST` | `/api/transfer-requests` | `auth:sanctum` | `{ "transfer": { "code": "TRF-..." } }` — PIN (same manager) + generates per-source-warehouse code |
 | `GET` | `/api/transfer-requests/{id}` | `auth:sanctum` | `{ "transfer": { ...with items } }` |
 | `POST` | `/api/transfer-requests/{id}/accomplish` | `auth:sanctum` | `{ "message": "Accomplished TRF-..." }` — PIN (different warehouse manager) + moves stock |
+| `GET` | `/api/issue-products` | `auth:sanctum` | `{ "issues": [...] }` |
+| `POST` | `/api/issue-products` | `auth:sanctum` | `{ "issue": { "code": "ISS-..." } }` — PIN (same manager) + generates per-warehouse code + decrements StockInUse |
+| `GET` | `/api/issue-products/{id}` | `auth:sanctum` | `{ "issue": { ...with items } }` |
 
 ---
 
@@ -184,7 +187,7 @@ Rural Rising Inventory Management System/   ← project root
 │   │   ├── context/
 │   │   │   ├── AuthContext.jsx            ← user session state (user, login, logout)
 │   │   │   ├── WarehouseContext.jsx       ← active warehouse; fetches /api/warehouses on user change (auth-safe)
-│   │   │   └── UIContext.jsx              ← overlay flags (createProduct/receiveOrder/transferRequest); productRefreshKey, receiveOrderRefreshKey, transferRequestRefreshKey + matching refresh() functions
+│   │   │   └── UIContext.jsx              ← overlay flags (createProduct/receiveOrder/transferRequest/issueProduct); productRefreshKey, receiveOrderRefreshKey, transferRequestRefreshKey + matching refresh() functions
 │   │   ├── pages/
 │   │   │   ├── auth/
 │   │   │   │   └── LoginPage.jsx          ← sign in form
@@ -195,9 +198,11 @@ Rural Rising Inventory Management System/   ← project root
 │   │   │   ├── receiveOrder/
 │   │   │   │   ├── ReceiveOrderListPage.jsx ← standalone page; re-fetches on location.key + receiveOrderRefreshKey; contextual accomplish bar
 │   │   │   │   └── ReceiveOrderFormPage.jsx ← dual-mode: create (UIContext overlay) + accomplish (/receive-orders/:id)
-│   │   │   └── transferRequest/
+│   │   │   ├── transferRequest/
 │   │   │       ├── TransferRequestListPage.jsx ← standalone page; re-fetches on location.key + transferRequestRefreshKey; contextual accomplish bar
 │   │   │       └── TransferRequestFormPage.jsx ← dual-mode: create (UIContext overlay) + accomplish (/transfer-requests/:id); two-step product flow
+│   │   │   └── issueProduct/
+│   │   │       └── IssueProductFormPage.jsx   ← UIContext overlay (no route); single-stage issue + StockInUse deduction; same-manager PIN
 │   │   ├── routes/
 │   │   │   └── ProtectedRoute.jsx         ← auth + adminOnly route guard
 │   │   ├── App.jsx                        ← BrowserRouter + providers + AppRoutes + GlobalOverlays
@@ -216,8 +221,11 @@ Rural Rising Inventory Management System/   ← project root
     │   │       ├── ProductController.php       ← index (with warehouse_stock + harvest_date), store (PIN-verified), show
     │   │       ├── PinController.php           ← verify (standalone PIN check endpoint)
     │   │       ├── StockInUseController.php    ← index (batches by sku_code + warehouse_id, FEFO; includes id in response)
-    │   │       ├── ReceiveOrderController.php  ← index, store (per-warehouse RO code with lockForUpdate), show, complete
-    │   │       └── TransferRequestController.php ← index, store (per-source-warehouse TRF code with lockForUpdate), show, accomplish
+    │   │       ├── ReceiveOrderController.php  ← index, store (per-warehouse RO code via trait), show, complete
+    │   │       ├── TransferRequestController.php ← index, store (per-source-warehouse TRF code via trait), show, accomplish
+    │   │       └── IssueProductController.php  ← index, store (same-manager PIN + ISS code via trait + StockInUse decrement), show
+    │   ├── Traits/
+    │   │   └── GeneratesTransactionCode.php    ← per-warehouse scoped code generator; used by RO, TRF, ISS controllers
     │   └── Models/
     │       ├── User.php                        ← fillable: name, email, password, role, warehouse_id, position_title, pin
     │       ├── Warehouse.php                   ← fillable: name, code
@@ -226,7 +234,9 @@ Rural Rising Inventory Management System/   ← project root
     │       ├── ReceiveOrder.php                ← fillable; belongsTo warehouse/creator/verifier; hasMany items
     │       ├── ReceiveOrderItem.php            ← fillable; belongsTo product/receiveOrder
     │       ├── TransferRequest.php             ← fillable; date casts; belongsTo sourceWarehouse/destinationWarehouse/requester/verifier; hasMany items
-    │       └── TransferRequestItem.php         ← fillable; date cast; belongsTo product/transferRequest/stockInUse
+    │       ├── TransferRequestItem.php         ← fillable; date cast; belongsTo product/transferRequest/stockInUse
+    │       ├── IssueProduct.php                ← fillable; cast date_issued; belongsTo warehouse + issuedBy (User); hasMany items
+    │       └── IssueProductItem.php            ← fillable; cast harvest_date; belongsTo issueProduct/product/stockInUse
     ├── bootstrap/
     │   └── app.php                            ← routes: api.php + health only; statefulApi() enabled for Sanctum SPA auth
     ├── config/                                 ← cors, sanctum, session, database, etc.
@@ -243,7 +253,9 @@ Rural Rising Inventory Management System/   ← project root
     │   │   ├── create_receive_order_items_table
     │   │   ├── add_warehouse_id_to_users_table
     │   │   ├── create_transfer_requests_table
-    │   │   └── create_transfer_request_items_table
+    │   │   ├── create_transfer_request_items_table
+    │   │   ├── create_issue_products_table
+    │   │   └── create_issue_product_items_table
     │   └── seeders/
     │       └── UserSeeder.php                 ← seeds 3 warehouses + 2 accounts:
     │                                              admin@ruriims.com (role=admin, PIN=123456)

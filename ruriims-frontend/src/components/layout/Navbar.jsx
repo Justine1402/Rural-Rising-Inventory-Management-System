@@ -20,7 +20,6 @@ const GearIcon = () => (
 );
 
 const STATIC_ACTION_BUTTONS = [
-  { label: '+ Issue Product',              to: null },
   { label: '+ Create Temporary Warehouse', to: null },
 ];
 
@@ -29,7 +28,7 @@ const BUTTON_ORDER = ['+ Create Product', '+ Receive Order', '+ Transfer Request
 export default function Navbar() {
   const { user, logout } = useAuth();
   const { activeWarehouse } = useWarehouse();
-  const { setReceiveOrderFormOpen, setCreateProductFormOpen, setTransferRequestFormOpen } = useUI();
+  const { setReceiveOrderFormOpen, setCreateProductFormOpen, setTransferRequestFormOpen, setIssueProductFormOpen } = useUI();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -152,6 +151,14 @@ export default function Navbar() {
             if (label === '+ Transfer Request') {
               return (
                 <button key={label} onClick={() => setTransferRequestFormOpen(true)}
+                  className="bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
+                  {label}
+                </button>
+              );
+            }
+            if (label === '+ Issue Product') {
+              return (
+                <button key={label} onClick={() => setIssueProductFormOpen(true)}
                   className="bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
                   {label}
                 </button>

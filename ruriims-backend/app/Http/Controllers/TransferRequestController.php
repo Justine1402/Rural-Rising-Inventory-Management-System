@@ -7,12 +7,14 @@ use App\Models\StockInUse;
 use App\Models\TransferRequest;
 use App\Models\TransferRequestItem;
 use App\Models\Warehouse;
+use App\Traits\GeneratesTransactionCode;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class TransferRequestController extends Controller
 {
+    use GeneratesTransactionCode;
     public function index()
     {
         $transfers = TransferRequest::with(['sourceWarehouse', 'destinationWarehouse', 'requester', 'verifier'])
@@ -53,11 +55,7 @@ class TransferRequestController extends Controller
         $sourceWarehouse = Warehouse::findOrFail($request->source_warehouse_id);
 
         $transfer = DB::transaction(function () use ($request, $sourceWarehouse, $user) {
-            // TODO: extract into GeneratesTransactionCode trait when ISS/TWH are built
-            $seq = TransferRequest::where('source_warehouse_id', $sourceWarehouse->id)
-                ->lockForUpdate()
-                ->count() + 1;
-            $code = 'TRF-' . $sourceWarehouse->code . '-000-' . str_pad($seq, 3, '0', STR_PAD_LEFT);
+            $code = $this->generateTransactionCode('TRF', $sourceWarehouse->id, $sourceWarehouse->code, TransferRequest::class, 'code', 'source_warehouse_id');
 
             $transfer = TransferRequest::create([
                 'code'                     => $code,
@@ -113,6 +111,7 @@ class TransferRequestController extends Controller
                 'category'           => $i->product->category,
                 'stock_in_use_id'    => $i->stock_in_use_id,
                 'stock_in_use_code'  => $i->stockInUse->code,
+                'batch_quantity'     => (float) $i->stockInUse->quantity,
                 'quantity_requested' => $i->quantity_requested,
                 'quantity_received'  => $i->quantity_received,
                 'harvest_date'       => $i->harvest_date?->format('Y-m-d'),

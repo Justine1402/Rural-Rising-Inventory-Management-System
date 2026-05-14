@@ -6,6 +6,7 @@ export function UIProvider({ children }) {
   const [receiveOrderFormOpen, setReceiveOrderFormOpen] = useState(false);
   const [createProductFormOpen, setCreateProductFormOpen] = useState(false);
   const [transferRequestFormOpen, setTransferRequestFormOpen] = useState(false);
+  const [issueProductFormOpen, setIssueProductFormOpen] = useState(false);
   const [productRefreshKey, setProductRefreshKey] = useState(0);
   const [receiveOrderRefreshKey, setReceiveOrderRefreshKey] = useState(0);
   const [transferRequestRefreshKey, setTransferRequestRefreshKey] = useState(0);
@@ -19,6 +20,7 @@ export function UIProvider({ children }) {
       receiveOrderFormOpen, setReceiveOrderFormOpen,
       createProductFormOpen, setCreateProductFormOpen,
       transferRequestFormOpen, setTransferRequestFormOpen,
+      issueProductFormOpen, setIssueProductFormOpen,
       productRefreshKey, refreshProducts,
       receiveOrderRefreshKey, refreshReceiveOrders,
       transferRequestRefreshKey, refreshTransferRequests,

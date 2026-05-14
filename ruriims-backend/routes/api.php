@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\IssueProductController;
 use App\Http\Controllers\PinController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ReceiveOrderController;
@@ -35,4 +36,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/transfer-requests', [TransferRequestController::class, 'store']);
     Route::get('/transfer-requests/{transferRequest}', [TransferRequestController::class, 'show']);
     Route::post('/transfer-requests/{transferRequest}/accomplish', [TransferRequestController::class, 'accomplish']);
+
+    Route::get('/issue-products', [IssueProductController::class, 'index']);
+    Route::post('/issue-products', [IssueProductController::class, 'store']);
+    Route::get('/issue-products/{issueProduct}', [IssueProductController::class, 'show']);
 });

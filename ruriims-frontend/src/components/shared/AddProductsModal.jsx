@@ -34,6 +34,7 @@ export default function AddProductsModal({ isOpen, onSelect, onClose }) {
   const handleSelect = () => {
     onSelect(
       selected.map((p) => ({
+        productId: p.id,
         productCode: p.sku_code,
         productName: p.name,
         unit: p.unit,

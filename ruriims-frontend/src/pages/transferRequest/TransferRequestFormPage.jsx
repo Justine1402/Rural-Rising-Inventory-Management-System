@@ -46,7 +46,7 @@ export default function TransferRequestFormPage({ onClose, onSuccess }) {
         setSourceWarehouseId(t.source_warehouse_id);
         setDestinationWarehouseId(t.destination_warehouse_id);
         setDateReceived(t.date_received ?? '');
-        setItems(t.items.map((i) => ({ ...i, quantity_received: parseFloat(i.quantity_received) || 0 })));
+        setItems(t.items.map((i) => ({ ...i, quantity_received: parseFloat(i.quantity_received) || 0, batch_quantity: i.batch_quantity ?? null })));
       })
       .catch(() => setError('Failed to load transfer request.'))
       .finally(() => setFetchLoading(false));
@@ -81,7 +81,7 @@ export default function TransferRequestFormPage({ onClose, onSuccess }) {
     setItems((prev) =>
       prev.map((item, i) =>
         i === rowIndex
-          ? { ...item, stock_in_use_id: batch.id, stock_in_use_code: batch.code, harvest_date: batch.harvest_date }
+          ? { ...item, stock_in_use_id: batch.id, stock_in_use_code: batch.code, harvest_date: batch.harvest_date, batch_quantity: batch.quantity }
           : item
       )
     );
@@ -291,7 +291,12 @@ export default function TransferRequestFormPage({ onClose, onSuccess }) {
                       {items.map((item, idx) => (
                         <tr key={item.product_code ?? idx} className="border-t border-gray-100">
                           <td className="px-4 py-2 font-mono text-xs text-gray-700">{item.product_code}</td>
-                          <td className="px-4 py-2 text-gray-800">{item.product_name}</td>
+                          <td className="px-4 py-2">
+                            <span className="text-gray-800 text-sm">{item.product_name}</span>
+                            {item.batch_quantity != null && (
+                              <div className="text-xs text-gray-500">{item.batch_quantity} {item.unit} available</div>
+                            )}
+                          </td>
                           <td className="px-4 py-2">
                             {isAccomplish ? (
                               <span className="font-mono text-xs text-gray-700">{item.stock_in_use_code}</span>

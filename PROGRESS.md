@@ -121,11 +121,31 @@
 #### Coordinated code edit
 - `ruriims-backend/bootstrap/app.php` — removed `web:` and `commands:` lines from `->withRouting()`; only `api:` and `health:` remain
 
+### Trait Extraction — Step 10
+
+- [x] `app/Traits/GeneratesTransactionCode.php` — protected method `generateTransactionCode(prefix, warehouseId, warehousePrefix, modelClass, codeColumn='code', warehouseColumn='warehouse_id')`: scopes `lockForUpdate()->count()` to the warehouse column, pads sequence to 3 digits, returns `{PREFIX}-{WH}-000-{SEQ}`
+- [x] `ReceiveOrderController` — added `use GeneratesTransactionCode`; replaced inline `count()/str_pad` block with `$this->generateTransactionCode('RO', ...)` call; removed TODO comment
+- [x] `TransferRequestController` — added `use GeneratesTransactionCode`; replaced inline block with `$this->generateTransactionCode('TRF', ..., 'code', 'source_warehouse_id')` call; removed TODO comment
+
+### Build Step 10 — IssueProductFormPage + IssueProductController
+
+- [x] `create_issue_products_table` migration — columns: id, code (unique), warehouse_id FK, issue_type (enum: sale/internal_use), date_issued (date), issued_by FK; **no status column** — single-stage transaction, always complete; run
+- [x] `create_issue_product_items_table` migration — columns: id, issue_product_id FK (cascadeOnDelete), product_id FK, stock_in_use_id FK, quantity_issued (decimal 10,3), harvest_date (nullable), note (text nullable); run
+- [x] `IssueProduct` model — fillable; cast date_issued; belongsTo warehouse + issuedBy (User); hasMany items
+- [x] `IssueProductItem` model — fillable; cast harvest_date; belongsTo issueProduct, product, stockInUse
+- [x] `IssueProductController` — uses `GeneratesTransactionCode` trait; `index` (all records with warehouse/user names); `store` (same-manager PIN + `ISS-[WH]-000-[SEQ]` per-warehouse code inside DB::transaction + item loop with `lockForUpdate()` batch check — returns 422 with message if quantity_issued exceeds batch quantity + `decrement` on StockInUse); `show` (record + items + nested product details)
+- [x] `routes/api.php` — `GET/POST /issue-products`, `GET /issue-products/{issueProduct}`
+- [x] `AddProductsModal.jsx` — updated `handleSelect` to include `productId: p.id` in the callback payload (backward-compatible; existing RO/TRF consumers ignore the new field)
+- [x] `IssueProductFormPage.jsx` (`src/pages/issueProduct/`) — opens as overlay via `UIContext` (no URL change, no route); blur overlay z-40 + card z-50; auto-fills Issued By (AuthContext), Date Requested (today), Warehouse (WarehouseContext.activeWarehouse — no dropdown); Issue Type dropdown (Sale/Internal Use); two-step product flow (AddProductsModal → StockInUseModal per row); table columns: Product SKU | Product Name | Stock-in-Use Code | Unit: | Quantity Issued: | Harvest Date: | Note: (trailing colons per prototype); Note field is `<textarea rows={2}>`; on success: "Created ISS-..." confirmation label + COMPLETE and Add Product buttons disabled; calls `onSuccess()` (refreshProducts) on success; RETURN closes overlay via `onClose` prop
+- [x] `UIContext.jsx` — added `issueProductFormOpen` boolean + `setIssueProductFormOpen` setter
+- [x] `App.jsx` — `GlobalOverlays` renders `<IssueProductFormPage>` when `issueProductFormOpen` is true; passes `onClose` and `onSuccess={refreshProducts}`; no `/issue-products/new` route added
+- [x] `Navbar.jsx` — `+ Issue Product` button wired to `setIssueProductFormOpen(true)` via UIContext (removed from `STATIC_ACTION_BUTTONS`, added dedicated handler); does not use `navigate()`
+- [x] `STRUCTURE.md` — removed `/issue-products/new` route entry; updated overlay callout to include `IssueProductFormPage`; updated `IssueProductFormPage` spec opening line to "opens as UIContext overlay"
+
 ---
 
 ## Not Started
 
-- [ ] Step 10 — `IssueProductFormPage` + `IssueProductController`
 - [ ] Step 11 — Temporary Warehouse pages + `TemporaryWarehouseController`
 - [ ] Step 12 — Reconciliation pages + `ReconciliationController`
 - [ ] Step 13 — `UserManagementPage` + `UserController`

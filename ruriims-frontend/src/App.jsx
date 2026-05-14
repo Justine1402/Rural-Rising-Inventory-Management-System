@@ -10,6 +10,7 @@ import ReceiveOrderListPage from './pages/receiveOrder/ReceiveOrderListPage';
 import ReceiveOrderFormPage from './pages/receiveOrder/ReceiveOrderFormPage';
 import TransferRequestListPage from './pages/transferRequest/TransferRequestListPage';
 import TransferRequestFormPage from './pages/transferRequest/TransferRequestFormPage';
+import IssueProductFormPage from './pages/issueProduct/IssueProductFormPage';
 
 function GuestRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -22,6 +23,7 @@ function GlobalOverlays() {
     receiveOrderFormOpen, setReceiveOrderFormOpen,
     createProductFormOpen, setCreateProductFormOpen,
     transferRequestFormOpen, setTransferRequestFormOpen,
+    issueProductFormOpen, setIssueProductFormOpen,
     refreshProducts, refreshReceiveOrders, refreshTransferRequests,
   } = useUI();
   return (
@@ -34,6 +36,9 @@ function GlobalOverlays() {
       )}
       {transferRequestFormOpen && (
         <TransferRequestFormPage onClose={() => setTransferRequestFormOpen(false)} onSuccess={() => { refreshProducts(); refreshTransferRequests(); }} />
+      )}
+      {issueProductFormOpen && (
+        <IssueProductFormPage onClose={() => setIssueProductFormOpen(false)} onSuccess={refreshProducts} />
       )}
     </>
   );
