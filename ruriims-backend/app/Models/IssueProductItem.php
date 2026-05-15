@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class IssueProductItem extends Model
 {
     protected $fillable = [
-        'issue_product_id', 'product_id', 'stock_in_use_id',
+        'issue_product_id', 'product_id', 'requested_stock_in_use_id',
         'quantity_issued', 'harvest_date', 'note',
     ];
 
@@ -27,6 +27,11 @@ class IssueProductItem extends Model
 
     public function stockInUse()
     {
-        return $this->belongsTo(StockInUse::class, 'stock_in_use_id');
+        return $this->belongsTo(StockInUse::class, 'requested_stock_in_use_id');
+    }
+
+    public function batchDeductions()
+    {
+        return $this->hasMany(IssueProductBatchDeduction::class);
     }
 }

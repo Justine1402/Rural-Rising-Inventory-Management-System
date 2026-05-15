@@ -19,8 +19,4 @@ class ReceiveOrderItem extends Model
         return $this->belongsTo(Product::class);
     }
 
-    public function receiveOrder()
-    {
-        return $this->belongsTo(ReceiveOrder::class);
-    }
 }

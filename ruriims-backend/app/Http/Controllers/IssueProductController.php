@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\IssueProduct;
+use App\Models\IssueProductBatchDeduction;
 use App\Models\IssueProductItem;
 use App\Models\StockInUse;
 use App\Models\Warehouse;
 use App\Traits\GeneratesTransactionCode;
+use App\Traits\PlansBatchCascade;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -14,6 +16,7 @@ use Illuminate\Support\Facades\Hash;
 class IssueProductController extends Controller
 {
     use GeneratesTransactionCode;
+    use PlansBatchCascade;
 
     public function index()
     {
@@ -67,24 +70,44 @@ class IssueProductController extends Controller
                 ]);
 
                 foreach ($request->items as $item) {
-                    $batch = StockInUse::lockForUpdate()->findOrFail($item['stock_in_use_id']);
+                    // stock_in_use_id in the payload maps to requested_stock_in_use_id in the DB
+                    $plan = $this->planBatchCascade(
+                        $item['product_id'],
+                        $request->warehouse_id,
+                        $item['stock_in_use_id'],
+                        (float) $item['quantity_issued']
+                    );
 
-                    if ($batch->quantity < $item['quantity_issued']) {
-                        throw new \Exception(
-                            "Insufficient stock in batch {$batch->code}. Available: {$batch->quantity}."
-                        );
-                    }
+                    $selectedBatch = StockInUse::find($item['stock_in_use_id']);
 
-                    IssueProductItem::create([
-                        'issue_product_id' => $issue->id,
-                        'product_id'       => $item['product_id'],
-                        'stock_in_use_id'  => $item['stock_in_use_id'],
-                        'quantity_issued'  => $item['quantity_issued'],
-                        'harvest_date'     => $item['harvest_date'] ?? null,
-                        'note'             => $item['note'] ?? null,
+                    $issueItem = IssueProductItem::create([
+                        'issue_product_id'        => $issue->id,
+                        'product_id'              => $item['product_id'],
+                        'requested_stock_in_use_id' => $item['stock_in_use_id'],
+                        'quantity_issued'          => $item['quantity_issued'],
+                        'harvest_date'             => $selectedBatch->harvest_date,
+                        'note'                     => $item['note'] ?? null,
                     ]);
 
-                    $batch->decrement('quantity', $item['quantity_issued']);
+                    $planSum = 0.0;
+                    foreach ($plan as $entry) {
+                        IssueProductBatchDeduction::create([
+                            'issue_product_item_id' => $issueItem->id,
+                            'stock_in_use_id'       => $entry['stock_in_use_id'],
+                            'quantity_deducted'     => $entry['quantity_deducted'],
+                        ]);
+
+                        StockInUse::where('id', $entry['stock_in_use_id'])
+                            ->decrement('quantity', $entry['quantity_deducted']);
+
+                        $planSum += $entry['quantity_deducted'];
+                    }
+
+                    if (abs($planSum - (float) $item['quantity_issued']) > 0.0005) {
+                        throw new \RuntimeException(
+                            "System invariant violated: cascade plan sum ({$planSum}) does not match quantity_issued ({$item['quantity_issued']})."
+                        );
+                    }
                 }
 
                 return $issue;
@@ -98,7 +121,13 @@ class IssueProductController extends Controller
 
     public function show(IssueProduct $issueProduct)
     {
-        $issueProduct->load(['warehouse', 'issuedBy', 'items.product', 'items.stockInUse']);
+        $issueProduct->load([
+            'warehouse',
+            'issuedBy',
+            'items.product',
+            'items.stockInUse',
+            'items.batchDeductions.stockInUse',
+        ]);
 
         $data = [
             'id'           => $issueProduct->id,
@@ -109,16 +138,27 @@ class IssueProductController extends Controller
             'date_issued'  => $issueProduct->date_issued->format('M d, Y'),
             'issued_by'    => $issueProduct->issuedBy->name,
             'items'        => $issueProduct->items->map(fn ($i) => [
-                'id'               => $i->id,
-                'product_id'       => $i->product_id,
-                'product_code'     => $i->product->sku_code,
-                'product_name'     => $i->product->name,
-                'unit'             => $i->product->unit,
-                'stock_in_use_id'  => $i->stock_in_use_id,
+                'id'                => $i->id,
+                'product_id'        => $i->product_id,
+                'product_code'      => $i->product->sku_code,
+                'product_name'      => $i->product->name,
+                'unit'              => $i->product->unit,
+                'stock_in_use_id'   => $i->requested_stock_in_use_id,
                 'stock_in_use_code' => $i->stockInUse->code,
-                'quantity_issued'  => $i->quantity_issued,
-                'harvest_date'     => $i->harvest_date?->format('M d, Y'),
-                'note'             => $i->note,
+                'quantity_issued'   => $i->quantity_issued,
+                'harvest_date'      => $i->harvest_date?->format('M d, Y'),
+                'note'              => $i->note,
+                'requested_batch'   => [
+                    'code'         => $i->stockInUse->code,
+                    'harvest_date' => $i->stockInUse->harvest_date?->format('Y-m-d'),
+                ],
+                'batch_deductions'  => $i->batchDeductions->map(fn ($d) => [
+                    'batch'             => [
+                        'code'         => $d->stockInUse->code,
+                        'harvest_date' => $d->stockInUse->harvest_date?->format('Y-m-d'),
+                    ],
+                    'quantity_deducted' => $d->quantity_deducted,
+                ]),
             ]),
         ];
 

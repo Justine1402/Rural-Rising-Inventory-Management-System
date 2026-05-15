@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\ReceiveOrder;
 use App\Models\ReceiveOrderItem;
 use App\Models\StockInUse;
+use App\Models\Warehouse;
 use App\Traits\GeneratesTransactionCode;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -53,7 +54,7 @@ class ReceiveOrderController extends Controller
             return response()->json(['message' => 'Incorrect PIN.'], 422);
         }
 
-        $warehouse = \App\Models\Warehouse::findOrFail($request->warehouse_id);
+        $warehouse = Warehouse::findOrFail($request->warehouse_id);
 
         $orderCost = collect($request->items)->sum('product_cost');
         $total = $orderCost + $request->delivery_fee;
@@ -166,7 +167,7 @@ class ReceiveOrderController extends Controller
                     $product = $item->product;
                     $warehouse = $receiveOrder->warehouse;
                     $skuSeq = substr($product->sku_code, 4);
-                    $batchSeq = str_pad(StockInUse::where('product_id', $product->id)->where('warehouse_id', $receiveOrder->warehouse_id)->count() + 1, 3, '0', STR_PAD_LEFT);
+                    $batchSeq = str_pad(StockInUse::where('product_id', $product->id)->where('warehouse_id', $receiveOrder->warehouse_id)->lockForUpdate()->count() + 1, 3, '0', STR_PAD_LEFT);
                     $code = "SKU-{$warehouse->code}-{$skuSeq}-{$batchSeq}";
 
                     StockInUse::create([

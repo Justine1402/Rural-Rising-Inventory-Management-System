@@ -3,6 +3,7 @@ import api from '../../api/axios';
 
 export default function StockInUseModal({ isOpen, skuCode, warehouseId, onSelect, onClose }) {
   const [batches, setBatches] = useState([]);
+  const [warehouseTotal, setWarehouseTotal] = useState(null);
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -13,7 +14,10 @@ export default function StockInUseModal({ isOpen, skuCode, warehouseId, onSelect
     setError(null);
     setLoading(true);
     api.get('/stock-in-use', { params: { sku_code: skuCode, warehouse_id: warehouseId } })
-      .then((res) => setBatches(res.data.batches))
+      .then((res) => {
+        setWarehouseTotal(res.data.warehouse_total);
+        setBatches(res.data.batches);
+      })
       .catch(() => setError('Failed to load batches.'))
       .finally(() => setLoading(false));
   }, [isOpen, skuCode, warehouseId]);
@@ -21,7 +25,7 @@ export default function StockInUseModal({ isOpen, skuCode, warehouseId, onSelect
   if (!isOpen) return null;
 
   const handleSelect = () => {
-    if (selected) onSelect(selected);
+    if (selected) onSelect({ batch: selected, warehouseTotal, allBatches: batches });
   };
 
   return (

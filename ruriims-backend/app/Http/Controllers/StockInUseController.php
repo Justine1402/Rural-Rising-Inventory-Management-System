@@ -23,12 +23,17 @@ class StockInUseController extends Controller
             ->orderBy('harvest_date')
             ->get(['id', 'code', 'harvest_date', 'quantity']);
 
+        $warehouseTotal = (float) StockInUse::where('product_id', $product->id)
+            ->where('warehouse_id', $request->warehouse_id)
+            ->sum('quantity');
+
         return response()->json([
-            'batches' => $batches->map(fn ($b) => [
+            'warehouse_total' => $warehouseTotal,
+            'batches'         => $batches->map(fn ($b) => [
                 'id'           => $b->id,
                 'code'         => $b->code,
-                'harvest_date' => $b->harvest_date->format('M d, Y'),
-                'quantity'     => $b->quantity,
+                'harvest_date' => $b->harvest_date->format('Y-m-d'),
+                'quantity'     => (float) $b->quantity,
                 'category'     => $product->category,
             ]),
         ]);

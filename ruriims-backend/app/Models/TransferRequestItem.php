@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class TransferRequestItem extends Model
 {
     protected $fillable = [
-        'transfer_request_id', 'product_id', 'stock_in_use_id',
+        'transfer_request_id', 'product_id', 'requested_stock_in_use_id',
         'quantity_requested', 'quantity_received', 'harvest_date',
     ];
 
@@ -27,6 +27,11 @@ class TransferRequestItem extends Model
 
     public function stockInUse()
     {
-        return $this->belongsTo(StockInUse::class, 'stock_in_use_id');
+        return $this->belongsTo(StockInUse::class, 'requested_stock_in_use_id');
+    }
+
+    public function batchDeductions()
+    {
+        return $this->hasMany(TransferRequestBatchDeduction::class);
     }
 }

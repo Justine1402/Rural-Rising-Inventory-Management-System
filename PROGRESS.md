@@ -142,11 +142,49 @@
 - [x] `Navbar.jsx` — `+ Issue Product` button wired to `setIssueProductFormOpen(true)` via UIContext (removed from `STATIC_ACTION_BUTTONS`, added dedicated handler); does not use `navigate()`
 - [x] `STRUCTURE.md` — removed `/issue-products/new` route entry; updated overlay callout to include `IssueProductFormPage`; updated `IssueProductFormPage` spec opening line to "opens as UIContext overlay"
 
+### Cascade Feature — Cross-Cutting (2026-05-15)
+
+- [x] `app/Traits/PlansBatchCascade.php` — backend cascade planner: nearest-harvest-date sort with FIFO (oldest-first) tiebreak; FIFO fallback when the anchor batch is depleted (selected batch not in non-zero set); `lockForUpdate()` on all fetched batches; throws `RuntimeException` on insufficient total stock
+- [x] `app/Models/IssueProductBatchDeduction.php` + migration `create_issue_product_batch_deductions_table` — records actual batch-level deductions per `issue_product_items` row; FK cascadeOnDelete on item
+- [x] `app/Models/TransferRequestBatchDeduction.php` + migration `create_transfer_request_batch_deductions_table` — same for TRF items
+- [x] Migrations `rename_stock_in_use_id_on_issue_product_items` + `rename_stock_in_use_id_on_transfer_request_items` — renamed `stock_in_use_id` → `requested_stock_in_use_id` on both items tables to clarify the column is the requester's chosen batch, not the actual deduction reference
+- [x] `IssueProductController@store` — cascade-aware; computes plan via trait inside `DB::transaction`; asserts `planSum === quantity_issued` invariant; creates `IssueProductBatchDeduction` rows; decrements `StockInUse` per plan; returns 422 with user-facing message on insufficient stock
+- [x] `TransferRequestController@store` — cascade-aware; computes plan via trait; stores `TransferRequestBatchDeduction` rows as the requester's plan; does **not** decrement stock at create time
+- [x] `TransferRequestController@accomplish` — recomputes cascade from current stock at accomplish time using `quantity_received`; deletes stale create-time `batch_deductions`; inserts fresh deduction rows; decrements source batches; creates one destination `StockInUse` batch per source batch deducted (harvest date copied from source); wrapped in `try/catch` returning 422 on `RuntimeException`
+- [x] `StockInUseController@index` — response shape updated to `{ warehouse_total, batches }` (`warehouse_total` = sum of all quantities for that product+warehouse; `batches` = non-zero only, FEFO ordered)
+- [x] `src/utils/planBatchCascade.js` — frontend mirror of `PlansBatchCascade` trait; identical algorithm (nearest-harvest-date + FIFO tiebreak, FIFO fallback when anchor batch absent); used for cascade count and preview rendering; returns `null` instead of throwing
+- [x] `src/components/shared/CascadePreviewModal.jsx` — modal (`z-[80]`) showing per-batch draw breakdown (code, harvest date, quantity deducted, total); click-outside-to-close; `formatDate` uses local time constructor to avoid UTC offset issues
+- [x] `src/components/shared/StockInUseModal.jsx` — updated to capture `warehouse_total` from new response shape; passes `{ batch, warehouseTotal, allBatches }` via `onSelect` so forms can compute cascade validation without extra fetches
+- [x] Per-row cascade validation in `IssueProductFormPage` and `TransferRequestFormPage` (create + accomplish modes): three-tier validation (within-batch → no feedback; cascade range → gray hint with count + preview link; exceeds warehouse total → red error, submit disabled)
+- [x] `TransferRequestFormPage` accomplish mode — parallel-fetches `GET /stock-in-use` per unique product code on load to populate `allBatches`/`warehouseTotal` for cascade validation (show API does not return these)
+
 ### UX Enhancement — "Available" Column + Per-Row Quantity Validation (2026-05-15)
 
 - [x] `TransferRequestFormPage.jsx` — renamed "Unit" table column header to "Available"; Available cell shows `{batch_quantity} {unit}` (e.g., "100 kg") when a batch is selected, blank otherwise; removed `batch_quantity` sub-line that was previously shown under the Product Name cell; added `getRowError(item)` helper that fires when typed qty exceeds the batch's available quantity (returns `"Batch {code} only has {qty} {unit}."`) or when a qty is entered but no batch is selected yet (returns `"Select a Stock-In-Use Code first."`); qty input (Qty Requested in create mode, Qty Received in accomplish mode) gets a red border + inline helper text below it when `getRowError` is non-null; CREATE / ACCOMPLISH button disabled while `hasRowErrors` is true (any row has an error)
 - [x] `IssueProductFormPage.jsx` — same "Available" column rename, cell rendering, and `getRowError` / `hasRowErrors` validation pattern applied to Qty Issued; COMPLETE button disabled while any row has an error
 - [x] Backend — `TransferRequestController@show` was already returning `batch_quantity: (float) $i->stockInUse->quantity` per item (via the eager-loaded `stockInUse` relationship); accomplish-mode Available cell renders from this field on load, no extra fetch or backend change needed
+
+### Codebase Cleanup — 2026-05-16
+- Ran read-only audit pass (`CODEBASE_AUDIT.md`) covering dead code, orphaned imports, stale TODOs, duplicated logic, debug statements, commented-out code, and concurrency concerns. 15 findings across 8 categories.
+- **Removed:** commented-out `MustVerifyEmail` import in `User.php`. Replaced inline FQCN `\App\Models\Warehouse` with a `use` statement in `ReceiveOrderController.php`. Removed unused `ReceiveOrderItem::receiveOrder()` inverse relationship after confirming zero references in codebase.
+- **Fixed:** `ReceiveOrderController@complete` batch sequence count now uses `lockForUpdate()`, matching the TRF accomplish pattern. Closes a concurrency gap that could have produced duplicate StockInUse batch codes under simultaneous RO completions.
+- **Deferred to future refactor (noted, not acted on):**
+  - Extract duplicated batch-sequence-generation pattern between `ReceiveOrderController@complete` and `TransferRequestController@accomplish` into a shared trait (similar to `GeneratesTransactionCode`).
+  - Extract duplicated PIN verification logic across `AuthController`, `IssueProductController`, `TransferRequestController`, `ReceiveOrderController` into a middleware or controller trait.
+  - Inverse `belongsTo` relationships on `StockInUse`, `IssueProductBatchDeduction`, `TransferRequestBatchDeduction` are unused today but intentionally retained for future Reports/Detail view traversal.
+- Audit findings consolidated into this entry. Full audit report (`CODEBASE_AUDIT.md`) deleted after action items were resolved or deferred.
+
+---
+
+## Known Issues / Flagged for Future Fix
+
+### Concurrency — TRF accomplish: no row-level lock on the transaction header
+- `TransferRequestController@accomplish` receives `$transferRequest` via Laravel route model binding — a plain `find()` with no `lockForUpdate()`.
+- The status check reads the already-bound instance, which was fetched before the request entered the transaction.
+- Two concurrent accomplish requests for the same TRF could both pass the status check before either commits, resulting in duplicate accomplishment.
+- **Risk level:** Low — requires two users to hit the endpoint for the same record within milliseconds. Not exploitable through normal UI.
+- **Fix:** Re-fetch the record inside `DB::transaction` with `lockForUpdate()` and re-check status there.
+- **Affects:** `TransferRequestController@accomplish` only. `ReceiveOrderController@complete` had a separate concurrency gap on batch sequence generation — fixed on 2026-05-16 by adding `lockForUpdate()` to the batch count query.
 
 ---
 
