@@ -256,15 +256,18 @@ a product is created — without navigating away.
   refreshReceiveOrders: function,         // call this to trigger an RO list re-fetch
   transferRequestRefreshKey: number,      // increments on each successful TRF create/accomplish
   refreshTransferRequests: function,      // call this to trigger a TRF list re-fetch
+  issueProductFormOpen: boolean,
+  setIssueProductFormOpen: function,
 }
 ```
 
-`GlobalOverlays` in `App.jsx` renders `CreateProductPage` when `createProductFormOpen`
-is true, and `ReceiveOrderFormPage` (create mode) when `receiveOrderFormOpen` is true.
-The Navbar buttons set these flags. RETURN inside each overlay clears the flag via
-the `onClose` prop — no `navigate()` call. `GlobalOverlays` passes `refreshProducts`
-as the `onSuccess` prop to `CreateProductPage`; `CreateProductPage` calls it after a
-successful `POST /api/products` so the dashboard re-fetches in real time.
+`GlobalOverlays` in `App.jsx` renders `CreateProductPage`, `ReceiveOrderFormPage`
+(create mode), `TransferRequestFormPage` (create mode), and `IssueProductFormPage`
+when their respective flags (`createProductFormOpen`, `receiveOrderFormOpen`,
+`transferRequestFormOpen`, `issueProductFormOpen`) are true. The Navbar buttons set
+these flags. RETURN inside each overlay clears the flag via the `onClose` prop —
+no `navigate()` call. Each overlay calls its `onSuccess` prop on successful submit
+to trigger the relevant list or dashboard re-fetch via the matching refresh key.
 
 ---
 
@@ -309,7 +312,7 @@ Default state (permanent warehouse active):
 - `+ Create Product` → opens `CreateProductPage` overlay via `UIContext` (no URL change)
 - `+ Receive Order` → opens `ReceiveOrderFormPage` overlay via `UIContext` (no URL change)
 - `+ Transfer Request` → opens `TransferRequestFormPage` overlay via `UIContext` (no URL change)
-- `+ Issue Product` → `/issue-products/new` (not yet built)
+- `+ Issue Product` → opens `IssueProductFormPage` overlay via `UIContext` (no URL change)
 - `+ Create Temporary Warehouse` → `/temporary-warehouses/new` (not yet built)
 
 When a **Temporary Warehouse tab is active**, Navbar shows only:
@@ -429,7 +432,7 @@ Props:
 isOpen        boolean
 skuCode       string    // e.g. "SKU-001" — used in the modal title
 warehouseId   number    // source warehouse to fetch available batches from
-onSelect      function  // receives { code, harvestDate, quantity, category }
+onSelect      function  // receives { id, code, harvest_date, quantity, category }
 onClose       function
 ```
 
@@ -720,12 +723,19 @@ Product Details section — **two-step flow:**
 3. User clicks the Stock-In-Use Code cell for a product row → `StockInUseModal`
    opens for that SKU, showing available batches in the source warehouse
 4. User selects a batch → row is populated:
-   Product SKU | Product Name | Stock-In-Use Code | Unit |
+   Product SKU | Product Name | Stock-In-Use Code | Available |
    Quantity Requested (user input) | Harvest Date (auto from batch)
+   — Available cell shows `{batch_quantity} {unit}` (e.g., "100 kg"); blank when no batch selected
 5. Repeat step 3–4 for each product row
 
 CREATE button → `PinVerificationModal` (same manager) → on verified →
 "Created TRF-QC-000-003" confirmation label appears → record saved as Incomplete.
+
+**Per-row quantity validation (create mode):** When Qty Requested exceeds the selected
+batch's available quantity, the input border turns red and inline helper text appears
+below it: "Batch {code} only has {qty} {unit}." If a quantity is entered but no batch
+is selected, helper text shows: "Select a Stock-In-Use Code first." CREATE is disabled
+while any row has an error.
 
 **Accomplish mode** (`/transfer-requests/:id`):
 
@@ -733,8 +743,14 @@ Header title is the TRF code (e.g., "TRF-QC-000-003"). Pre-filled read-only
 fields: Requested By, Date Requested, Source Warehouse, Destination Warehouse.
 Blank editable fields: Verified By, Date Received.
 
-Product table: Product SKU | Product Name | Stock-In-Use Code | Unit |
+Product table: Product SKU | Product Name | Stock-In-Use Code | Available |
 Quantity Requested (read-only) | Quantity Received (user inputs) | Harvest Date
+— Available cell shows `{batch_quantity} {unit}` loaded from the show API response
+(no extra fetch; `batch_quantity` is included per item in `GET /api/transfer-requests/{id}`)
+
+**Per-row quantity validation (accomplish mode):** When Qty Received exceeds the batch's
+available quantity, the input border turns red and inline helper text appears below it:
+"Batch {code} only has {qty} {unit}." ACCOMPLISH is disabled while any row has an error.
 
 ACCOMPLISH button → `PinVerificationModal` (manager from a **different warehouse**
 than the one that created the request — same warehouse PIN is rejected, SRS §3.5.6)
@@ -767,12 +783,19 @@ Product Details section — **two-step flow (same as Transfer):**
 3. User clicks the Stock-In-Use Code cell for a product row → `StockInUseModal`
    opens for that SKU, showing available batches in the current warehouse
 4. User selects a batch → row is populated:
-   Product SKU | Product Name | Stock-In-Use Code | Unit |
+   Product SKU | Product Name | Stock-In-Use Code | Available |
    Quantity Issued (user input) | Harvest Date (auto) | Note (optional text)
+   — Available cell shows `{batch_quantity} {unit}` (e.g., "350 kg"); blank when no batch selected
 5. Repeat step 3–4 for each product row
 
-Unit and Harvest Date are auto-filled from the selected batch — the user only
-inputs Quantity Issued and optionally a Note (e.g., "Included 10 Batch 2 Eggplants").
+Harvest Date is auto-filled from the selected batch — the user only inputs
+Quantity Issued and optionally a Note (e.g., "Included 10 Batch 2 Eggplants").
+
+**Per-row quantity validation:** When Qty Issued exceeds the selected batch's available
+quantity, the input border turns red and inline helper text appears below it:
+"Batch {code} only has {qty} {unit}." If a quantity is entered but no batch is selected,
+helper text shows: "Select a Stock-In-Use Code first." COMPLETE is disabled while any
+row has an error.
 
 COMPLETE button → `PinVerificationModal` (same manager) → on verified →
 "Created ISS-QC-000-004" confirmation label appears → inventory quantities

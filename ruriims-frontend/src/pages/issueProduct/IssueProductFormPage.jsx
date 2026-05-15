@@ -78,6 +78,17 @@ export default function IssueProductFormPage({ onClose, onSuccess }) {
 
   const removeItem = (index) => setItems((prev) => prev.filter((_, i) => i !== index));
 
+  const getRowError = (item) => {
+    const qty = parseFloat(item.quantity_issued);
+    if (!qty || qty <= 0) return null;
+    if (!item.stock_in_use_id) return 'Select a Stock-In-Use Code first.';
+    if (item.batch_quantity != null && qty > item.batch_quantity) {
+      return `Batch ${item.stock_in_use_code} only has ${item.batch_quantity} ${item.unit}.`;
+    }
+    return null;
+  };
+  const hasRowErrors = items.some((item) => getRowError(item) !== null);
+
   const handleSubmit = () => {
     setError(null);
     if (!issueType) { setError('Please select an Issue Type.'); return; }
@@ -193,7 +204,7 @@ export default function IssueProductFormPage({ onClose, onSuccess }) {
                     <th className="text-left font-semibold px-4 py-2.5">Product SKU</th>
                     <th className="text-left font-semibold px-4 py-2.5">Product Name</th>
                     <th className="text-left font-semibold px-4 py-2.5">Stock-in-Use Code</th>
-                    <th className="text-left font-semibold px-4 py-2.5">Unit:</th>
+                    <th className="text-left font-semibold px-4 py-2.5">Available</th>
                     <th className="text-left font-semibold px-4 py-2.5">Quantity Issued:</th>
                     <th className="text-left font-semibold px-4 py-2.5">Harvest Date:</th>
                     <th className="text-left font-semibold px-4 py-2.5">Note:</th>
@@ -213,9 +224,6 @@ export default function IssueProductFormPage({ onClose, onSuccess }) {
                       <td className="px-4 py-2 font-mono text-xs text-gray-700">{item.product_code}</td>
                       <td className="px-4 py-2">
                         <span className="text-gray-800 text-sm">{item.product_name}</span>
-                        {item.batch_quantity != null && (
-                          <div className="text-xs text-gray-500">{item.batch_quantity} {item.unit} available</div>
-                        )}
                       </td>
                       <td className="px-4 py-2">
                         <button
@@ -231,19 +239,28 @@ export default function IssueProductFormPage({ onClose, onSuccess }) {
                           {item.stock_in_use_code ?? 'Select batch…'}
                         </button>
                       </td>
-                      <td className="px-4 py-2 text-gray-600 text-xs">{item.unit}</td>
+                      <td className="px-4 py-2 text-gray-700 text-sm">
+                        {item.batch_quantity != null ? `${item.batch_quantity} ${item.unit}` : ''}
+                      </td>
                       <td className="px-4 py-2">
-                        <div className="flex items-center gap-1.5">
-                          <input
-                            type="number"
-                            min="0"
-                            step="1"
-                            value={item.quantity_issued}
-                            onChange={(e) => setItemField(idx, 'quantity_issued', e.target.value)}
-                            disabled={!!successCode}
-                            className="w-24 bg-gray-100 border border-transparent rounded px-2 py-1 text-sm focus:outline-none focus:border-[#1A381E] focus:bg-white disabled:opacity-50"
-                          />
-                          <span className="text-xs text-gray-500">{item.unit}</span>
+                        <div className="flex flex-col gap-0.5">
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="number"
+                              min="0"
+                              step="1"
+                              value={item.quantity_issued}
+                              onChange={(e) => setItemField(idx, 'quantity_issued', e.target.value)}
+                              disabled={!!successCode}
+                              className={`w-24 bg-gray-100 border rounded px-2 py-1 text-sm focus:outline-none focus:bg-white disabled:opacity-50 ${
+                                getRowError(item) ? 'border-red-500' : 'border-transparent focus:border-[#1A381E]'
+                              }`}
+                            />
+                            <span className="text-xs text-gray-500">{item.unit}</span>
+                          </div>
+                          {getRowError(item) && (
+                            <p className="text-xs text-red-600">{getRowError(item)}</p>
+                          )}
                         </div>
                       </td>
                       <td className="px-4 py-2 text-gray-600 text-xs">
@@ -284,7 +301,7 @@ export default function IssueProductFormPage({ onClose, onSuccess }) {
             )}
             <button
               onClick={handleSubmit}
-              disabled={loading || !!successCode}
+              disabled={loading || !!successCode || hasRowErrors}
               className="px-8 py-2.5 text-sm font-bold text-white rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
               style={{ backgroundColor: '#409645' }}
             >

@@ -142,6 +142,12 @@
 - [x] `Navbar.jsx` — `+ Issue Product` button wired to `setIssueProductFormOpen(true)` via UIContext (removed from `STATIC_ACTION_BUTTONS`, added dedicated handler); does not use `navigate()`
 - [x] `STRUCTURE.md` — removed `/issue-products/new` route entry; updated overlay callout to include `IssueProductFormPage`; updated `IssueProductFormPage` spec opening line to "opens as UIContext overlay"
 
+### UX Enhancement — "Available" Column + Per-Row Quantity Validation (2026-05-15)
+
+- [x] `TransferRequestFormPage.jsx` — renamed "Unit" table column header to "Available"; Available cell shows `{batch_quantity} {unit}` (e.g., "100 kg") when a batch is selected, blank otherwise; removed `batch_quantity` sub-line that was previously shown under the Product Name cell; added `getRowError(item)` helper that fires when typed qty exceeds the batch's available quantity (returns `"Batch {code} only has {qty} {unit}."`) or when a qty is entered but no batch is selected yet (returns `"Select a Stock-In-Use Code first."`); qty input (Qty Requested in create mode, Qty Received in accomplish mode) gets a red border + inline helper text below it when `getRowError` is non-null; CREATE / ACCOMPLISH button disabled while `hasRowErrors` is true (any row has an error)
+- [x] `IssueProductFormPage.jsx` — same "Available" column rename, cell rendering, and `getRowError` / `hasRowErrors` validation pattern applied to Qty Issued; COMPLETE button disabled while any row has an error
+- [x] Backend — `TransferRequestController@show` was already returning `batch_quantity: (float) $i->stockInUse->quantity` per item (via the eager-loaded `stockInUse` relationship); accomplish-mode Available cell renders from this field on load, no extra fetch or backend change needed
+
 ---
 
 ## Not Started
