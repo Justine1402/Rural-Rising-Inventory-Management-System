@@ -204,6 +204,12 @@ class TransferRequestController extends Controller
 
         try {
             DB::transaction(function () use ($request, $transferRequest, $user, $destination) {
+                DB::table('transfer_requests')->where('id', $transferRequest->id)->lockForUpdate()->first();
+                $transferRequest->refresh();
+                if ($transferRequest->status !== 'incomplete') {
+                    throw new \RuntimeException('Transfer request already accomplished.');
+                }
+
                 $transferRequest->update([
                     'date_received' => $request->date_received,
                     'status'        => 'complete',

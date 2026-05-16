@@ -8,6 +8,7 @@ use App\Http\Controllers\ReceiveOrderController;
 use App\Http\Controllers\StockInUseController;
 use App\Http\Controllers\TransferRequestController;
 use App\Http\Controllers\WarehouseController;
+use App\Http\Controllers\TemporaryWarehouseController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/test', fn () => response()->json(['message' => 'Laravel is connected!']));
@@ -40,4 +41,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/issue-products', [IssueProductController::class, 'index']);
     Route::post('/issue-products', [IssueProductController::class, 'store']);
     Route::get('/issue-products/{issueProduct}', [IssueProductController::class, 'show']);
+
+    Route::get('/temporary-warehouses', [TemporaryWarehouseController::class, 'index']);
+    Route::post('/temporary-warehouses', [TemporaryWarehouseController::class, 'store']);
+    Route::get('/temporary-warehouses/{temporaryWarehouse}', [TemporaryWarehouseController::class, 'show']);
+    Route::post('/temporary-warehouses/{temporaryWarehouse}/close', [TemporaryWarehouseController::class, 'close']);
 });

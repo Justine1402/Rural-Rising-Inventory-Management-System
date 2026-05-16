@@ -167,30 +167,60 @@
 ### Codebase Cleanup — 2026-05-16
 - Ran read-only audit pass (`CODEBASE_AUDIT.md`) covering dead code, orphaned imports, stale TODOs, duplicated logic, debug statements, commented-out code, and concurrency concerns. 15 findings across 8 categories.
 - **Removed:** commented-out `MustVerifyEmail` import in `User.php`. Replaced inline FQCN `\App\Models\Warehouse` with a `use` statement in `ReceiveOrderController.php`. Removed unused `ReceiveOrderItem::receiveOrder()` inverse relationship after confirming zero references in codebase.
-- **Fixed:** `ReceiveOrderController@complete` batch sequence count now uses `lockForUpdate()`, matching the TRF accomplish pattern. Closes a concurrency gap that could have produced duplicate StockInUse batch codes under simultaneous RO completions.
+- **Fixed:** Added `lockForUpdate()` to the batch-sequence count query in `ReceiveOrderController@complete` (header-row lock remains unfixed — see Known Issues).
 - **Deferred to future refactor (noted, not acted on):**
   - Extract duplicated batch-sequence-generation pattern between `ReceiveOrderController@complete` and `TransferRequestController@accomplish` into a shared trait (similar to `GeneratesTransactionCode`).
   - Extract duplicated PIN verification logic across `AuthController`, `IssueProductController`, `TransferRequestController`, `ReceiveOrderController` into a middleware or controller trait.
   - Inverse `belongsTo` relationships on `StockInUse`, `IssueProductBatchDeduction`, `TransferRequestBatchDeduction` are unused today but intentionally retained for future Reports/Detail view traversal.
 - Audit findings consolidated into this entry. Full audit report (`CODEBASE_AUDIT.md`) deleted after action items were resolved or deferred.
 
+### Documentation Reconciliation — 2026-05-16
+- **TECHSTACK.md** — Added `PlansBatchCascade.php` to Traits list; added `IssueProductBatchDeduction.php` and `TransferRequestBatchDeduction.php` to Models list; added 4 cascade migrations (`rename_stock_in_use_id_on_issue_product_items`, `rename_stock_in_use_id_on_transfer_request_items`, `create_issue_product_batch_deductions_table`, `create_transfer_request_batch_deductions_table`); added `CascadePreviewModal.jsx` to shared components; added `src/utils/planBatchCascade.js` to frontend structure.
+- **STRUCTURE.md** — Fixed TWH-active Navbar button list to use UIContext overlays (no `/issue-products/new` or `/transfer-requests/new` routes); added `CascadePreviewModal.jsx` to `src/components/shared/` folder tree; added `src/utils/` entry with `planBatchCascade.js`; added zero-stock empty-state note to `CloseTemporaryWarehousePage` Products to Return table.
+
+### Concurrency Fix — TRF Accomplish Header Lock — 2026-05-16
+- **Fixed:** `TransferRequestController@accomplish` now acquires a row-level lock via `DB::table('transfer_requests')->where('id', $transferRequest->id)->lockForUpdate()->first()` as the first statement inside `DB::transaction`, then calls `$transferRequest->refresh()` to update the Eloquent instance in-place, then re-checks `status !== 'incomplete'` (throws `RuntimeException` if already complete, caught by the existing `catch (\Exception $e)` block → 422). Closes the race window where two concurrent accomplish requests could both pass the pre-transaction status check.
+
+### Step 11, Stage 1 — Temporary Warehouse Backend Foundation — 2026-05-16
+
+- [x] `add_is_temporary_to_warehouses_table` migration — adds `boolean is_temporary default false` to existing `warehouses` table; existing QC/ALA/MAN rows receive `false` via MySQL ALTER TABLE default; run
+- [x] `create_temporary_warehouses_table` migration — columns: id, warehouse_id (unique FK → warehouses, cascadeOnDelete), transaction_code (unique), name, location, event_date, created_by FK, closed_by FK (nullable), date_closed (nullable), status (enum: active/closed, default active); run
+- [x] `create_temporary_warehouse_returns_table` migration — columns: id, temporary_warehouse_id FK (cascadeOnDelete), product_id FK, source_stock_in_use_id FK, destination_stock_in_use_id FK, destination_warehouse_id FK, quantity_returned (decimal 10,3), harvest_date (nullable); run
+- [x] `Warehouse` model — added `is_temporary` to fillable + boolean cast; `WarehouseController@index` now serializes `is_temporary` on every row automatically
+- [x] `TemporaryWarehouse` model — fillable; casts event_date/date_closed → date; belongsTo warehouse(), creator(), closer(); hasMany returns()
+- [x] `TemporaryWarehouseReturn` model — fillable; cast harvest_date; belongsTo temporaryWarehouse(), product(), sourceStockInUse(), destinationStockInUse(), destinationWarehouse()
+- [x] `TemporaryWarehouseController` — `index` (optional ?status filter, orderByDesc created_at); `store` (same-manager PIN + inline TWH code gen via LIKE count + lockForUpdate inside DB::transaction + creates warehouses row then TWH row — **⚠ TWH event code format is `TWH-{LOC}-{NNN}` instead of correct `TWH-{LOC}-000-{NNN}`; see Known Issues**); `show` (products_transferred_in from completed TRF items, products_issued from IssueProductItems, products_returned from returns() relationship); `close` (same-manager PIN — any manager including creator; lockForUpdate+refresh+status re-check inside transaction; validates dest warehouse is not TWH; validates batch ownership; per-batch decrement + dest StockInUse creation using `SKU-` prefix — correct since close() destinations are always permanent warehouses + TemporaryWarehouseReturn insert; zero-stock close supported via nullable returns array)
+- [x] `routes/api.php` — 4 TWH routes added under auth:sanctum: GET/POST /temporary-warehouses, GET /temporary-warehouses/{id}, POST /temporary-warehouses/{id}/close
+- **Schema decision:** TWH rows stored in existing `warehouses` table (`is_temporary=true`); `temporary_warehouses` is an extension table with unique FK. Avoids all FK collision issues for TRF destination, ISS warehouse, StockInUse warehouse_id.
+- **PIN rule:** close() uses same-manager (any authorized manager, including creator). No different-manager check. Contrast with TRF accomplish (different warehouse) and RO complete (different manager, same branch).
+
 ---
 
 ## Known Issues / Flagged for Future Fix
 
-### Concurrency — TRF accomplish: no row-level lock on the transaction header
-- `TransferRequestController@accomplish` receives `$transferRequest` via Laravel route model binding — a plain `find()` with no `lockForUpdate()`.
-- The status check reads the already-bound instance, which was fetched before the request entered the transaction.
-- Two concurrent accomplish requests for the same TRF could both pass the status check before either commits, resulting in duplicate accomplishment.
-- **Risk level:** Low — requires two users to hit the endpoint for the same record within milliseconds. Not exploitable through normal UI.
-- **Fix:** Re-fetch the record inside `DB::transaction` with `lockForUpdate()` and re-check status there.
-- **Affects:** `TransferRequestController@accomplish` only. `ReceiveOrderController@complete` had a separate concurrency gap on batch sequence generation — fixed on 2026-05-16 by adding `lockForUpdate()` to the batch count query.
+### TWH Event Header Code Missing "000" Segment
+- **File:** `ruriims-backend/app/Http/Controllers/TemporaryWarehouseController.php:65-66` and the LIKE query at line 61.
+- **Issue:** `store()` generates `TWH-{LOC}-{SEQ}` (e.g., `TWH-BGC-001`) instead of `TWH-{LOC}-000-{SEQ}` (e.g., `TWH-BGC-000-001`). Confirmed by user: the "000" middle segment is intentional and matches the prototype screenshots showing `TWH-PAS-000-001` and `TWH-BGC-000-001`.
+- **Fix:** Change line 66 to `$transactionCode = "TWH-{$locationCode}-000-{$seq}";` and line 61 to `where('transaction_code', 'like', "TWH-{$locationCode}-000-%")`.
+- **Risk:** Pre-Stage 3. No TWH records exist yet. Trivial fix before Stage 3 begins.
+
+### TWH Destination Batch Code Uses Wrong Prefix
+- **File:** `ruriims-backend/app/Http/Controllers/TransferRequestController.php` (`@accomplish` method, destination batch creation block).
+- **Issue:** When a TransferRequest accomplishes into a temporary warehouse, the destination StockInUse batch is generated with `SKU-{DEST_WH}-{SKU_SEQ}-{BATCH_SEQ}`. For TWH destinations the prefix should be `TWH-`, yielding `TWH-{LOC}-{SKU_SEQ}-{BATCH_SEQ}` (e.g., `TWH-BGC-001-001`).
+- **Fix:** In `TransferRequestController@accomplish`, after resolving the destination warehouse, branch on `$destination->is_temporary`. If true, build the batch code as `"TWH-{$destination->code}-{$skuSeq}-{$batchSeq}"`. If false, keep the existing `"SKU-{$destination->code}-{$skuSeq}-{$batchSeq}"`. The `warehouses.code` on a TWH already stores the location code (e.g., "BGC"), so the substitution is direct. Note: `TemporaryWarehouseController@close` always writes to a permanent destination (validated); the `SKU-` prefix in `close()` is correct and requires no change.
+- **Risk:** Pre-Stage 3. No transfers into a TWH have occurred yet because the frontend cannot open a TWH-active form until Stage 2 ships. Trivial fix before Stage 3.
+
+### RO Complete — Missing Header Lock (Concurrency Gap)
+- **File:** `ruriims-backend/app/Http/Controllers/ReceiveOrderController.php:131`
+- **Issue:** `complete()` checks `status === 'accomplished'` outside the transaction (line 131) but never re-acquires the row lock or refreshes the model inside the transaction. Two concurrent requests could both pass the pre-check and both execute, double-adding inventory to the warehouse. Same race window patched on `TransferRequestController@accomplish` this session.
+- **Fix:** Insert `DB::table('receive_orders')->where('id', $receiveOrder->id)->lockForUpdate()->first(); $receiveOrder->refresh(); if ($receiveOrder->status !== 'incomplete') { throw new \RuntimeException('Order already accomplished.'); }` as the first three statements inside `DB::transaction`.
+- **Risk:** Low under normal UI usage. Should be patched before Step 12 (Reconciliation) which will follow the same accomplish-pattern shape.
 
 ---
 
 ## Not Started
 
-- [ ] Step 11 — Temporary Warehouse pages + `TemporaryWarehouseController`
+- [ ] Step 11, Stages 2–5 — Temporary Warehouse frontend (WarehouseContext TWH wiring, WarehouseTabs TWH tab, Navbar TWH-active variant, TemporaryWarehouseFormPage, CloseTemporaryWarehousePage, TemporaryWarehouseDetailPage, list in TempWarehouseReportsPage)
 - [ ] Step 12 — Reconciliation pages + `ReconciliationController`
 - [ ] Step 13 — `UserManagementPage` + `UserController`
 - [ ] Step 14 — All Reports pages + `ReportController`

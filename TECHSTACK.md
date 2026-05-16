@@ -157,6 +157,10 @@ Routes defined in `ruriims-backend/routes/api.php`:
 | `GET` | `/api/issue-products` | `auth:sanctum` | `{ "issues": [...] }` |
 | `POST` | `/api/issue-products` | `auth:sanctum` | `{ "issue": { "code": "ISS-..." } }` — PIN (same manager) + generates per-warehouse code + decrements StockInUse |
 | `GET` | `/api/issue-products/{id}` | `auth:sanctum` | `{ "issue": { ...with items } }` |
+| `GET` | `/api/temporary-warehouses` | `auth:sanctum` | `{ "temporary_warehouses": [...] }` — optional `?status=active\|closed` filter |
+| `POST` | `/api/temporary-warehouses` | `auth:sanctum` | `{ "temporary_warehouse": { id, warehouse_id, transaction_code, name } }` — PIN (same manager) + creates warehouses row + TWH row |
+| `GET` | `/api/temporary-warehouses/{id}` | `auth:sanctum` | `{ "temporary_warehouse": { ...with products_transferred_in, products_issued, products_returned } }` |
+| `POST` | `/api/temporary-warehouses/{id}/close` | `auth:sanctum` | `{ "message": "Closed TWH-..." }` — PIN (same manager) + lockForUpdate header + per-batch deduction + dest StockInUse creation |
 
 ---
 
@@ -181,7 +185,8 @@ Rural Rising Inventory Management System/   ← project root
 │   │   │   ├── shared/
 │   │   │   │   ├── PinVerificationModal.jsx ← 6-digit PIN entry modal (z-[60])
 │   │   │   │   ├── AddProductsModal.jsx   ← multi-select master SKU picker (z-[70])
-│   │   │   │   └── StockInUseModal.jsx    ← single-select batch picker (z-[70])
+│   │   │   │   ├── StockInUseModal.jsx    ← single-select batch picker (z-[70])
+│   │   │   │   └── CascadePreviewModal.jsx ← per-batch draw breakdown modal (z-[80]); mirrors planBatchCascade output
 │   │   │   └── ui/
 │   │   │       └── StatusBadge.jsx        ← colored pill: green for In Stock/Accomplished/Complete, red otherwise
 │   │   ├── context/
@@ -203,6 +208,8 @@ Rural Rising Inventory Management System/   ← project root
 │   │   │       └── TransferRequestFormPage.jsx ← dual-mode: create (UIContext overlay) + accomplish (/transfer-requests/:id); two-step product flow
 │   │   │   └── issueProduct/
 │   │   │       └── IssueProductFormPage.jsx   ← UIContext overlay (no route); single-stage issue + StockInUse deduction; same-manager PIN
+│   │   ├── utils/
+│   │   │   └── planBatchCascade.js        ← frontend mirror of PlansBatchCascade trait; nearest-harvest-date cascade planner with FIFO tiebreak
 │   │   ├── routes/
 │   │   │   └── ProtectedRoute.jsx         ← auth + adminOnly route guard
 │   │   ├── App.jsx                        ← BrowserRouter + providers + AppRoutes + GlobalOverlays
@@ -217,26 +224,32 @@ Rural Rising Inventory Management System/   ← project root
     │   ├── Http/
     │   │   └── Controllers/
     │   │       ├── AuthController.php          ← login, logout, user
-    │   │       ├── WarehouseController.php     ← index (returns all warehouses)
+    │   │       ├── WarehouseController.php     ← index (returns all warehouses including TWH; is_temporary serialized via model cast)
     │   │       ├── ProductController.php       ← index (with warehouse_stock + harvest_date), store (PIN-verified), show
     │   │       ├── PinController.php           ← verify (standalone PIN check endpoint)
     │   │       ├── StockInUseController.php    ← index (batches by sku_code + warehouse_id, FEFO; includes id in response)
     │   │       ├── ReceiveOrderController.php  ← index, store (per-warehouse RO code via trait), show, complete
     │   │       ├── TransferRequestController.php ← index, store (per-source-warehouse TRF code via trait), show, accomplish
-    │   │       └── IssueProductController.php  ← index, store (same-manager PIN + ISS code via trait + StockInUse decrement), show
+    │   │       ├── IssueProductController.php  ← index, store (same-manager PIN + ISS code via trait + StockInUse decrement), show
+    │   │       └── TemporaryWarehouseController.php ← index (?status filter), store (same-manager PIN + inline TWH code gen + creates warehouses row + TWH row), show (products_transferred_in/issued/returned), close (same-manager PIN + lockForUpdate+refresh+re-check + per-batch deduction + dest StockInUse creation)
     │   ├── Traits/
-    │   │   └── GeneratesTransactionCode.php    ← per-warehouse scoped code generator; used by RO, TRF, ISS controllers
+    │   │   ├── GeneratesTransactionCode.php    ← per-warehouse scoped code generator; used by RO, TRF, ISS controllers
+    │   │   └── PlansBatchCascade.php           ← nearest-harvest-date batch cascade planner with FIFO tiebreak and fallback; used by TRF and ISS controllers
     │   └── Models/
     │       ├── User.php                        ← fillable: name, email, password, role, warehouse_id, position_title, pin
-    │       ├── Warehouse.php                   ← fillable: name, code
+    │       ├── Warehouse.php                   ← fillable: name, code, is_temporary; cast is_temporary → boolean
     │       ├── Product.php                     ← fillable: sku_code, name, category, unit, shelf_life, created_by
     │       ├── StockInUse.php                  ← table: stock_in_use_codes; fillable: code, product_id, warehouse_id, quantity, harvest_date
     │       ├── ReceiveOrder.php                ← fillable; belongsTo warehouse/creator/verifier; hasMany items
     │       ├── ReceiveOrderItem.php            ← fillable; belongsTo product/receiveOrder
     │       ├── TransferRequest.php             ← fillable; date casts; belongsTo sourceWarehouse/destinationWarehouse/requester/verifier; hasMany items
     │       ├── TransferRequestItem.php         ← fillable; date cast; belongsTo product/transferRequest/stockInUse
+    │       ├── TransferRequestBatchDeduction.php ← records per-batch deductions from a TRF item; belongsTo transferRequestItem/stockInUse
     │       ├── IssueProduct.php                ← fillable; cast date_issued; belongsTo warehouse + issuedBy (User); hasMany items
-    │       └── IssueProductItem.php            ← fillable; cast harvest_date; belongsTo issueProduct/product/stockInUse
+    │       ├── IssueProductItem.php            ← fillable; cast harvest_date; belongsTo issueProduct/product/stockInUse
+    │       ├── IssueProductBatchDeduction.php  ← records per-batch deductions from an ISS item; belongsTo issueProductItem/stockInUse
+    │       ├── TemporaryWarehouse.php          ← fillable; casts event_date/date_closed → date; belongsTo warehouse/creator/closer; hasMany returns
+    │       └── TemporaryWarehouseReturn.php    ← fillable; cast harvest_date; belongsTo temporaryWarehouse/product/sourceStockInUse/destinationStockInUse/destinationWarehouse
     ├── bootstrap/
     │   └── app.php                            ← routes: api.php + health only; statefulApi() enabled for Sanctum SPA auth
     ├── config/                                 ← cors, sanctum, session, database, etc.
@@ -255,7 +268,14 @@ Rural Rising Inventory Management System/   ← project root
     │   │   ├── create_transfer_requests_table
     │   │   ├── create_transfer_request_items_table
     │   │   ├── create_issue_products_table
-    │   │   └── create_issue_product_items_table
+    │   │   ├── create_issue_product_items_table
+    │   │   ├── rename_stock_in_use_id_on_issue_product_items
+    │   │   ├── rename_stock_in_use_id_on_transfer_request_items
+    │   │   ├── create_issue_product_batch_deductions_table
+    │   │   ├── create_transfer_request_batch_deductions_table
+    │   │   ├── add_is_temporary_to_warehouses_table
+    │   │   ├── create_temporary_warehouses_table
+    │   │   └── create_temporary_warehouse_returns_table
     │   └── seeders/
     │       └── UserSeeder.php                 ← seeds 3 warehouses + 2 accounts:
     │                                              admin@ruriims.com (role=admin, PIN=123456)
