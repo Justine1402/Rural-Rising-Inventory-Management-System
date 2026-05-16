@@ -194,21 +194,15 @@
 - **Schema decision:** TWH rows stored in existing `warehouses` table (`is_temporary=true`); `temporary_warehouses` is an extension table with unique FK. Avoids all FK collision issues for TRF destination, ISS warehouse, StockInUse warehouse_id.
 - **PIN rule:** close() uses same-manager (any authorized manager, including creator). No different-manager check. Contrast with TRF accomplish (different warehouse) and RO complete (different manager, same branch).
 
+### TWH Backend Bugfixes — Pre-Stage 2 — 2026-05-17
+
+- **Fixed: TWH event header code missing "000" segment** — `TemporaryWarehouseController@store` was generating `TWH-{LOC}-{SEQ}` (e.g., `TWH-BGC-001`) instead of the correct `TWH-{LOC}-000-{SEQ}` (e.g., `TWH-BGC-000-001`). Changed the LIKE pattern to `TWH-{$locationCode}-000-%` and the code assembly to `"TWH-{$locationCode}-000-{$seq}"`. All future event codes now match the 4-segment format shown in prototype screenshots.
+- **Fixed: TRF→TWH destination batch code using wrong prefix** — `TransferRequestController@accomplish` was writing all destination `StockInUse` batches with `SKU-` prefix unconditionally. Added `$prefix = $destination->is_temporary ? 'TWH' : 'SKU'` branch before code assembly. TWH destinations now produce `TWH-{LOC}-{SKU_SEQ}-{BATCH_SEQ}` codes; permanent warehouse destinations keep the `SKU-` prefix unchanged. `TemporaryWarehouseController@close` was not affected (its destination is always a permanent warehouse, validated at runtime).
+- **Doc fix: STRUCTURE.md styling rules** — Replaced stale `bg-green-700`/`bg-green-800` Tailwind class references in the Brand color, Buttons, and Table header examples with Tailwind arbitrary value equivalents (`bg-[#409645]`, `bg-[#1A381E]`, `hover:bg-[#39803E]`). Added a DESIGN.md citation as the source of truth for brand hex values. The actual code was already using inline hex correctly; only the STRUCTURE.md docs were stale.
+
 ---
 
 ## Known Issues / Flagged for Future Fix
-
-### TWH Event Header Code Missing "000" Segment
-- **File:** `ruriims-backend/app/Http/Controllers/TemporaryWarehouseController.php:65-66` and the LIKE query at line 61.
-- **Issue:** `store()` generates `TWH-{LOC}-{SEQ}` (e.g., `TWH-BGC-001`) instead of `TWH-{LOC}-000-{SEQ}` (e.g., `TWH-BGC-000-001`). Confirmed by user: the "000" middle segment is intentional and matches the prototype screenshots showing `TWH-PAS-000-001` and `TWH-BGC-000-001`.
-- **Fix:** Change line 66 to `$transactionCode = "TWH-{$locationCode}-000-{$seq}";` and line 61 to `where('transaction_code', 'like', "TWH-{$locationCode}-000-%")`.
-- **Risk:** Pre-Stage 3. No TWH records exist yet. Trivial fix before Stage 3 begins.
-
-### TWH Destination Batch Code Uses Wrong Prefix
-- **File:** `ruriims-backend/app/Http/Controllers/TransferRequestController.php` (`@accomplish` method, destination batch creation block).
-- **Issue:** When a TransferRequest accomplishes into a temporary warehouse, the destination StockInUse batch is generated with `SKU-{DEST_WH}-{SKU_SEQ}-{BATCH_SEQ}`. For TWH destinations the prefix should be `TWH-`, yielding `TWH-{LOC}-{SKU_SEQ}-{BATCH_SEQ}` (e.g., `TWH-BGC-001-001`).
-- **Fix:** In `TransferRequestController@accomplish`, after resolving the destination warehouse, branch on `$destination->is_temporary`. If true, build the batch code as `"TWH-{$destination->code}-{$skuSeq}-{$batchSeq}"`. If false, keep the existing `"SKU-{$destination->code}-{$skuSeq}-{$batchSeq}"`. The `warehouses.code` on a TWH already stores the location code (e.g., "BGC"), so the substitution is direct. Note: `TemporaryWarehouseController@close` always writes to a permanent destination (validated); the `SKU-` prefix in `close()` is correct and requires no change.
-- **Risk:** Pre-Stage 3. No transfers into a TWH have occurred yet because the frontend cannot open a TWH-active form until Stage 2 ships. Trivial fix before Stage 3.
 
 ### RO Complete — Missing Header Lock (Concurrency Gap)
 - **File:** `ruriims-backend/app/Http/Controllers/ReceiveOrderController.php:131`

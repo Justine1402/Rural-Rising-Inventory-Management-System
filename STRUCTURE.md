@@ -1162,25 +1162,25 @@ submit button while `loading` is true.
 
 All styling uses **Tailwind CSS utility classes only**. No custom CSS files.
 
-**Brand color (SRS §5.1):** `#1B4D2E` dark green
-- Tailwind approximation: `bg-green-800` / `text-green-800`
-- Table headers, filled buttons, active tabs: `bg-green-700`
-- Hover: `hover:bg-green-800`
+**Brand colors — see DESIGN.md (source of truth for all brand hex values). Do NOT use `bg-green-700`, `bg-green-800`, or any Tailwind green presets for brand surfaces — use Tailwind arbitrary value syntax with exact hex.**
+- Navbar / page headers / table headers: `bg-[#1A381E]` (dark green `#1A381E`)
+- Buttons / active tabs: `bg-[#409645]` (medium green `#409645`)
+- Hover states: `hover:bg-[#39803E]` (deep green `#39803E`)
 
 **Buttons:**
-- Primary filled: `bg-green-700 text-white px-4 py-2 rounded hover:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed`
-- Secondary outlined: `border border-green-700 text-green-700 px-4 py-2 rounded hover:bg-green-50`
+- Primary filled: `bg-[#409645] text-white px-4 py-2 rounded hover:bg-[#39803E] disabled:opacity-50 disabled:cursor-not-allowed`
+- Secondary outlined: `border border-[#409645] text-[#409645] px-4 py-2 rounded hover:bg-green-50`
 - Danger: `bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600`
-- RETURN: `bg-green-600 text-white px-3 py-1.5 rounded text-sm`
+- RETURN: `bg-[#409645] text-white px-3 py-1.5 rounded text-sm`
 
 **Form fields:**
-- Base: `w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600`
+- Base: `w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#409645]`
 - Read-only / auto-filled: add `bg-gray-100 text-gray-500 cursor-not-allowed`
 
 **Table:**
-- Header row: `bg-green-700 text-white text-sm font-semibold`
+- Header row: `bg-[#1A381E] text-white text-sm font-semibold`
 - Body rows: `border-b border-gray-200 hover:bg-gray-50 cursor-pointer text-sm`
-- Selected row: `bg-green-50 border-l-4 border-green-600`
+- Selected row: `bg-green-50 border-l-4 border-[#409645]`
 
 **Status badges:**
 - Base: `rounded-full px-3 py-1 text-xs font-medium`

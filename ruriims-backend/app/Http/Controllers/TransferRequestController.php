@@ -272,7 +272,8 @@ class TransferRequestController extends Controller
                             StockInUse::where('product_id', $product->id)->where('warehouse_id', $destination->id)->lockForUpdate()->count() + 1,
                             3, '0', STR_PAD_LEFT
                         );
-                        $destCode = "SKU-{$destination->code}-{$skuSeq}-{$batchSeq}";
+                        $prefix   = $destination->is_temporary ? 'TWH' : 'SKU';
+                        $destCode = "{$prefix}-{$destination->code}-{$skuSeq}-{$batchSeq}";
 
                         StockInUse::create([
                             'code'         => $destCode,

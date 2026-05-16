@@ -58,12 +58,12 @@ class TemporaryWarehouseController extends Controller
         try {
             $twh = DB::transaction(function () use ($request, $user, $locationCode) {
                 $count = DB::table('temporary_warehouses')
-                    ->where('transaction_code', 'like', "TWH-{$locationCode}-%")
+                    ->where('transaction_code', 'like', "TWH-{$locationCode}-000-%")
                     ->lockForUpdate()
                     ->count();
 
                 $seq             = str_pad($count + 1, 3, '0', STR_PAD_LEFT);
-                $transactionCode = "TWH-{$locationCode}-{$seq}";
+                $transactionCode = "TWH-{$locationCode}-000-{$seq}";
 
                 $warehouse = Warehouse::create([
                     'name'         => $request->name,
