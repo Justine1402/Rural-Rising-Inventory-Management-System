@@ -26,7 +26,16 @@ class ProductController extends Controller
             ->groupBy('product_id')
             ->pluck('latest_harvest', 'product_id');
 
-        $products = Product::all()->map(function ($p) use ($warehouses, $stock, $latestHarvest) {
+        // Most recent harvest date per product per warehouse (for per-warehouse views like TWH dashboard)
+        $latestHarvestPerWarehouse = StockInUse::selectRaw('product_id, warehouse_id, MAX(harvest_date) as latest_harvest')
+            ->groupBy('product_id', 'warehouse_id')
+            ->get()
+            ->groupBy('product_id')
+            ->map(function ($rows) {
+                return $rows->pluck('latest_harvest', 'warehouse_id')->toArray();
+            });
+
+        $products = Product::all()->map(function ($p) use ($warehouses, $stock, $latestHarvest, $latestHarvestPerWarehouse) {
             $productStock = $stock->get($p->id, collect());
             $warehouseStock = $warehouses->mapWithKeys(
                 fn ($w) => [$w->id => $productStock->get($w->id, 0.0)]
@@ -41,7 +50,8 @@ class ProductController extends Controller
                 'unit'           => $p->unit,
                 'shelf_life'     => $p->shelf_life,
                 'warehouse_stock' => $warehouseStock,
-                'harvest_date'   => $latestHarvest->get($p->id),
+                'harvest_date'                => $latestHarvest->get($p->id),
+                'harvest_date_per_warehouse' => $latestHarvestPerWarehouse->get($p->id, []),
                 'status'         => $totalQty > 0 ? 'In Stock' : 'Out of Stock',
             ];
         });

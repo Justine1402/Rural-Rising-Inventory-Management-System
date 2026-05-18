@@ -25,10 +25,12 @@ class TemporaryWarehouseController extends Controller
 
         $twhs = $query->get()->map(fn ($t) => [
             'id'               => $t->id,
+            'warehouse_id'     => $t->warehouse_id,
             'transaction_code' => $t->transaction_code,
             'name'             => $t->name,
             'location'         => $t->location,
             'event_date'       => $t->event_date->format('M d, Y'),
+            'created_at'       => $t->created_at->format('M d, Y'),
             'status'           => $t->status,
             'created_by'       => $t->creator->name,
             'closed_by'        => $t->closer?->name ?? '—',
@@ -107,7 +109,7 @@ class TemporaryWarehouseController extends Controller
 
         $warehouseId = $temporaryWarehouse->warehouse_id;
 
-        $transferredIn = TransferRequestItem::with(['product', 'transferRequest'])
+        $transferredIn = TransferRequestItem::with(['product', 'transferRequest.sourceWarehouse'])
             ->whereHas('transferRequest', fn ($q) => $q
                 ->where('destination_warehouse_id', $warehouseId)
                 ->where('status', 'complete'))
@@ -120,9 +122,13 @@ class TemporaryWarehouseController extends Controller
                 'unit'                  => $i->product->unit,
                 'quantity_received'     => $i->quantity_received,
                 'harvest_date'          => $i->harvest_date?->format('Y-m-d'),
+                'stock_in_use_code'     => StockInUse::where('warehouse_id', $warehouseId)
+                    ->where('product_id', $i->product_id)
+                    ->value('code'),
+                'source_warehouse'      => $i->transferRequest->sourceWarehouse->name,
             ]);
 
-        $issued = IssueProductItem::with(['product', 'issueProduct'])
+        $issued = IssueProductItem::with(['product', 'issueProduct', 'stockInUse'])
             ->whereHas('issueProduct', fn ($q) => $q->where('warehouse_id', $warehouseId))
             ->get()
             ->map(fn ($i) => [
@@ -132,6 +138,8 @@ class TemporaryWarehouseController extends Controller
                 'unit'               => $i->product->unit,
                 'quantity_issued'    => $i->quantity_issued,
                 'harvest_date'       => $i->harvest_date?->format('Y-m-d'),
+                'stock_in_use_code'  => $i->stockInUse?->code,
+                'issue_type'         => $i->issueProduct->issue_type,
             ]);
 
         return response()->json(['temporary_warehouse' => [

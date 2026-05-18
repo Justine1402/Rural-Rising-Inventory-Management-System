@@ -159,7 +159,7 @@ Routes defined in `ruriims-backend/routes/api.php`:
 | `GET` | `/api/issue-products/{id}` | `auth:sanctum` | `{ "issue": { ...with items } }` |
 | `GET` | `/api/temporary-warehouses` | `auth:sanctum` | `{ "temporary_warehouses": [...] }` — optional `?status=active\|closed` filter |
 | `POST` | `/api/temporary-warehouses` | `auth:sanctum` | `{ "temporary_warehouse": { id, warehouse_id, transaction_code, name } }` — PIN (same manager) + creates warehouses row + TWH row |
-| `GET` | `/api/temporary-warehouses/{id}` | `auth:sanctum` | `{ "temporary_warehouse": { ...with products_transferred_in, products_issued, products_returned } }` |
+| `GET` | `/api/temporary-warehouses/{id}` | `auth:sanctum` | `{ "temporary_warehouse": { ...with products_transferred_in [+stock_in_use_code, +source_warehouse], products_issued [+stock_in_use_code, +issue_type], products_returned } }` |
 | `POST` | `/api/temporary-warehouses/{id}/close` | `auth:sanctum` | `{ "message": "Closed TWH-..." }` — PIN (same manager) + lockForUpdate header + per-batch deduction + dest StockInUse creation |
 
 ---
@@ -188,11 +188,11 @@ Rural Rising Inventory Management System/   ← project root
 │   │   │   │   ├── StockInUseModal.jsx    ← single-select batch picker (z-[70])
 │   │   │   │   └── CascadePreviewModal.jsx ← per-batch draw breakdown modal (z-[80]); mirrors planBatchCascade output
 │   │   │   └── ui/
-│   │   │       └── StatusBadge.jsx        ← colored pill: green for In Stock/Accomplished/Complete, red otherwise
+│   │   │       └── StatusBadge.jsx        ← colored pill: green for In Stock/Accomplished/Complete/Active, red otherwise
 │   │   ├── context/
 │   │   │   ├── AuthContext.jsx            ← user session state (user, login, logout)
 │   │   │   ├── WarehouseContext.jsx       ← active warehouse; fetches /api/warehouses on user change (auth-safe)
-│   │   │   └── UIContext.jsx              ← overlay flags (createProduct/receiveOrder/transferRequest/issueProduct); productRefreshKey, receiveOrderRefreshKey, transferRequestRefreshKey + matching refresh() functions
+│   │   │   └── UIContext.jsx              ← overlay flags (createProduct/receiveOrder/transferRequest/issueProduct/temporaryWarehouse); ID-carrying overlay state (closeTemporaryWarehouseOverlayTwhId, temporaryWarehouseDetailOverlayTwhId — null=closed, number=open); productRefreshKey, receiveOrderRefreshKey, transferRequestRefreshKey + matching refresh() functions
 │   │   ├── pages/
 │   │   │   ├── auth/
 │   │   │   │   └── LoginPage.jsx          ← sign in form
@@ -206,8 +206,14 @@ Rural Rising Inventory Management System/   ← project root
 │   │   │   ├── transferRequest/
 │   │   │       ├── TransferRequestListPage.jsx ← standalone page; re-fetches on location.key + transferRequestRefreshKey; contextual accomplish bar
 │   │   │       └── TransferRequestFormPage.jsx ← dual-mode: create (UIContext overlay) + accomplish (/transfer-requests/:id); two-step product flow
-│   │   │   └── issueProduct/
-│   │   │       └── IssueProductFormPage.jsx   ← UIContext overlay (no route); single-stage issue + StockInUse deduction; same-manager PIN
+│   │   │   ├── issueProduct/
+│   │   │   │   └── IssueProductFormPage.jsx   ← UIContext overlay (no route); single-stage issue + StockInUse deduction; same-manager PIN
+│   │   │   ├── temporaryWarehouse/
+│   │   │   │   ├── TemporaryWarehouseFormPage.jsx ← UIContext overlay (no route); creates TWH + warehouses row; same-manager PIN; calls refreshWarehouses(warehouse_id) to auto-select new tab
+│   │   │   │   ├── CloseTemporaryWarehousePage.jsx ← UIContext overlay (no route); reads id from closeTemporaryWarehouseOverlayTwhId; fetches remaining stock via stock-in-use API; per-row Return To dropdown; PIN-verified close; closes overlay on success
+│   │   │   │   └── TemporaryWarehouseDetailPage.jsx ← UIContext overlay (no route); reads id from temporaryWarehouseDetailOverlayTwhId; metadata block + three sub-tables with enriched columns
+│   │   │   └── reports/
+│   │   │       └── TempWarehouseReportsPage.jsx ← standalone full page (/reports/temporary-warehouses); 9-column list of all TWHs; row click → temporaryWarehouseDetailOverlayTwhId; "Reports History" nav button wired here temporarily
 │   │   ├── utils/
 │   │   │   └── planBatchCascade.js        ← frontend mirror of PlansBatchCascade trait; nearest-harvest-date cascade planner with FIFO tiebreak
 │   │   ├── routes/

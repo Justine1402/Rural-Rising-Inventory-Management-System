@@ -19,12 +19,14 @@ export default function TransferRequestFormPage({ onClose, onSuccess }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { warehouses } = useWarehouse();
+  const { warehouses, activeWarehouse } = useWarehouse();
   const { refreshProducts, refreshTransferRequests } = useUI();
   const isAccomplish = !!id;
 
   const [sourceWarehouseId, setSourceWarehouseId] = useState('');
-  const [destinationWarehouseId, setDestinationWarehouseId] = useState('');
+  const [destinationWarehouseId, setDestinationWarehouseId] = useState(
+    !isAccomplish && activeWarehouse?.isTemporary ? activeWarehouse.id : '',
+  );
   const [dateReceived, setDateReceived] = useState('');
   const [items, setItems] = useState([]);
   const [transferData, setTransferData] = useState(null);

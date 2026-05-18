@@ -11,6 +11,10 @@ import ReceiveOrderFormPage from './pages/receiveOrder/ReceiveOrderFormPage';
 import TransferRequestListPage from './pages/transferRequest/TransferRequestListPage';
 import TransferRequestFormPage from './pages/transferRequest/TransferRequestFormPage';
 import IssueProductFormPage from './pages/issueProduct/IssueProductFormPage';
+import TemporaryWarehouseFormPage from './pages/temporaryWarehouse/TemporaryWarehouseFormPage';
+import CloseTemporaryWarehousePage from './pages/temporaryWarehouse/CloseTemporaryWarehousePage';
+import TemporaryWarehouseDetailPage from './pages/temporaryWarehouse/TemporaryWarehouseDetailPage';
+import TempWarehouseReportsPage from './pages/reports/TempWarehouseReportsPage';
 
 function GuestRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -24,6 +28,7 @@ function GlobalOverlays() {
     createProductFormOpen, setCreateProductFormOpen,
     transferRequestFormOpen, setTransferRequestFormOpen,
     issueProductFormOpen, setIssueProductFormOpen,
+    temporaryWarehouseFormOpen, setTemporaryWarehouseFormOpen,
     refreshProducts, refreshReceiveOrders, refreshTransferRequests,
   } = useUI();
   return (
@@ -40,6 +45,11 @@ function GlobalOverlays() {
       {issueProductFormOpen && (
         <IssueProductFormPage onClose={() => setIssueProductFormOpen(false)} onSuccess={refreshProducts} />
       )}
+      {temporaryWarehouseFormOpen && (
+        <TemporaryWarehouseFormPage onClose={() => setTemporaryWarehouseFormOpen(false)} />
+      )}
+      <CloseTemporaryWarehousePage />
+      <TemporaryWarehouseDetailPage />
     </>
   );
 }
@@ -61,6 +71,7 @@ function AppRoutes() {
           <><TransferRequestListPage /><TransferRequestFormPage /></>
         </ProtectedRoute>
       } />
+      <Route path="/reports/temporary-warehouses" element={<ProtectedRoute><TempWarehouseReportsPage /></ProtectedRoute>} />
       <Route path="/admin/users" element={<ProtectedRoute adminOnly><DashboardPage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

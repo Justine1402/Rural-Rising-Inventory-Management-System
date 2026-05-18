@@ -329,7 +329,7 @@ Default state (permanent warehouse active):
 - `+ Receive Order` → opens `ReceiveOrderFormPage` overlay via `UIContext` (no URL change)
 - `+ Transfer Request` → opens `TransferRequestFormPage` overlay via `UIContext` (no URL change)
 - `+ Issue Product` → opens `IssueProductFormPage` overlay via `UIContext` (no URL change)
-- `+ Create Temporary Warehouse` → `/temporary-warehouses/new` (not yet built)
+- `+ Create Temporary Warehouse` → opens `TemporaryWarehouseFormPage` overlay via `UIContext` (no URL change)
 
 When a **Temporary Warehouse tab is active**, Navbar shows only:
 - `+ Issue Product` → opens `IssueProductFormPage` overlay via `UIContext` (no URL change; warehouse auto-fills to active TWH)
@@ -899,8 +899,8 @@ record → new tab appears in `WarehouseTabs` for this temporary warehouse.
 
 ### `CloseTemporaryWarehousePage` (proto p.43-45, SRS §3.7.4)
 
-Accessed via `+ Close Temporary Warehouse` button in the Navbar when a TWH tab
-is active, or via the Temporary Warehouse Reports list.
+Opened as a UIContext overlay from the `+ Close Temporary Warehouse` button when a TWH tab
+is active. May also be opened from the Temporary Warehouse Reports list.
 
 Header: RETURN button + "Close Temporary Warehouse" title
 
@@ -925,20 +925,20 @@ selected permanent warehouses → TWH tab removed from `WarehouseTabs`.
 
 ### `TemporaryWarehouseDetailPage` (proto p.44-45, 60, SRS §3.7.4)
 
-**Read-only.** Accessed by clicking a row in `TempWarehouseReportsPage` for an
-already-closed TWH record → `/temporary-warehouses/:id`.
+**Read-only.** Opened as a UIContext overlay by clicking a row in `TempWarehouseReportsPage` for an
+already-closed TWH record.
 
 Header: RETURN button + TWH code as title (e.g., "TWH-PAS-000-001")
 
 Displays: Warehouse Name, Event Date, Created By, Location, Closed By, Date Closed.
 
-Two sub-tables:
-1. **Products Transferred In:** Product SKU | Product Name | Stock-In-Use Code |
-   Quantity Requested | Source Warehouse
-2. **Products Issued:** Product SKU | Product Name | Stock-In-Use Code |
-   Quantity Issued | Issue Type
-3. **Products Returned:** Product SKU | Product Name | Stock-In-Use Code |
-   Quantity Returned | Returned To (permanent warehouse)
+Three sub-tables:
+1. **Products Transferred In:** Product SKU | Product Name | Transfer Code | Stock-In-Use Code |
+   Qty Received | Harvest Date | Source Warehouse
+2. **Products Issued:** Product SKU | Product Name | Issue Code | Stock-In-Use Code |
+   Qty Issued | Harvest Date | Issue Type
+3. **Products Returned:** Product SKU | Product Name | Source Batch |
+   Qty Returned | Returned To (permanent warehouse)
 
 All fields are read-only. No action buttons other than RETURN.
 
@@ -1090,9 +1090,9 @@ view mode, showing the ISS code as the header title.
 
 **`TempWarehouseReportsPage` columns (proto p.59, 61):**
 Transaction Code | Warehouse Name | Location | Event Date | Date Created |
-Date Closed | Created By | Closed By | Status
+Created By | Closed By | Date Closed | Status
 
-Row click → `/temporary-warehouses/:id` (TemporaryWarehouseDetailPage, read-only).
+Route: `/reports/temporary-warehouses`. Row click → `setTemporaryWarehouseDetailOverlayTwhId(twh.id)` (UIContext overlay). No filter bar (deferred to Step 14).
 
 ---
 

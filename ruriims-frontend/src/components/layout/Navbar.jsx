@@ -19,16 +19,14 @@ const GearIcon = () => (
   </svg>
 );
 
-const STATIC_ACTION_BUTTONS = [
-  { label: '+ Create Temporary Warehouse', to: null },
-];
+const STATIC_ACTION_BUTTONS = [];
 
 const BUTTON_ORDER = ['+ Create Product', '+ Receive Order', '+ Transfer Request', '+ Issue Product', '+ Create Temporary Warehouse'];
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const { activeWarehouse } = useWarehouse();
-  const { setReceiveOrderFormOpen, setCreateProductFormOpen, setTransferRequestFormOpen, setIssueProductFormOpen } = useUI();
+  const { setReceiveOrderFormOpen, setCreateProductFormOpen, setTransferRequestFormOpen, setIssueProductFormOpen, setTemporaryWarehouseFormOpen, setCloseTemporaryWarehouseOverlayTwhId } = useUI();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -129,49 +127,69 @@ export default function Navbar() {
       {/* Row 2 — Action buttons + Controls */}
       <div className="flex items-center justify-between px-6 pb-3 gap-4">
 
-        {/* Action buttons */}
+        {/* Action buttons — TWH-active shows 3 buttons; permanent shows full set */}
         <div className="flex items-center gap-2 flex-wrap">
-          {BUTTON_ORDER.map((label) => {
-            if (label === '+ Create Product') {
-              return (
-                <button key={label} onClick={() => setCreateProductFormOpen(true)}
-                  className="bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
-                  {label}
-                </button>
-              );
-            }
-            if (label === '+ Receive Order') {
-              return (
-                <button key={label} onClick={() => setReceiveOrderFormOpen(true)}
-                  className="bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
-                  {label}
-                </button>
-              );
-            }
-            if (label === '+ Transfer Request') {
-              return (
-                <button key={label} onClick={() => setTransferRequestFormOpen(true)}
-                  className="bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
-                  {label}
-                </button>
-              );
-            }
-            if (label === '+ Issue Product') {
-              return (
-                <button key={label} onClick={() => setIssueProductFormOpen(true)}
-                  className="bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
-                  {label}
-                </button>
-              );
-            }
-            const btn = STATIC_ACTION_BUTTONS.find((b) => b.label === label);
-            return (
-              <button key={label} onClick={() => btn?.to && navigate(btn.to)}
+          {activeWarehouse?.isTemporary ? (
+            <>
+              <button onClick={() => setIssueProductFormOpen(true)}
                 className="bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
-                {label}
+                + Issue Product
               </button>
-            );
-          })}
+              <button onClick={() => setTransferRequestFormOpen(true)}
+                className="bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
+                + Transfer Request
+              </button>
+              <button
+                onClick={() => setCloseTemporaryWarehouseOverlayTwhId(activeWarehouse.temporaryWarehouseId)}
+                className="bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
+                + Close Temporary Warehouse
+              </button>
+            </>
+          ) : (
+            BUTTON_ORDER.map((label) => {
+              if (label === '+ Create Product') {
+                return (
+                  <button key={label} onClick={() => setCreateProductFormOpen(true)}
+                    className="bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
+                    {label}
+                  </button>
+                );
+              }
+              if (label === '+ Receive Order') {
+                return (
+                  <button key={label} onClick={() => setReceiveOrderFormOpen(true)}
+                    className="bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
+                    {label}
+                  </button>
+                );
+              }
+              if (label === '+ Transfer Request') {
+                return (
+                  <button key={label} onClick={() => setTransferRequestFormOpen(true)}
+                    className="bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
+                    {label}
+                  </button>
+                );
+              }
+              if (label === '+ Issue Product') {
+                return (
+                  <button key={label} onClick={() => setIssueProductFormOpen(true)}
+                    className="bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
+                    {label}
+                  </button>
+                );
+              }
+              if (label === '+ Create Temporary Warehouse') {
+                return (
+                  <button key={label} onClick={() => setTemporaryWarehouseFormOpen(true)}
+                    className="bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
+                    {label}
+                  </button>
+                );
+              }
+              return null;
+            })
+          )}
         </div>
 
         {/* Center-right controls */}
@@ -212,7 +230,10 @@ export default function Navbar() {
           <button className="flex items-center gap-1 bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded-full transition-colors">
             LIFO <ChevronDown />
           </button>
-          <button className="text-white text-xs font-medium px-3 py-1.5 rounded border border-white hover:bg-[#409645] transition-colors">
+          <button
+            onClick={() => navigate('/reports/temporary-warehouses')}
+            className="text-white text-xs font-medium px-3 py-1.5 rounded border border-white hover:bg-[#409645] transition-colors"
+          >
             Reports History
           </button>
         </div>

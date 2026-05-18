@@ -21,11 +21,13 @@ export default function WarehouseTabs() {
       )}
       {warehouses.map((warehouse) => (
         <button
-          key={warehouse.id}
+          key={warehouse.isTemporary ? `twh-${warehouse.id}` : warehouse.id}
           onClick={() => setActiveWarehouse(warehouse)}
-          className={activeWarehouse?.id === warehouse.id ? activeClass : inactiveClass}
+          className={activeWarehouse?.id === warehouse.id && activeWarehouse?.isTemporary === warehouse.isTemporary ? activeClass : inactiveClass}
         >
-          {warehouse.name}
+          {warehouse.isTemporary
+            ? `Temporary Warehouse (${warehouse.code})`
+            : warehouse.name}
         </button>
       ))}
     </div>
