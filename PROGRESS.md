@@ -259,13 +259,15 @@
 
 ---
 
+### Concurrency Fix — RO Complete Header Lock — 2026-05-18
+
+- [x] **Fixed:** `ReceiveOrderController@complete` now acquires a row-level lock via `DB::table('receive_orders')->where('id', $receiveOrder->id)->lockForUpdate()->first()` as the first statement inside `DB::transaction`, then `$receiveOrder->refresh()` to re-hydrate, then re-checks `status !== 'incomplete'` (throws `RuntimeException`, caught by new `try/catch` wrapper → 422). Added the `try/catch` wrapper to match `TransferRequestController@accomplish` exactly — the original method had no catch block, so a thrown exception would have surfaced as a 500. Closes the race window where two concurrent complete requests could both pass the pre-transaction status check and double-add inventory.
+
+---
+
 ## Known Issues / Flagged for Future Fix
 
-### RO Complete — Missing Header Lock (Concurrency Gap)
-- **File:** `ruriims-backend/app/Http/Controllers/ReceiveOrderController.php:131`
-- **Issue:** `complete()` checks `status === 'accomplished'` outside the transaction (line 131) but never re-acquires the row lock or refreshes the model inside the transaction. Two concurrent requests could both pass the pre-check and both execute, double-adding inventory to the warehouse. Same race window patched on `TransferRequestController@accomplish` this session.
-- **Fix:** Insert `DB::table('receive_orders')->where('id', $receiveOrder->id)->lockForUpdate()->first(); $receiveOrder->refresh(); if ($receiveOrder->status !== 'incomplete') { throw new \RuntimeException('Order already accomplished.'); }` as the first three statements inside `DB::transaction`.
-- **Risk:** Low under normal UI usage. Should be patched before Step 12 (Reconciliation) which will follow the same accomplish-pattern shape.
+None at present.
 
 ---
 

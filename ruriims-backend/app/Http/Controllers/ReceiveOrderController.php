@@ -150,36 +150,46 @@ class ReceiveOrderController extends Controller
             return response()->json(['message' => 'Incorrect PIN.'], 422);
         }
 
-        DB::transaction(function () use ($request, $receiveOrder, $user) {
-            $receiveOrder->update([
-                'date_arrived' => $request->date_arrived,
-                'status'       => 'accomplished',
-                'verified_by'  => $user->id,
-            ]);
-
-            $itemMap = collect($request->items)->keyBy('id');
-
-            foreach ($receiveOrder->items as $item) {
-                $arrived = (float) ($itemMap[$item->id]['quantity_arrived'] ?? 0);
-                $item->update(['quantity_arrived' => $arrived]);
-
-                if ($arrived > 0) {
-                    $product = $item->product;
-                    $warehouse = $receiveOrder->warehouse;
-                    $skuSeq = substr($product->sku_code, 4);
-                    $batchSeq = str_pad(StockInUse::where('product_id', $product->id)->where('warehouse_id', $receiveOrder->warehouse_id)->lockForUpdate()->count() + 1, 3, '0', STR_PAD_LEFT);
-                    $code = "SKU-{$warehouse->code}-{$skuSeq}-{$batchSeq}";
-
-                    StockInUse::create([
-                        'code'         => $code,
-                        'product_id'   => $product->id,
-                        'warehouse_id' => $receiveOrder->warehouse_id,
-                        'quantity'     => $arrived,
-                        'harvest_date' => $item->harvest_date ?? now()->toDateString(),
-                    ]);
+        try {
+            DB::transaction(function () use ($request, $receiveOrder, $user) {
+                DB::table('receive_orders')->where('id', $receiveOrder->id)->lockForUpdate()->first();
+                $receiveOrder->refresh();
+                if ($receiveOrder->status !== 'incomplete') {
+                    throw new \RuntimeException('Order already accomplished.');
                 }
-            }
-        });
+
+                $receiveOrder->update([
+                    'date_arrived' => $request->date_arrived,
+                    'status'       => 'accomplished',
+                    'verified_by'  => $user->id,
+                ]);
+
+                $itemMap = collect($request->items)->keyBy('id');
+
+                foreach ($receiveOrder->items as $item) {
+                    $arrived = (float) ($itemMap[$item->id]['quantity_arrived'] ?? 0);
+                    $item->update(['quantity_arrived' => $arrived]);
+
+                    if ($arrived > 0) {
+                        $product = $item->product;
+                        $warehouse = $receiveOrder->warehouse;
+                        $skuSeq = substr($product->sku_code, 4);
+                        $batchSeq = str_pad(StockInUse::where('product_id', $product->id)->where('warehouse_id', $receiveOrder->warehouse_id)->lockForUpdate()->count() + 1, 3, '0', STR_PAD_LEFT);
+                        $code = "SKU-{$warehouse->code}-{$skuSeq}-{$batchSeq}";
+
+                        StockInUse::create([
+                            'code'         => $code,
+                            'product_id'   => $product->id,
+                            'warehouse_id' => $receiveOrder->warehouse_id,
+                            'quantity'     => $arrived,
+                            'harvest_date' => $item->harvest_date ?? now()->toDateString(),
+                        ]);
+                    }
+                }
+            });
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         return response()->json(['message' => 'Accomplished ' . $receiveOrder->code]);
     }
