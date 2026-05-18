@@ -57,7 +57,7 @@ export default function ReceiveOrderListPage() {
           {/* Table */}
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-[#1A381E] text-white">
+              <tr className="text-white" style={{ backgroundColor: '#1A381E' }}>
                 <th className="text-left font-semibold px-5 py-3">Receiving Order #</th>
                 <th className="text-left font-semibold px-5 py-3">Warehouse</th>
                 <th className="text-left font-semibold px-5 py-3">Date Created</th>

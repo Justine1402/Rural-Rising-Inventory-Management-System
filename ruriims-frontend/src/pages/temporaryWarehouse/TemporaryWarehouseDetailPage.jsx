@@ -16,7 +16,7 @@ function SubTable({ title, headers, rows, emptyMessage }) {
       <div className="rounded-lg overflow-hidden border border-gray-200">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-[#1A381E] text-white">
+            <tr className="text-white" style={{ backgroundColor: '#1A381E' }}>
               {headers.map((h) => (
                 <th key={h} className="text-left font-semibold px-4 py-2.5 whitespace-nowrap">{h}</th>
               ))}

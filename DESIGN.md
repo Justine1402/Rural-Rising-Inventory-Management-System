@@ -14,7 +14,7 @@
 | Light Green  | #489F46   | (use inline style)  | Secondary elements                 |
 | Deep Green   | #39803E   | (use inline style)  | Hover states, borders              |
 
-For colors not covered by Tailwind defaults, use inline `style={{ backgroundColor: '#1A381E' }}`.
+For colors not covered by Tailwind defaults, use inline `style={{ backgroundColor: '#1A381E' }}` for non-interactive elements (table headers, nav bar, badges). For interactive elements that need hover states (buttons, active tabs), use the `.btn-brand` / `.btn-brand-outline` CSS classes defined in `src/index.css` — these avoid the need for JS state to handle hover colors. Tailwind arbitrary-value brand color classes (`bg-[#hex]`, `hover:bg-[#hex]`) are not used in the codebase.
 
 ---
 
@@ -38,7 +38,7 @@ For colors not covered by Tailwind defaults, use inline `style={{ backgroundColo
 - Cards: White background, subtle shadow, rounded corners
 - Page background: Light gray (`#F3F4F6` / `bg-gray-100`)
 - Tables: Dark green header row with white text; zebra-striped body rows (odd rows white, even rows light gray `bg-gray-50`)
-- Status badges: Green pill for active/in-stock, red pill for inactive/out-of-stock
+- Status badges: Soft pastel pills — green (`bg-green-100`) for active/complete, amber (`bg-amber-100`) for pending review, red (`bg-red-100`) for inactive/incomplete/closed. Uses Tailwind named classes, not brand hex.
 
 ---
 

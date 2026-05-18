@@ -61,7 +61,7 @@ export default function Navbar() {
 
   return (
     <>
-    <nav className="bg-[#1A381E] w-full">
+    <nav className="w-full" style={{ backgroundColor: '#1A381E' }}>
 
       {/* Row 1 — Brand + Warehouse + Icons */}
       <div className="flex items-center justify-between px-6 py-3">
@@ -132,16 +132,16 @@ export default function Navbar() {
           {activeWarehouse?.isTemporary ? (
             <>
               <button onClick={() => setIssueProductFormOpen(true)}
-                className="bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
+                className="btn-brand text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
                 + Issue Product
               </button>
               <button onClick={() => setTransferRequestFormOpen(true)}
-                className="bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
+                className="btn-brand text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
                 + Transfer Request
               </button>
               <button
                 onClick={() => setCloseTemporaryWarehouseOverlayTwhId(activeWarehouse.temporaryWarehouseId)}
-                className="bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
+                className="btn-brand text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
                 + Close Temporary Warehouse
               </button>
             </>
@@ -150,7 +150,7 @@ export default function Navbar() {
               if (label === '+ Create Product') {
                 return (
                   <button key={label} onClick={() => setCreateProductFormOpen(true)}
-                    className="bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
+                    className="btn-brand text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
                     {label}
                   </button>
                 );
@@ -158,7 +158,7 @@ export default function Navbar() {
               if (label === '+ Receive Order') {
                 return (
                   <button key={label} onClick={() => setReceiveOrderFormOpen(true)}
-                    className="bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
+                    className="btn-brand text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
                     {label}
                   </button>
                 );
@@ -166,7 +166,7 @@ export default function Navbar() {
               if (label === '+ Transfer Request') {
                 return (
                   <button key={label} onClick={() => setTransferRequestFormOpen(true)}
-                    className="bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
+                    className="btn-brand text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
                     {label}
                   </button>
                 );
@@ -174,7 +174,7 @@ export default function Navbar() {
               if (label === '+ Issue Product') {
                 return (
                   <button key={label} onClick={() => setIssueProductFormOpen(true)}
-                    className="bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
+                    className="btn-brand text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
                     {label}
                   </button>
                 );
@@ -182,7 +182,7 @@ export default function Navbar() {
               if (label === '+ Create Temporary Warehouse') {
                 return (
                   <button key={label} onClick={() => setTemporaryWarehouseFormOpen(true)}
-                    className="bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
+                    className="btn-brand text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
                     {label}
                   </button>
                 );
@@ -194,13 +194,13 @@ export default function Navbar() {
 
         {/* Center-right controls */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          <button className="flex items-center gap-1 bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded-full transition-colors">
+          <button className="flex items-center gap-1 btn-brand text-white text-xs font-medium px-3 py-1.5 rounded-full transition-colors">
             All Products <ChevronDown />
           </button>
           <div className="relative" ref={inventoryRef}>
             <button
               onClick={() => setInventoryOpen((v) => !v)}
-              className="flex items-center gap-1 bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
+              className="flex items-center gap-1 btn-brand text-white text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
             >
               {inventoryLabel} <ChevronDown />
             </button>
@@ -227,12 +227,12 @@ export default function Navbar() {
               </div>
             )}
           </div>
-          <button className="flex items-center gap-1 bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded-full transition-colors">
+          <button className="flex items-center gap-1 btn-brand text-white text-xs font-medium px-3 py-1.5 rounded-full transition-colors">
             LIFO <ChevronDown />
           </button>
           <button
             onClick={() => navigate('/reports/temporary-warehouses')}
-            className="text-white text-xs font-medium px-3 py-1.5 rounded border border-white hover:bg-[#409645] transition-colors"
+            className="btn-brand-outline text-white text-xs font-medium px-3 py-1.5 rounded border border-white transition-colors"
           >
             Reports History
           </button>

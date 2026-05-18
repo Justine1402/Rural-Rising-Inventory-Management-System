@@ -35,7 +35,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F3F4F6]">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white rounded-2xl shadow-lg border border-[#1A381E] w-full max-w-md px-10 py-10">
 
         <h1 className="text-2xl font-bold text-center uppercase tracking-widest mb-8" style={{ color: '#FAA31A' }}>
@@ -129,7 +129,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full text-white font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-60 text-sm tracking-wide bg-[#409645] hover:bg-[#367a38]"
+            className="w-full text-white font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-60 text-sm tracking-wide btn-brand"
           >
             {loading ? 'Signing in…' : 'Sign in'}
           </button>

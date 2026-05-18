@@ -1,3 +1,13 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.btn-brand {
+  background-color: #409645;
+}
+.btn-brand:hover {
+  background-color: #367a38;
+}
+.btn-brand-outline:hover {
+  background-color: #409645;
+}

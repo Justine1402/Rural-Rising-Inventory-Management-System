@@ -249,6 +249,16 @@
 
 ---
 
+### Pre-Step 12 Cleanup — STRUCTURE.md Drift + StatusBadge Expansion + DESIGN.md Styling Reconciliation — 2026-05-18
+
+- [x] **STRUCTURE.md routing table:** Removed 3 stale TWH routes (`/temporary-warehouses/:id`, `/temporary-warehouses/new`, `/temporary-warehouses/:id/close`) — all converted to UIContext overlays during Stage 4 refactor; `/reports/temporary-warehouses` entry retained. Deleted obsolete React Router precedence note for `:id` vs `:id/close`. Updated Navbar TWH-active section: `+ Close Temporary Warehouse` now correctly documents UIContext overlay wiring (`setCloseTemporaryWarehouseOverlayTwhId`; no URL change). Added inline comment flagging that Reports History Navbar button temporarily routes to `/reports/temporary-warehouses` until Step 14.
+- [x] **`StatusBadge.jsx` expanded to 3 color tiers using Tailwind named pastel classes throughout:** Green tier adds `"Reviewed"` (was missing); amber tier added for `"Pending Review"` (`bg-amber-100 text-amber-800`, consistent with green/red pastel pattern); red tier adds `"Closed"` explicitly (previously implicit via fallback). STRUCTURE.md `### StatusBadge.jsx` table synced — all 10 status values documented with named classes used; "(planned)" labels removed. Styling Rules section updated to document the status badge exception to the brand-color rule (badges use Tailwind pastels, not brand hex, to preserve the prototype's soft visual language).
+- [x] **DESIGN.md confirmed as source of truth for brand color application.** Added dual-approach note to DESIGN.md: inline `style={{ backgroundColor }}` for non-interactive elements; `.btn-brand` / `.btn-brand-outline` CSS classes for interactive elements with hover states.
+- [x] **`src/index.css`** — added `.btn-brand` (`#409645` bg, `#367a38` hover) and `.btn-brand-outline` (`#409645` hover-only) CSS rules.
+- [x] **Codebase migration — 15 files updated:** Converted all `bg-[#1A381E]` table headers and navbar to inline `style={{ backgroundColor: '#1A381E' }}` (12 occurrences: `Navbar.jsx`, `CascadePreviewModal.jsx`, `DashboardPage.jsx` ×2, `ReceiveOrderListPage.jsx`, `ReceiveOrderFormPage.jsx`, `TransferRequestListPage.jsx`, `TransferRequestFormPage.jsx`, `IssueProductFormPage.jsx`, `TempWarehouseReportsPage.jsx`, `TemporaryWarehouseDetailPage.jsx`, `CloseTemporaryWarehousePage.jsx`). Converted all `bg-[#409645] hover:bg-[#367a38]` button classes to `btn-brand` (13 occurrences across `Navbar.jsx`, `ProfileModal.jsx`, `LoginPage.jsx`). Converted `WarehouseTabs.jsx` active tab constant to `btn-brand`. Converted `Navbar.jsx:235` ghost button to `btn-brand-outline`. Replaced `bg-[#F3F4F6]` in `LoginPage.jsx` with standard `bg-gray-100`. STRUCTURE.md Styling Rules rewritten to document dual approach.
+
+---
+
 ## Known Issues / Flagged for Future Fix
 
 ### RO Complete — Missing Header Lock (Concurrency Gap)

@@ -198,7 +198,7 @@ export default function ReceiveOrderFormPage({ onClose, onSuccess }) {
                 <div className="rounded-lg overflow-hidden border border-gray-200">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="bg-[#1A381E] text-white">
+                      <tr className="text-white" style={{ backgroundColor: '#1A381E' }}>
                         <th className="text-left font-semibold px-4 py-2.5">Product Code</th>
                         <th className="text-left font-semibold px-4 py-2.5">Product Name</th>
                         <th className="text-left font-semibold px-4 py-2.5">Qty Ordered</th>

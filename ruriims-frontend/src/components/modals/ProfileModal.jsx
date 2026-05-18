@@ -203,7 +203,7 @@ export default function ProfileModal({ isOpen, onClose }) {
             Cancel
           </button>
           <button
-            className="px-5 py-2 text-sm font-medium text-white rounded-lg transition-colors bg-[#409645] hover:bg-[#367a38]"
+            className="px-5 py-2 text-sm font-medium text-white rounded-lg transition-colors btn-brand"
           >
             Save Changes
           </button>

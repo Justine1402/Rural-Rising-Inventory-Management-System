@@ -193,13 +193,12 @@ ruriims-frontend/
 /receive-orders/:id                 → ReceiveOrderListPage + ReceiveOrderFormPage overlay (accomplish) (protected)
 /transfer-requests                  → TransferRequestListPage          (protected)
 /transfer-requests/:id              → TransferRequestListPage + TransferRequestFormPage overlay (accomplish) (protected)
-/temporary-warehouses/:id           → TemporaryWarehouseDetailPage     (protected, read-only)
-/temporary-warehouses/new           → TemporaryWarehouseFormPage       (protected)
-/temporary-warehouses/:id/close     → CloseTemporaryWarehousePage      (protected)
 /reconciliation                     → ReconciliationListPage           (protected)
 /reconciliation/new                 → ReconciliationFormPage           (protected)
 /reconciliation/:id/review          → ReconciliationReviewPage         (protected)
 /reports                            → ReportsHistoryPage               (protected)
+# Reports History Navbar button temporarily routes to /reports/temporary-warehouses
+# until Step 14 builds the ReportsHistoryPage landing.
 /reports/products                   → ProductReportsPage               (protected)
 /reports/receive-orders             → ReceiveOrderReportsPage          (protected)
 /reports/transfer-requests          → TransferRequestReportsPage       (protected)
@@ -221,10 +220,6 @@ still uses routes (`/receive-orders/:id`, `/transfer-requests/:id`) since they n
 Both list pages render beneath the overlay when the accomplish route is active —
 `ReceiveOrderListPage` + `ReceiveOrderFormPage` share the `/receive-orders/:id` route,
 and `TransferRequestListPage` + `TransferRequestFormPage` share `/transfer-requests/:id`.
-
-**Note on `/temporary-warehouses/:id` vs `/temporary-warehouses/:id/close`:**
-React Router evaluates these in order. Place the `/close` route before `/:id` in
-`App.jsx` to prevent "close" from being matched as an `:id` param.
 
 ---
 
@@ -266,24 +261,37 @@ a product is created — without navigating away.
   setCreateProductFormOpen: function,
   transferRequestFormOpen: boolean,
   setTransferRequestFormOpen: function,
+  issueProductFormOpen: boolean,
+  setIssueProductFormOpen: function,
+  temporaryWarehouseFormOpen: boolean,
+  setTemporaryWarehouseFormOpen: function,
+  closeTemporaryWarehouseOverlayTwhId: number | null,  // null = closed; number = TWH id to close
+  setCloseTemporaryWarehouseOverlayTwhId: function,
+  temporaryWarehouseDetailOverlayTwhId: number | null, // null = closed; number = TWH id to view
+  setTemporaryWarehouseDetailOverlayTwhId: function,
   productRefreshKey: number,              // increments on each successful product creation
   refreshProducts: function,              // call this to trigger a dashboard re-fetch
   receiveOrderRefreshKey: number,         // increments on each successful RO create/accomplish
   refreshReceiveOrders: function,         // call this to trigger an RO list re-fetch
   transferRequestRefreshKey: number,      // increments on each successful TRF create/accomplish
   refreshTransferRequests: function,      // call this to trigger a TRF list re-fetch
-  issueProductFormOpen: boolean,
-  setIssueProductFormOpen: function,
 }
 ```
 
-`GlobalOverlays` in `App.jsx` renders `CreateProductPage`, `ReceiveOrderFormPage`
-(create mode), `TransferRequestFormPage` (create mode), and `IssueProductFormPage`
-when their respective flags (`createProductFormOpen`, `receiveOrderFormOpen`,
-`transferRequestFormOpen`, `issueProductFormOpen`) are true. The Navbar buttons set
-these flags. RETURN inside each overlay clears the flag via the `onClose` prop —
-no `navigate()` call. Each overlay calls its `onSuccess` prop on successful submit
-to trigger the relevant list or dashboard re-fetch via the matching refresh key.
+`GlobalOverlays` in `App.jsx` renders the following overlays when their UIContext flags/IDs are set:
+- `CreateProductPage` — when `createProductFormOpen` is true
+- `ReceiveOrderFormPage` (create mode) — when `receiveOrderFormOpen` is true
+- `TransferRequestFormPage` (create mode) — when `transferRequestFormOpen` is true
+- `IssueProductFormPage` — when `issueProductFormOpen` is true
+- `TemporaryWarehouseFormPage` — when `temporaryWarehouseFormOpen` is true
+- `CloseTemporaryWarehousePage` — always mounted; self-guards on `closeTemporaryWarehouseOverlayTwhId !== null`
+- `TemporaryWarehouseDetailPage` — always mounted; self-guards on `temporaryWarehouseDetailOverlayTwhId !== null`
+
+The Navbar buttons set boolean flags for the first five. `CloseTemporaryWarehousePage` and
+`TemporaryWarehouseDetailPage` open by setting the ID-carrying state to the TWH id to view.
+RETURN inside each overlay clears its flag/ID via the setter — no `navigate()` call.
+Each overlay calls its `onSuccess` prop (or internally calls `refreshWarehouses()`) on successful
+submit to trigger the relevant list or dashboard re-fetch.
 
 ---
 
@@ -295,9 +303,14 @@ auto-fill "Warehouse" from this context.
 ```js
 // Value shape
 {
-  activeWarehouse: { id: number, name: string, code: string, isTemporary: boolean },
-  warehouses: [{ id: number, name: string, code: string, isTemporary: boolean }],
+  activeWarehouse: { id: number, name: string, code: string, isTemporary: boolean,
+                     transactionCode?: string, temporaryWarehouseId?: number },
+  warehouses: [{ id: number, name: string, code: string, isTemporary: boolean,
+                 transactionCode?: string, temporaryWarehouseId?: number }],
   setActiveWarehouse: (warehouse) => void,
+  refreshWarehouses: (selectWarehouseId?: number) => void,
+  // selectWarehouseId: if provided, auto-selects that TWH tab after refresh
+  // (used by TemporaryWarehouseFormPage after creation). Omit to preserve current active.
 }
 ```
 
@@ -334,7 +347,8 @@ Default state (permanent warehouse active):
 When a **Temporary Warehouse tab is active**, Navbar shows only:
 - `+ Issue Product` → opens `IssueProductFormPage` overlay via `UIContext` (no URL change; warehouse auto-fills to active TWH)
 - `+ Transfer Request` → opens `TransferRequestFormPage` overlay via `UIContext` (no URL change; destination pre-fills to active TWH, source starts blank)
-- `+ Close Temporary Warehouse` → `/temporary-warehouses/:id/close`
+- `+ Close Temporary Warehouse` → opens `CloseTemporaryWarehousePage` overlay via `UIContext`
+    (sets `closeTemporaryWarehouseOverlayTwhId`; no URL change)
 
 Contextual button changes on list pages:
 - Receive Orders list, one Incomplete row selected → `+ Receive Order` becomes `+ Accomplish Order` → `/receive-orders/:id`
@@ -473,15 +487,20 @@ Props:
 status   string
 ```
 
+← colored pill: green (`bg-green-100/text-green-800`) for In Stock/Accomplished/Complete/Active/Reviewed; amber (`bg-amber-100/text-amber-800`) for Pending Review; red (`bg-red-100/text-red-700`) for Out of Stock/Incomplete/Closed and any other status.
+
 | Status | Badge Color |
 |---|---|
-| `"In Stock"` | green |
-| `"Accomplished"` | green |
-| `"Out of Stock"` | red |
-| `"Incomplete"` | red |
-| `"Complete"` | green |
-| `"Closed"` / `"Reviewed"` | green (planned) |
-| `"Pending Review"` | orange (planned) |
+| `"In Stock"` | green (`bg-green-100 text-green-800`) |
+| `"Accomplished"` | green (`bg-green-100 text-green-800`) |
+| `"Complete"` | green (`bg-green-100 text-green-800`) |
+| `"Active"` | green (`bg-green-100 text-green-800`) |
+| `"Reviewed"` | green (`bg-green-100 text-green-800`) |
+| `"Pending Review"` | amber (`bg-amber-100 text-amber-800`) |
+| `"Out of Stock"` | red (`bg-red-100 text-red-700`) |
+| `"Incomplete"` | red (`bg-red-100 text-red-700`) |
+| `"Closed"` | red (`bg-red-100 text-red-700`) |
+| any other | red (`bg-red-100 text-red-700`, fallback) |
 
 ---
 
@@ -1160,33 +1179,36 @@ submit button while `loading` is true.
 
 ## Styling Rules
 
-All styling uses **Tailwind CSS utility classes only**. No custom CSS files.
+All styling uses Tailwind CSS utility classes for layout, spacing, and typography. Brand colors are applied in one of two ways:
+- **Non-interactive elements** (table headers, nav bar): inline `style={{ backgroundColor: '#hex' }}` per DESIGN.md.
+- **Interactive elements with hover states** (buttons, active tabs): the `.btn-brand` / `.btn-brand-outline` classes defined in `src/index.css`. These override Tailwind's arbitrary-value classes (`bg-[#hex]`), which are no longer used anywhere in the codebase.
+- **Status badges are a documented exception.** `StatusBadge` uses Tailwind named pastel classes (`bg-{color}-100 text-{color}-800/700`) for green, amber, and red tiers to maintain the prototype's soft status-indicator visual language. The brand palette (`#1A381E`, `#409645`, etc.) is reserved for primary UI surfaces (nav, table headers, buttons) where it carries identity weight.
 
-**Brand colors — see DESIGN.md (source of truth for all brand hex values). Do NOT use `bg-green-700`, `bg-green-800`, or any Tailwind green presets for brand surfaces — use Tailwind arbitrary value syntax with exact hex.**
-- Navbar / page headers / table headers: `bg-[#1A381E]` (dark green `#1A381E`)
-- Buttons / active tabs: `bg-[#409645]` (medium green `#409645`)
-- Hover states: `hover:bg-[#39803E]` (deep green `#39803E`)
+**Brand colors — see DESIGN.md (source of truth for all brand hex values). Do NOT use `bg-green-700`, `bg-green-800`, or any Tailwind green presets for brand surfaces. Tailwind arbitrary-value brand color classes (`bg-[#hex]`, `hover:bg-[#hex]`) are not used.**
+- Navbar / page headers / table headers: `style={{ backgroundColor: '#1A381E' }}` (dark green)
+- Buttons / active tabs: `className="btn-brand"` (medium green `#409645`, hover `#367a38`)
+- Ghost bordered buttons on dark bg: `className="btn-brand-outline"` (hover shows `#409645`)
 
 **Buttons:**
-- Primary filled: `bg-[#409645] text-white px-4 py-2 rounded hover:bg-[#39803E] disabled:opacity-50 disabled:cursor-not-allowed`
+- Primary filled: `btn-brand text-white px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed`
 - Secondary outlined: `border border-[#409645] text-[#409645] px-4 py-2 rounded hover:bg-green-50`
 - Danger: `bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600`
-- RETURN: `bg-[#409645] text-white px-3 py-1.5 rounded text-sm`
+- RETURN: `btn-brand text-white px-3 py-1.5 rounded text-sm`
 
 **Form fields:**
 - Base: `w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#409645]`
 - Read-only / auto-filled: add `bg-gray-100 text-gray-500 cursor-not-allowed`
 
 **Table:**
-- Header row: `bg-[#1A381E] text-white text-sm font-semibold`
+- Header row: `text-white text-sm font-semibold` + `style={{ backgroundColor: '#1A381E' }}`
 - Body rows: `border-b border-gray-200 hover:bg-gray-50 cursor-pointer text-sm`
 - Selected row: `bg-green-50 border-l-4 border-[#409645]`
 
-**Status badges:**
-- Base: `rounded-full px-3 py-1 text-xs font-medium`
+**Status badges** (pastel named classes — see badge exception note above):
+- Base: `rounded-full px-3 py-0.5 text-xs font-medium`
 - Green: `bg-green-100 text-green-800`
-- Red / Incomplete: `bg-red-100 text-red-700`
-- Orange / Pending Review: `bg-orange-100 text-orange-700`
+- Amber / Pending Review: `bg-amber-100 text-amber-800`
+- Red / fallback: `bg-red-100 text-red-700`
 
 **Modals:**
 - Overlay: `fixed inset-0 bg-black/50 z-50 flex items-center justify-center`

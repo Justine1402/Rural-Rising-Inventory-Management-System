@@ -31,7 +31,7 @@ export default function TempWarehouseReportsPage() {
         <div className="bg-white rounded-xl shadow overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-[#1A381E] text-white">
+              <tr className="text-white" style={{ backgroundColor: '#1A381E' }}>
                 <th className="text-left font-semibold px-5 py-3">Transaction Code</th>
                 <th className="text-left font-semibold px-5 py-3">Warehouse Name</th>
                 <th className="text-left font-semibold px-5 py-3">Location</th>

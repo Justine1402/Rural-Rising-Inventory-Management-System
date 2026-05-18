@@ -57,7 +57,7 @@ export default function TransferRequestListPage() {
           {/* Table */}
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-[#1A381E] text-white">
+              <tr className="text-white" style={{ backgroundColor: '#1A381E' }}>
                 <th className="text-left font-semibold px-5 py-3">Transfer Request Code</th>
                 <th className="text-left font-semibold px-5 py-3">Source Warehouse</th>
                 <th className="text-left font-semibold px-5 py-3">Destination Warehouse</th>

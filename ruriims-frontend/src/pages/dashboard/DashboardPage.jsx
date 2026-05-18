@@ -41,7 +41,7 @@ export default function DashboardPage() {
             /* ── Temporary Warehouse simplified table ── */
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-[#1A381E] text-white">
+                <tr className="text-white" style={{ backgroundColor: '#1A381E' }}>
                   <th className="text-left font-semibold px-5 py-3">Name</th>
                   <th className="text-left font-semibold px-5 py-3">Quantity</th>
                   <th className="text-left font-semibold px-5 py-3">Harvest Date</th>
@@ -94,7 +94,7 @@ export default function DashboardPage() {
             /* ── Standard multi-warehouse table ── */
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-[#1A381E] text-white">
+                <tr className="text-white" style={{ backgroundColor: '#1A381E' }}>
                   <th className="text-left font-semibold px-5 py-3">Name</th>
                   {permanentWarehouses.map((w) => (
                     <th key={w.id} className="text-left font-semibold px-5 py-3">{w.name}</th>
