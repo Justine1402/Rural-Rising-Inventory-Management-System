@@ -313,6 +313,48 @@
 
 ---
 
+### Step 12, Stage 2 — Reconciliation List Page + Inventory Dropdown Wiring — 2026-05-19
+
+- [x] `UIContext.jsx` — added reconciliationFormOpen / setReconciliationFormOpen
+      / reconciliationRefreshKey / refreshReconciliations; mirrors
+      transferRequestFormOpen pattern exactly.
+- [x] `ReconciliationListPage.jsx` (new, `src/pages/reconciliation/`) — full page
+      (Navbar + WarehouseTabs inside card + content card). 7-column table fed by
+      GET /api/reconciliations. Filter bar (4 stub controls) top-right; `+ New
+      Reconciliation` button top-left of content area. Re-fetches on
+      location.key and reconciliationRefreshKey change; selection clears on
+      re-fetch.
+- [x] `ReconciliationReviewPage.jsx` (new, stub) — placeholder route component
+      so /reconciliation/:id/review doesn't 404. Stage 4 will replace.
+- [x] `Navbar.jsx` — added "Inventory Reconciliation" to Inventory dropdown
+      (third entry, after Transfer Requests); added /reconciliation* branch
+      to inventoryLabel computation.
+- [x] `App.jsx` — protected routes added: /reconciliation (list),
+      /reconciliation/:id/review (stub).
+- [x] Selection behavior: only Pending Review rows are selectable. Selected
+      row gets #f0fdf4 background + 4px solid #409645 left border (verbatim
+      from TRF inline style convention). Button label swaps to
+      `+ Review & Confirm` when a Pending Review row is selected; click
+      navigates to /reconciliation/{id}/review. Reviewed rows are clickable
+      but navigate directly (no selection state).
+- [x] Pluralization rule on "Products with Discrepancy" column:
+      0 → "0 Products", 1 → "1 Product", N → "N Products".
+- **Sort decision:** Pure created_at desc (already what the backend returns).
+  Pending Review pinned-to-top was considered and rejected; in real usage,
+  `created_at desc` will surface recent Pending records at the top naturally.
+- **Reviewed-row click behavior:** Navigates to the review page, which will
+  render in read-only mode (Stage 4 implements the read-only branch). This
+  gives managers a way to audit past reconciliations without waiting for
+  Step 14 reports.
+- **Filter bar:** All four controls are presentational stubs. Wiring deferred
+  to Step 14 along with the Reports History dropdown work.
+- **Form overlay:** `+ New Reconciliation` button toggles
+  `reconciliationFormOpen` to true, but no overlay is mounted yet — Stage 3
+  builds the form and mounts it in GlobalOverlays. Clicking the button in
+  Stage 2 does nothing visible; this is intentional.
+
+---
+
 ## Known Issues / Flagged for Future Fix
 
 - **Reconciliation reports not reachable from UI** — Step 12 reconciliation records
@@ -325,7 +367,8 @@
 
 ## Not Started
 
-- [ ] Step 12 (Stages 2–4) — Reconciliation frontend pages (list, create form, review page)
+- [ ] Step 12 (Stage 3) — Reconciliation create form
+- [ ] Step 12 (Stage 4) — Reconciliation review page
 - [ ] Step 13 — `UserManagementPage` + `UserController`
 - [ ] Step 14 — All Reports pages + `ReportController`
 - [ ] Step 15 — `InventorySummaryPage` + PDF export

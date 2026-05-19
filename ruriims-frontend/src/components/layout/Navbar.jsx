@@ -30,11 +30,13 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const inventoryLabel = location.pathname.startsWith('/transfer-requests')
-    ? 'Transfer Requests'
-    : location.pathname.startsWith('/receive-orders')
-      ? 'Receive Orders'
-      : 'Inventory';
+  const inventoryLabel = location.pathname.startsWith('/reconciliation')
+    ? 'Inventory Reconciliation'
+    : location.pathname.startsWith('/transfer-requests')
+      ? 'Transfer Requests'
+      : location.pathname.startsWith('/receive-orders')
+        ? 'Receive Orders'
+        : 'Inventory';
   const [menuOpen, setMenuOpen] = useState(false);
   const [gearOpen, setGearOpen] = useState(false);
   const [inventoryOpen, setInventoryOpen] = useState(false);
@@ -223,6 +225,12 @@ export default function Navbar() {
                   className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                   Transfer Requests
+                </button>
+                <button
+                  onClick={() => { setInventoryOpen(false); navigate('/reconciliation'); }}
+                  className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Inventory Reconciliation
                 </button>
               </div>
             )}

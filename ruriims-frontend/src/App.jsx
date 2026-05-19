@@ -15,6 +15,8 @@ import TemporaryWarehouseFormPage from './pages/temporaryWarehouse/TemporaryWare
 import CloseTemporaryWarehousePage from './pages/temporaryWarehouse/CloseTemporaryWarehousePage';
 import TemporaryWarehouseDetailPage from './pages/temporaryWarehouse/TemporaryWarehouseDetailPage';
 import TempWarehouseReportsPage from './pages/reports/TempWarehouseReportsPage';
+import ReconciliationListPage from './pages/reconciliation/ReconciliationListPage';
+import ReconciliationReviewPage from './pages/reconciliation/ReconciliationReviewPage';
 
 function GuestRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -71,6 +73,8 @@ function AppRoutes() {
           <><TransferRequestListPage /><TransferRequestFormPage /></>
         </ProtectedRoute>
       } />
+      <Route path="/reconciliation" element={<ProtectedRoute><ReconciliationListPage /></ProtectedRoute>} />
+      <Route path="/reconciliation/:id/review" element={<ProtectedRoute><ReconciliationReviewPage /></ProtectedRoute>} />
       <Route path="/reports/temporary-warehouses" element={<ProtectedRoute><TempWarehouseReportsPage /></ProtectedRoute>} />
       <Route path="/admin/users" element={<ProtectedRoute adminOnly><DashboardPage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
