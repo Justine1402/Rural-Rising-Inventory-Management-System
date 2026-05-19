@@ -8,6 +8,7 @@ use App\Http\Controllers\ReceiveOrderController;
 use App\Http\Controllers\StockInUseController;
 use App\Http\Controllers\TransferRequestController;
 use App\Http\Controllers\WarehouseController;
+use App\Http\Controllers\ReconciliationController;
 use App\Http\Controllers\TemporaryWarehouseController;
 use Illuminate\Support\Facades\Route;
 
@@ -46,4 +47,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/temporary-warehouses', [TemporaryWarehouseController::class, 'store']);
     Route::get('/temporary-warehouses/{temporaryWarehouse}', [TemporaryWarehouseController::class, 'show']);
     Route::post('/temporary-warehouses/{temporaryWarehouse}/close', [TemporaryWarehouseController::class, 'close']);
+
+    Route::get('/reconciliations', [ReconciliationController::class, 'index']);
+    Route::get('/reconciliations/expected-stock', [ReconciliationController::class, 'expectedStock']);
+    Route::post('/reconciliations', [ReconciliationController::class, 'store']);
+    Route::get('/reconciliations/{id}', [ReconciliationController::class, 'show']);
+    Route::post('/reconciliations/{id}/confirm', [ReconciliationController::class, 'confirm']);
 });

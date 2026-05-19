@@ -161,6 +161,11 @@ Routes defined in `ruriims-backend/routes/api.php`:
 | `POST` | `/api/temporary-warehouses` | `auth:sanctum` | `{ "temporary_warehouse": { id, warehouse_id, transaction_code, name } }` — PIN (same manager) + creates warehouses row + TWH row |
 | `GET` | `/api/temporary-warehouses/{id}` | `auth:sanctum` | `{ "temporary_warehouse": { ...with products_transferred_in [+stock_in_use_code, +source_warehouse], products_issued [+stock_in_use_code, +issue_type], products_returned } }` |
 | `POST` | `/api/temporary-warehouses/{id}/close` | `auth:sanctum` | `{ "message": "Closed TWH-..." }` — PIN (same manager) + lockForUpdate header + per-batch deduction + dest StockInUse creation |
+| `GET` | `/api/reconciliations` | `auth:sanctum` | `{ "reconciliations": [...] }` — optional `?warehouse_id` + `?status` filters; includes products_with_discrepancy count |
+| `GET` | `/api/reconciliations/expected-stock` | `auth:sanctum` | `{ "products": [{id, sku_code, name, unit, total_quantity}] }` — required `?warehouse_id`; one row per product, summed across batches |
+| `POST` | `/api/reconciliations` | `auth:sanctum` | `{ "reconciliation": { "transaction_code": "RC-..." } }` — PIN (same manager) + snapshot items + RC code; no inventory changes at submit |
+| `GET` | `/api/reconciliations/{id}` | `auth:sanctum` | `{ "reconciliation": { ...with items+adjustments } }` |
+| `POST` | `/api/reconciliations/{id}/confirm` | `auth:sanctum` | `{ "message": "Reconciliation confirmed: RC-..." }` — PIN (different manager, same branch) + lockForUpdate+refresh+re-check + FIFO deduction or RCB surplus batch creation |
 
 ---
 
@@ -237,7 +242,8 @@ Rural Rising Inventory Management System/   ← project root
     │   │       ├── ReceiveOrderController.php  ← index, store (per-warehouse RO code via trait), show, complete
     │   │       ├── TransferRequestController.php ← index, store (per-source-warehouse TRF code via trait), show, accomplish
     │   │       ├── IssueProductController.php  ← index, store (same-manager PIN + ISS code via trait + StockInUse decrement), show
-    │   │       └── TemporaryWarehouseController.php ← index (?status filter), store (same-manager PIN + inline TWH code gen + creates warehouses row + TWH row), show (products_transferred_in/issued/returned), close (same-manager PIN + lockForUpdate+refresh+re-check + per-batch deduction + dest StockInUse creation)
+    │   │       ├── TemporaryWarehouseController.php ← index (?status filter), store (same-manager PIN + inline TWH code gen + creates warehouses row + TWH row), show (products_transferred_in/issued/returned), close (same-manager PIN + lockForUpdate+refresh+re-check + per-batch deduction + dest StockInUse creation)
+    │   │       └── ReconciliationController.php    ← index (?warehouse_id+?status filters, products_with_discrepancy count), expectedStock (per-product totals at warehouse), store (same-manager PIN + RC code + snapshot items), show (with items+adjustments), confirm (different-manager-same-branch PIN + lockForUpdate+refresh+re-check + FIFO deduction + RCB surplus batch creation)
     │   ├── Traits/
     │   │   ├── GeneratesTransactionCode.php    ← per-warehouse scoped code generator; used by RO, TRF, ISS controllers
     │   │   └── PlansBatchCascade.php           ← nearest-harvest-date batch cascade planner with FIFO tiebreak and fallback; used by TRF and ISS controllers
@@ -255,7 +261,10 @@ Rural Rising Inventory Management System/   ← project root
     │       ├── IssueProductItem.php            ← fillable; cast harvest_date; belongsTo issueProduct/product/stockInUse
     │       ├── IssueProductBatchDeduction.php  ← records per-batch deductions from an ISS item; belongsTo issueProductItem/stockInUse
     │       ├── TemporaryWarehouse.php          ← fillable; casts event_date/date_closed → date; belongsTo warehouse/creator/closer; hasMany returns
-    │       └── TemporaryWarehouseReturn.php    ← fillable; cast harvest_date; belongsTo temporaryWarehouse/product/sourceStockInUse/destinationStockInUse/destinationWarehouse
+    │       ├── TemporaryWarehouseReturn.php    ← fillable; cast harvest_date; belongsTo temporaryWarehouse/product/sourceStockInUse/destinationStockInUse/destinationWarehouse
+    │       ├── Reconciliation.php              ← fillable; casts date_reconciled/date_reviewed → date; belongsTo warehouse/reconciledBy/reviewedBy; hasMany items
+    │       ├── ReconciliationItem.php          ← fillable; casts expected_stock/actual_count/discrepancy decimal:3; belongsTo reconciliation/product; hasMany adjustments
+    │       └── ReconciliationBatchAdjustment.php ← fillable; cast quantity decimal:3; direction enum (deduction/addition); harvest_date_source nullable enum; belongsTo reconciliationItem/stockInUse
     ├── bootstrap/
     │   └── app.php                            ← routes: api.php + health only; statefulApi() enabled for Sanctum SPA auth
     ├── config/                                 ← cors, sanctum, session, database, etc.
@@ -281,7 +290,10 @@ Rural Rising Inventory Management System/   ← project root
     │   │   ├── create_transfer_request_batch_deductions_table
     │   │   ├── add_is_temporary_to_warehouses_table
     │   │   ├── create_temporary_warehouses_table
-    │   │   └── create_temporary_warehouse_returns_table
+    │   │   ├── create_temporary_warehouse_returns_table
+    │   │   ├── create_reconciliations_table
+    │   │   ├── create_reconciliation_items_table
+    │   │   └── create_reconciliation_batch_adjustments_table
     │   └── seeders/
     │       └── UserSeeder.php                 ← seeds 3 warehouses + 2 accounts:
     │                                              admin@ruriims.com (role=admin, PIN=123456)

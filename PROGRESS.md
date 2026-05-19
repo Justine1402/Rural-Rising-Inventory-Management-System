@@ -265,15 +265,67 @@
 
 ---
 
+### Step 12, Stage 1 — Reconciliation Backend Foundation — 2026-05-19
+
+- [x] 3 migrations: create_reconciliations_table, create_reconciliation_items_table,
+      create_reconciliation_batch_adjustments_table. All run.
+- [x] 3 models: Reconciliation, ReconciliationItem, ReconciliationBatchAdjustment
+      with full relations.
+- [x] ReconciliationController with index, expectedStock, store, show, confirm
+      methods.
+- [x] FIFO deduction routine for negative discrepancies (oldest harvest_date first,
+      id ASC tiebreak, lockForUpdate, zero-quantity batches retained).
+- [x] Surplus batch creation routine with RCB-{WH}-{SKU_SEQ}-{BATCH_SEQ} code
+      generation; SKU_SEQ from product sku_code suffix, BATCH_SEQ scoped per
+      (warehouse, product, RCB- prefix); harvest_date copied from oldest existing
+      batch at same warehouse for that product, defaults to today if no existing
+      batches; harvest_date_source enum recorded for audit transparency.
+- [x] PIN model: same-manager on store() (auth user's own PIN); different-manager-
+      same-branch on confirm() (mirrors RO complete).
+- [x] confirm() uses lockForUpdate + refresh + status re-check inside DB::transaction
+      from the start (matches the pattern proven on TRF accomplish and RO complete),
+      with try/catch wrapper converting RuntimeException to 422.
+- [x] Event code RC-{WH}-000-{SEQ} generated via existing GeneratesTransactionCode
+      trait (no new trait needed).
+- [x] Validation: store() requires Remarks on items with non-zero discrepancy via
+      single inline validator closure that computes discrepancy server-side; rejects
+      422 if any non-zero row has empty remarks. Warehouse fetched ONCE at top of
+      store() and reused by both the is_temporary rejection check and the closure.
+- [x] 5 routes added under auth:sanctum: GET /reconciliations, GET /reconciliations/
+      expected-stock, POST /reconciliations, GET /reconciliations/{id}, POST
+      /reconciliations/{id}/confirm. expected-stock placed before {id} for routing
+      precedence.
+- **Schema decision:** Single reconciliation_batch_adjustments table with direction
+  enum (deduction/addition) and nullable harvest_date_source enum
+  (copied_from_oldest/defaulted_today, populated only for additions).
+- **Code prefix decision:** Event code RC-, surplus batch code RCB- — disambiguated
+  so reports never have to count segments to identify what kind of code they're
+  looking at.
+- **Scope decision:** Reconciliation reads all in-stock products at the active
+  warehouse via the new expectedStock endpoint (one row per product, summed across
+  batches); manager doesn't pick products. Zero-discrepancy rows are still saved
+  for audit trail.
+- **Snapshot semantics (documented for future reference):** expected_stock is
+  captured at store() time and not updated at confirm(). Between submit and confirm,
+  stock can move via other transactions; FIFO deduction at confirm() operates on
+  current stock, not the snapshot. Recorded discrepancy may diverge from actual
+  deduction sum in such cases — this is intentional, not a bug.
+
+---
+
 ## Known Issues / Flagged for Future Fix
 
-None at present.
+- **Reconciliation reports not reachable from UI** — Step 12 reconciliation records
+  are created and confirmed, but the existing Reports History Navbar button is
+  temporarily hard-routed to /reports/temporary-warehouses. Step 14 will add the
+  Reports History dropdown and a /reports/reconciliations page. Until then,
+  reconciliation history is only visible through the /reconciliation list page.
 
 ---
 
 ## Not Started
 
-- [ ] Step 12 — Reconciliation pages + `ReconciliationController`
+- [ ] Step 12 (Stages 2–4) — Reconciliation frontend pages (list, create form, review page)
 - [ ] Step 13 — `UserManagementPage` + `UserController`
 - [ ] Step 14 — All Reports pages + `ReportController`
 - [ ] Step 15 — `InventorySummaryPage` + PDF export
