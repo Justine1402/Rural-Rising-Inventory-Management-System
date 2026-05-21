@@ -5,6 +5,7 @@ import Navbar from '../../components/layout/Navbar';
 import WarehouseTabs from '../../components/layout/WarehouseTabs';
 import StatusBadge from '../../components/ui/StatusBadge';
 import { useUI } from '../../context/UIContext';
+import { useWarehouse } from '../../context/WarehouseContext';
 
 const ChevronDown = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -16,6 +17,7 @@ export default function ReconciliationListPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { reconciliationRefreshKey, setReconciliationFormOpen } = useUI();
+  const { activeWarehouse } = useWarehouse();
   const [reconciliations, setReconciliations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -55,7 +57,13 @@ export default function ReconciliationListPage() {
             <button
               onClick={hasSelection
                 ? () => navigate(`/reconciliation/${selectedId}/review`)
-                : () => setReconciliationFormOpen(true)}
+                : () => {
+                    if (activeWarehouse?.isTemporary) {
+                      alert('Reconciliation is not available for temporary warehouses.');
+                      return;
+                    }
+                    setReconciliationFormOpen(true);
+                  }}
               className="btn-brand text-white text-xs font-bold px-4 py-1.5 rounded transition-colors"
             >
               {hasSelection ? '+ Review & Confirm' : '+ New Reconciliation'}

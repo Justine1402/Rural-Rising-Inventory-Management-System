@@ -17,6 +17,7 @@ import TemporaryWarehouseDetailPage from './pages/temporaryWarehouse/TemporaryWa
 import TempWarehouseReportsPage from './pages/reports/TempWarehouseReportsPage';
 import ReconciliationListPage from './pages/reconciliation/ReconciliationListPage';
 import ReconciliationReviewPage from './pages/reconciliation/ReconciliationReviewPage';
+import ReconciliationFormPage from './pages/reconciliation/ReconciliationFormPage';
 
 function GuestRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -31,7 +32,8 @@ function GlobalOverlays() {
     transferRequestFormOpen, setTransferRequestFormOpen,
     issueProductFormOpen, setIssueProductFormOpen,
     temporaryWarehouseFormOpen, setTemporaryWarehouseFormOpen,
-    refreshProducts, refreshReceiveOrders, refreshTransferRequests,
+    reconciliationFormOpen, setReconciliationFormOpen,
+    refreshProducts, refreshReceiveOrders, refreshTransferRequests, refreshReconciliations,
   } = useUI();
   return (
     <>
@@ -49,6 +51,12 @@ function GlobalOverlays() {
       )}
       {temporaryWarehouseFormOpen && (
         <TemporaryWarehouseFormPage onClose={() => setTemporaryWarehouseFormOpen(false)} />
+      )}
+      {reconciliationFormOpen && (
+        <ReconciliationFormPage
+          onClose={() => setReconciliationFormOpen(false)}
+          onSuccess={refreshReconciliations}
+        />
       )}
       <CloseTemporaryWarehousePage />
       <TemporaryWarehouseDetailPage />

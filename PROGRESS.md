@@ -355,6 +355,61 @@
 
 ---
 
+### Step 12, Stage 3 — ReconciliationFormPage Create Flow — 2026-05-21
+
+- [x] `ReconciliationFormPage.jsx` (new, `src/pages/reconciliation/`) — UIContext
+      overlay, no URL change. Backdrop + centered card matching
+      TransferRequestFormPage create mode shell.
+- [x] Auto-populates from GET /api/reconciliations/expected-stock?warehouse_id=X
+      (one row per product, summed across batches).
+- [x] Auto-filled header fields: Reconciled By (AuthContext.user.name),
+      Date (today), Warehouse (activeWarehouse.name).
+- [x] Product table columns: Product SKU | Product Name | Expected Stock |
+      Actual Count | Discrepancy | Remarks.
+- [x] Actual Count input: type=number, step=0.001, min=0, with unit label
+      beside. Stored as string in local state to distinguish blank ("") from
+      zero ("0").
+- [x] Discrepancy auto-compute and three-state color encoding:
+      - shortage (negative): red (#DC2626), signed e.g. "-2 KG"
+      - matched (zero): black (default), "0 KG"
+      - surplus (positive): green (#16A34A), signed e.g. "+2 KG"
+      - blank Actual Count: empty cell (NOT "0 KG", to avoid implying matched)
+      Trailing zeros stripped from decimals: "2", not "2.000".
+- [x] Remarks input: always enabled, conditionally required (non-zero
+      discrepancy → required). Frontend disabled-button logic enforces;
+      backend store() validates redundantly.
+- [x] Submit disabled logic: disabled while submitting, when products list
+      empty, when any row has blank Actual Count, or when any non-zero-
+      discrepancy row has empty Remarks.
+- [x] Empty-state: when expectedStock returns zero products, table shows
+      "No in-stock products to reconcile at this warehouse." SUBMIT disabled.
+- [x] PinVerificationModal — same-manager (auth user's own PIN), wired to
+      POST /api/reconciliations.
+- [x] Success flow: shows "Created RC-{code}" label, calls
+      refreshReconciliations, auto-closes overlay after 1.5s.
+- [x] TWH guard: form refuses to open for temporary warehouses. List page
+      button shows alert; form itself shows error state as second line of
+      defense.
+- [x] `App.jsx` — ReconciliationFormPage imported and mounted in
+      GlobalOverlays, conditional on reconciliationFormOpen state.
+- [x] `ReconciliationListPage.jsx` — `+ New Reconciliation` onClick handler
+      wrapped with TWH guard via useWarehouse hook.
+- **Display decision (three-state color encoding):** Departed from prototype's
+  two-state (all-non-zero-red / zero-green) display. Three-state encoding
+  (red shortage / black matched / green surplus) carries more information at
+  a glance — managers can scan the column and immediately see losses vs gains
+  vs unchanged. Signed format with explicit + and - removes ambiguity about
+  direction.
+- **Granularity decision:** step=0.001 to match DB decimal(10,3) and allow
+  weighing-scale precision. Whole-number input was considered (matches RO/TRF
+  Qty inputs) but rejected — reconciliation specifically involves physical
+  weighing where fractional KG is realistic.
+- **String vs number state:** Actual Count stored as string in local state.
+  Critical for distinguishing "blank" (uncounted) from "0" (counted as zero).
+  Parsed to float only at compute time and at payload submission.
+
+---
+
 ## Known Issues / Flagged for Future Fix
 
 - **Reconciliation reports not reachable from UI** — Step 12 reconciliation records
@@ -367,7 +422,6 @@
 
 ## Not Started
 
-- [ ] Step 12 (Stage 3) — Reconciliation create form
 - [ ] Step 12 (Stage 4) — Reconciliation review page
 - [ ] Step 13 — `UserManagementPage` + `UserController`
 - [ ] Step 14 — All Reports pages + `ReportController`

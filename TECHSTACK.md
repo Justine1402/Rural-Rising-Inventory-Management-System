@@ -213,6 +213,7 @@ Rural Rising Inventory Management System/   ← project root
 │   │   │       └── TransferRequestFormPage.jsx ← dual-mode: create (UIContext overlay) + accomplish (/transfer-requests/:id); two-step product flow
 │   │   │   ├── reconciliation/
 │   │   │       ├── ReconciliationListPage.jsx ← standalone page; re-fetches on location.key + reconciliationRefreshKey; selectedId toggle; label-swap button (+ New Reconciliation / + Review & Confirm)
+│   │   │       ├── ReconciliationFormPage.jsx ← UIContext overlay (no route); create flow; auto-populates from expectedStock endpoint; three-state discrepancy encoding; same-manager PIN
 │   │   │       └── ReconciliationReviewPage.jsx ← stub; full implementation in Stage 4
 │   │   │   ├── issueProduct/
 │   │   │   │   └── IssueProductFormPage.jsx   ← UIContext overlay (no route); single-stage issue + StockInUse deduction; same-manager PIN
