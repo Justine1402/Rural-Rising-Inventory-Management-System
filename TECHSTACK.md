@@ -214,7 +214,7 @@ Rural Rising Inventory Management System/   ← project root
 │   │   │   ├── reconciliation/
 │   │   │       ├── ReconciliationListPage.jsx ← standalone page; re-fetches on location.key + reconciliationRefreshKey; selectedId toggle; label-swap button (+ New Reconciliation / + Review & Confirm)
 │   │   │       ├── ReconciliationFormPage.jsx ← UIContext overlay (no route); create flow; auto-populates from expectedStock endpoint; three-state discrepancy encoding; same-manager PIN
-│   │   │       └── ReconciliationReviewPage.jsx ← stub; full implementation in Stage 4
+│   │   │       └── ReconciliationReviewPage.jsx ← standalone full page (/reconciliation/:id/review); read-only review + confirm; status-branched (pending_review shows CONFIRM + PIN modal; reviewed is fully read-only); post-confirm refreshes reconciliations + products, navigates to list after 1.5s
 │   │   │   ├── issueProduct/
 │   │   │   │   └── IssueProductFormPage.jsx   ← UIContext overlay (no route); single-stage issue + StockInUse deduction; same-manager PIN
 │   │   │   ├── temporaryWarehouse/
@@ -224,7 +224,8 @@ Rural Rising Inventory Management System/   ← project root
 │   │   │   └── reports/
 │   │   │       └── TempWarehouseReportsPage.jsx ← standalone full page (/reports/temporary-warehouses); 9-column list of all TWHs; row click → temporaryWarehouseDetailOverlayTwhId; "Reports History" nav button wired here temporarily
 │   │   ├── utils/
-│   │   │   └── planBatchCascade.js        ← frontend mirror of PlansBatchCascade trait; nearest-harvest-date cascade planner with FIFO tiebreak
+│   │   │   ├── planBatchCascade.js        ← frontend mirror of PlansBatchCascade trait; nearest-harvest-date cascade planner with FIFO tiebreak
+│   │   │   └── reconciliationFormat.js    ← shared discrepancy formatter (formatDiscrepancy, formatAdjustmentArrow, EPSILON); used by ReconciliationFormPage, ReconciliationReviewPage, and future Step 14 reports
 │   │   ├── routes/
 │   │   │   └── ProtectedRoute.jsx         ← auth + adminOnly route guard
 │   │   ├── App.jsx                        ← BrowserRouter + providers + AppRoutes + GlobalOverlays

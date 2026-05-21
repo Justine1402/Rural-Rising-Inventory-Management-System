@@ -3,11 +3,10 @@ import api from '../../api/axios';
 import PinVerificationModal from '../../components/shared/PinVerificationModal';
 import { useAuth } from '../../context/AuthContext';
 import { useWarehouse } from '../../context/WarehouseContext';
+import { formatDiscrepancy, EPSILON } from '../../utils/reconciliationFormat';
 
 const readonlyClass =
   'w-full bg-gray-100 border border-transparent rounded-lg px-4 py-2.5 text-sm text-gray-500 cursor-not-allowed';
-
-const fmt = (n) => n.toFixed(3).replace(/\.?0+$/, '');
 
 export default function ReconciliationFormPage({ onClose, onSuccess }) {
   const { user } = useAuth();
@@ -55,7 +54,7 @@ export default function ReconciliationFormPage({ onClose, onSuccess }) {
     const state = rowState[p.id] ?? { actualCount: '', remarks: '' };
     if (state.actualCount === '') return true;
     const disc = computeDiscrepancy(p);
-    return disc !== null && Math.abs(disc) > 0.0005 && !state.remarks.trim();
+    return disc !== null && Math.abs(disc) > EPSILON && !state.remarks.trim();
   });
 
   const handleSubmit = () => {
@@ -154,13 +153,8 @@ export default function ReconciliationFormPage({ onClose, onSuccess }) {
 
                     let discCell = null;
                     if (disc !== null) {
-                      if (Math.abs(disc) < 0.0005) {
-                        discCell = <span>0 {product.unit}</span>;
-                      } else {
-                        const label = `${disc > 0 ? '+' : ''}${fmt(disc)} ${product.unit}`;
-                        const color = disc < 0 ? '#DC2626' : '#16A34A';
-                        discCell = <span style={{ color }}>{label}</span>;
-                      }
+                      const formatted = formatDiscrepancy(disc, product.unit);
+                      discCell = <span style={{ color: formatted.color }}>{formatted.label}</span>;
                     }
 
                     return (

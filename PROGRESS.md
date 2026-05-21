@@ -410,6 +410,62 @@
 
 ---
 
+### Step 12, Stage 4 — ReconciliationReviewPage + Shared Formatter — 2026-05-21
+
+- [x] `src/utils/reconciliationFormat.js` (new) — shared discrepancy formatter
+      extracted from Stage 3 form page. Exports `formatDiscrepancy(disc, unit)`
+      → `{ label, color }`, `formatAdjustmentArrow(expected, actual, unit)`,
+      and `EPSILON = 0.0005`. Both helpers accept numeric strings (PHP decimal
+      cast output) or JS numbers. Step 14 reports will reuse without changes.
+- [x] `ReconciliationFormPage.jsx` refactored — removed local `fmt` helper;
+      imports `formatDiscrepancy` and `EPSILON` from utility; `discCell` block
+      replaced with `formatDiscrepancy(disc, product.unit)`; epsilon literal
+      `0.0005` replaced with `EPSILON`.
+- [x] `ReconciliationReviewPage.jsx` — full implementation replacing 12-line
+      stub. Standalone full page at `/reconciliation/:id/review`.
+- [x] Data load: GET /reconciliations/{id} → `res.data.reconciliation`.
+      Cancellable useEffect with `cancelled` flag; `pageLoading` / `loadError`
+      guard before main render.
+- [x] Metadata grid (2-col): Reconciled By, Date Reconciled, Reviewed By,
+      Date Reviewed, Warehouse. All flat strings from backend (no nested
+      objects). Dates formatted from Y-m-d to "Mon D, YYYY" via
+      `new Date(d + 'T00:00:00')`.
+- [x] Counted Items table (read-only): 6 columns matching the create form.
+      `formatDiscrepancy` drives color-coded Discrepancy cell.
+- [x] Inventory Adjustment sub-table: filters items where
+      `|discrepancy| >= EPSILON`; empty-state row "No adjustments — all
+      counts matched." when all matched; populated rows show
+      `formatAdjustmentArrow` (Expected → Actual) + `formatDiscrepancy`
+      Variance in parens with color.
+- [x] Status-based action row:
+      - `pending_review`: RETURN (btn-brand-outline) + CONFIRM (btn-brand);
+        error paragraph above buttons; `successCode` replaces button row
+        after success.
+      - `reviewed`: RETURN (btn-brand-outline) only. No CONFIRM, no modal.
+- [x] `handleVerify`: modal closes before API call (matches RO/TRF pattern).
+      On success: `setSuccessCode(data.transaction_code)`,
+      `refreshReconciliations()`, `refreshProducts()`,
+      `setTimeout(() => navigate('/reconciliation'), 1500)`.
+      Error renders below action row via `{error && <p>}`.
+- **Decision (formatter utility):** Three-state color helper moved to
+  `src/utils/reconciliationFormat.js` so Step 14 reports can import it
+  without copying logic. The utility accepts both JS numbers and PHP
+  decimal strings.
+- **Decision (post-confirm refreshes):** `confirm()` is where inventory
+  actually changes (FIFO deduction or surplus batch creation). Both
+  `refreshReconciliations` (list page badge + status) and `refreshProducts`
+  (dashboard stock totals) are called after confirm, not after store().
+- **Decision (PIN error location):** Errors render below the action row,
+  not inline in the modal. Modal closes on VERIFY click regardless of
+  API outcome (matches RO complete and TRF accomplish). PinVerificationModal
+  was not modified.
+
+---
+
+## ✅ Step 12 COMPLETE — Inventory Reconciliation (all 4 stages)
+
+---
+
 ## Known Issues / Flagged for Future Fix
 
 - **Reconciliation reports not reachable from UI** — Step 12 reconciliation records
@@ -422,7 +478,6 @@
 
 ## Not Started
 
-- [ ] Step 12 (Stage 4) — Reconciliation review page
 - [ ] Step 13 — `UserManagementPage` + `UserController`
 - [ ] Step 14 — All Reports pages + `ReportController`
 - [ ] Step 15 — `InventorySummaryPage` + PDF export
