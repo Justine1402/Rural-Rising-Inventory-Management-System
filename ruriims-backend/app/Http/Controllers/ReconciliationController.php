@@ -207,18 +207,34 @@ class ReconciliationController extends Controller
             return response()->json(['message' => 'Reconciliation already reviewed.'], 422);
         }
 
-        $candidates = User::where('warehouse_id', $reconciliation->warehouse_id)
-            ->where('id', '!=', auth()->id())
-            ->get();
+        $user = $request->user();
 
-        $matched = $candidates->first(fn ($u) => $u->pin && Hash::check($request->pin, $u->pin));
+        if ($user->role === 'admin') {
+            // Admin bypass: master admin verifies with their own PIN.
+            // Self-exclusion still applies — admin cannot confirm their own reconciliation.
+            if ($user->id === $reconciliation->reconciled_by) {
+                return response()->json(['message' => 'The verifier cannot be the reconciler.'], 422);
+            }
+            if (!$user->pin || !Hash::check($request->pin, $user->pin)) {
+                return response()->json(['message' => 'Invalid PIN.'], 422);
+            }
+            $verifierId = $user->id;
+        } else {
+            // Manager flow: different-manager-same-branch rule (SRS §3.7).
+            $candidates = User::where('warehouse_id', $reconciliation->warehouse_id)
+                ->where('id', '!=', auth()->id())
+                ->get();
 
-        if (!$matched) {
-            return response()->json(['message' => 'No other manager at this warehouse matched the PIN.'], 422);
+            $matched = $candidates->first(fn ($u) => $u->pin && Hash::check($request->pin, $u->pin));
+
+            if (!$matched) {
+                return response()->json(['message' => 'No other manager at this warehouse matched the PIN.'], 422);
+            }
+            $verifierId = $matched->id;
         }
 
         try {
-            DB::transaction(function () use ($reconciliation, $id) {
+            DB::transaction(function () use ($reconciliation, $id, $verifierId) {
                 DB::table('reconciliations')->where('id', $id)->lockForUpdate()->first();
                 $reconciliation->refresh();
 
@@ -244,7 +260,7 @@ class ReconciliationController extends Controller
 
                 $reconciliation->update([
                     'status'        => 'reviewed',
-                    'reviewed_by'   => auth()->id(),
+                    'reviewed_by'   => $verifierId,
                     'date_reviewed' => today()->toDateString(),
                 ]);
             });

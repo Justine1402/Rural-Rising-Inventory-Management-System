@@ -197,7 +197,7 @@ Rural Rising Inventory Management System/   ← project root
 │   │   ├── context/
 │   │   │   ├── AuthContext.jsx            ← user session state (user, login, logout)
 │   │   │   ├── WarehouseContext.jsx       ← active warehouse; fetches /api/warehouses on user change (auth-safe)
-│   │   │   └── UIContext.jsx              ← overlay flags (createProduct/receiveOrder/transferRequest/issueProduct/temporaryWarehouse); ID-carrying overlay state (closeTemporaryWarehouseOverlayTwhId, temporaryWarehouseDetailOverlayTwhId — null=closed, number=open); productRefreshKey, receiveOrderRefreshKey, transferRequestRefreshKey + matching refresh() functions
+│   │   │   └── UIContext.jsx              ← overlay flags (createProduct/receiveOrder/transferRequest/issueProduct/temporaryWarehouse/reconciliation); ID-carrying overlay state (closeTemporaryWarehouseOverlayTwhId, temporaryWarehouseDetailOverlayTwhId — null=closed, number=open); productRefreshKey, receiveOrderRefreshKey, transferRequestRefreshKey, reconciliationRefreshKey + matching refresh() functions
 │   │   ├── pages/
 │   │   │   ├── auth/
 │   │   │   │   └── LoginPage.jsx          ← sign in form

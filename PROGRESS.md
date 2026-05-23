@@ -466,6 +466,56 @@
 
 ---
 
+### Verification Self-Exclusion — TRF Accomplish + RC Confirm — 2026-05-22
+
+- [x] `TransferRequestController@accomplish` — confirmed an explicit
+      same-user self-verification guard (`$user->id === $transferRequest->requested_by`)
+      already exists in the controller, before the same-warehouse check.
+      The backend audit earlier in this session under-reported the
+      controller's verification guards because the audit prompt asked
+      specifically for reads of `warehouse_id` on the authenticated user
+      and the same-user guard reads `$user->id` instead. No code change
+      needed in this controller — the two-person rule was already
+      correctly enforced for TRF accomplish regardless of role.
+      `STRUCTURE.md` updated to document the two-layer guard structure
+      explicitly (same-user + same-warehouse).
+- [x] `ReconciliationController@confirm` — added admin bypass branch before
+      the candidate-pool query. When `$user->role === 'admin'`, the admin's
+      own PIN is verified directly and `verified_by` is set to the admin's
+      user id. Admin branch enforces self-exclusion explicitly
+      (`$user->id === $reconciliation->reconciled_by` returns 422). Manager
+      flow (different-manager-same-branch rule) preserved unchanged.
+- **Principle (client agreement):** The master admin operates across all
+  warehouses and can perform any action a manager can perform, but is
+  subject to the same self-verification prevention guards. The two-person
+  rule — creator ≠ verifier — applies regardless of role. This is a
+  structural property of the IMS, not a manager-specific restriction.
+- **Audit basis:** Earlier in the same session, a backend audit confirmed
+  these were the only two PIN-check locations where the principle was
+  not explicitly enforced. RO complete (`$user->id !== $receiveOrder->created_by`)
+  was already role-blind and correct. All same-manager PIN flows (Create
+  Product, Issue Product, Create Reconciliation, Create TWH, Close TWH)
+  are action confirmations, not two-person rules, so self-exclusion does
+  not apply.
+- **SRS note:** SRS §3.5.6 (TRF) and §3.7 (RC) describe verification rules
+  in manager-only terms. This patch extends the rules' intent to the admin
+  role per client sign-off — same-user self-verification is blocked for
+  both roles; same-warehouse self-verification continues to apply only to
+  managers (admins, with `warehouse_id = null`, are not assigned to any
+  branch and the rule cannot apply to them).
+- **Behavior change — `reviewed_by` semantics (manager flow):** Pre-patch
+  `ReconciliationController@confirm` wrote `'reviewed_by' => auth()->id()`
+  — the HTTP caller's user id. Post-patch writes `'reviewed_by' => $verifierId`
+  — for managers, the id of the user whose PIN actually matched; for
+  admin, the admin's own id. The new behavior more accurately records who
+  authorized the confirmation (the PIN owner) rather than who submitted
+  the request. Reconciliation records confirmed before this patch retain
+  the old semantics. Frontend display is unaffected — the API response
+  continues to include the full user object regardless of which user id
+  is stored.
+
+---
+
 ## Known Issues / Flagged for Future Fix
 
 - **Reconciliation reports not reachable from UI** — Step 12 reconciliation records

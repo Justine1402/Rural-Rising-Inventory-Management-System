@@ -275,6 +275,10 @@ a product is created — without navigating away.
   refreshReceiveOrders: function,         // call this to trigger an RO list re-fetch
   transferRequestRefreshKey: number,      // increments on each successful TRF create/accomplish
   refreshTransferRequests: function,      // call this to trigger a TRF list re-fetch
+  reconciliationFormOpen: boolean,
+  setReconciliationFormOpen: function,
+  reconciliationRefreshKey: number,       // increments on each successful RC create/confirm
+  refreshReconciliations: function,       // call this to trigger a Reconciliation list re-fetch
 }
 ```
 
@@ -286,6 +290,7 @@ a product is created — without navigating away.
 - `TemporaryWarehouseFormPage` — when `temporaryWarehouseFormOpen` is true
 - `CloseTemporaryWarehousePage` — always mounted; self-guards on `closeTemporaryWarehouseOverlayTwhId !== null`
 - `TemporaryWarehouseDetailPage` — always mounted; self-guards on `temporaryWarehouseDetailOverlayTwhId !== null`
+- `ReconciliationFormPage` — when `reconciliationFormOpen` is true
 
 The Navbar buttons set boolean flags for the first five. `CloseTemporaryWarehousePage` and
 `TemporaryWarehouseDetailPage` open by setting the ID-carrying state to the TWH id to view.
@@ -353,7 +358,8 @@ When a **Temporary Warehouse tab is active**, Navbar shows only:
 Contextual button changes on list pages:
 - Receive Orders list, one Incomplete row selected → `+ Receive Order` becomes `+ Accomplish Order` → `/receive-orders/:id`
 - Transfer Requests list, one Incomplete row selected → `+ Transfer Request` becomes `+ Accomplish Transfer` → `/transfer-requests/:id`
-- Reconciliation list, one Pending Review row selected → `+ New Reconciliation` becomes `+ Review & Confirm` → `/reconciliation/:id/review`
+
+Note: the Reconciliation contextual action (`+ New Reconciliation` / `+ Review & Confirm`) lives **in the content area** of `ReconciliationListPage`, not in the Navbar. It is not a Navbar button.
 
 **Center-right controls:**
 - `All Products` dropdown — filter dashboard by category: All Products, Fruits,
@@ -827,8 +833,10 @@ If `requested_stock_in_use_id` has been fully depleted since the TRF was created
 planner falls back to FIFO across all remaining non-zero batches in the source warehouse
 (oldest harvest date first), rather than erroring out.
 
-ACCOMPLISH button → `PinVerificationModal` (manager from a **different warehouse**
-than the one that created the request — same warehouse PIN is rejected, SRS §3.5.6)
+ACCOMPLISH button → `PinVerificationModal` — PIN verification on ACCOMPLISH enforces two guards:
+- **Same-user check (all roles):** The verifying user cannot be the user who created the request.
+- **Same-warehouse check (managers only):** The verifying manager must be from a different warehouse than the one that created the request. Admins (`warehouse_id = null`) are not subject to this check because they are not assigned to any branch.
+
 → on verified → "Accomplished TRF-QC-000-003" label → status changes to Complete
 → stock deducted from source warehouse per recomputed cascade plan, new batches
 added to destination warehouse (one per source batch deducted).
@@ -1031,8 +1039,11 @@ Shows only products with discrepancies. Columns:
 Product Name | Adjustment (old value → new value, e.g., "25 KG → 23 KG") |
 Variance (e.g., "−2 KG")
 
-CONFIRM button → `PinVerificationModal` (different manager, same branch) →
-on verified → "Accomplished RC-QC-000-003" label appears → Reviewed By is filled
+CONFIRM button → `PinVerificationModal` — PIN verification on CONFIRM uses one of two rules depending on the caller's role:
+- **Manager:** PIN must belong to a different user assigned to the same warehouse as the reconciliation (different-manager-same-branch rule, per SRS §3.7). Self-exclusion is enforced by excluding the auth user from the candidate pool.
+- **Admin:** PIN must be the admin's own PIN. Admin bypass exists because the master admin account has organization-wide authority over all warehouses (per client agreement) and is not assigned to any single branch (`warehouse_id = null`). Self-exclusion is enforced explicitly — the admin cannot confirm a reconciliation they themselves created.
+
+→ on verified → "Accomplished RC-QC-000-003" label appears → Reviewed By is filled
 in → status changes to Reviewed → inventory quantities adjusted to reflect
 actual counts (FIFO deduction applied by backend).
 
