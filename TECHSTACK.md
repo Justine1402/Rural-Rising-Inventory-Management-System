@@ -193,7 +193,7 @@ Rural Rising Inventory Management System/   ← project root
 │   │   │   │   ├── StockInUseModal.jsx    ← single-select batch picker (z-[70])
 │   │   │   │   └── CascadePreviewModal.jsx ← per-batch draw breakdown modal (z-[80]); mirrors planBatchCascade output
 │   │   │   └── ui/
-│   │   │       └── StatusBadge.jsx        ← colored pill: green for In Stock/Accomplished/Complete/Active, red otherwise
+│   │   │       └── StatusBadge.jsx        ← colored pill: green for In Stock/Accomplished/Complete/Active/Reviewed; amber for Pending Review; red for Out of Stock/Incomplete/Closed and fallback
 │   │   ├── context/
 │   │   │   ├── AuthContext.jsx            ← user session state (user, login, logout)
 │   │   │   ├── WarehouseContext.jsx       ← active warehouse; fetches /api/warehouses on user change (auth-safe)

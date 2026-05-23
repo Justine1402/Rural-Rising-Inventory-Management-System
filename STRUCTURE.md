@@ -327,7 +327,7 @@ warehouse list on logout. Temporary warehouses are appended dynamically when act
 > **Current state:** `activeWarehouse` defaults to `list[0]` (the first warehouse)
 > for all users on login, including admin. The intended "All Warehouses" null default
 > for admin is not yet implemented — it will be addressed alongside the manager
-> single-warehouse scoping in Step 13.
+> single-warehouse scoping in Step 13.75.
 
 ---
 
@@ -395,10 +395,7 @@ Mandaluyong Warehouse | [Active Temporary Warehouse name, if any]
 **Manager account tabs (planned):** Only the single warehouse the manager is assigned to.
 No tab switcher is shown for manager accounts.
 
-> **Current state:** Manager single-warehouse restriction is not yet implemented.
-> All users currently see all warehouse tabs (same as admin). The scoping logic
-> will be added in Step 13 when `UserManagementPage` and `warehouse_id` assignment
-> are wired up.
+> **Current state:** all users currently see all warehouse tabs (manager single-warehouse restriction deferred to a post-Step 13 cross-cutting pass — see PROGRESS.md Step 13.75)
 
 ---
 
@@ -525,10 +522,7 @@ Content:
 - **Change PIN** — always visible; 2-column layout (Current PIN, New PIN);
   6-digit numeric inputs, centered and masked
 
-> **Current state:** User info (name, email, warehouse name) is hardcoded as
-> placeholder values — not yet reading from `AuthContext`. Change Password and
-> Change PIN are UI-only with no API calls. Both will be wired when
-> `UserManagementPage` (Step 13) establishes the full user management backend.
+> **Current state:** User info (name, email, warehouse name) is hardcoded as placeholder values — not yet reading from `AuthContext`. Change Password and Change PIN are UI-only with no API calls. All three will be wired in a follow-up pass after Step 13 establishes the user-management backend — see PROGRESS.md Step 13.5.
 
 Props:
 ```js
@@ -1291,5 +1285,7 @@ Build in strict sequence — each step depends on the previous being complete:
 12. `ReconciliationListPage` + `ReconciliationFormPage` + `ReconciliationReviewPage` +
     `ReconciliationController`
 13. `UserManagementPage` + `UserController` (admin/users routes)
+13.5. `ProfileModal` live wiring (AuthContext display + Change Password/PIN API hookup)
+13.75. Manager warehouse-scoping cross-cutting pass (WarehouseContext, WarehouseTabs, Navbar, page guards)
 14. All Reports pages + `ReportController`
 15. `InventorySummaryPage` + PDF export

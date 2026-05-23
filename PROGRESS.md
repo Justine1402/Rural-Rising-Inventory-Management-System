@@ -528,6 +528,8 @@
 
 ## Not Started
 
-- [ ] Step 13 — `UserManagementPage` + `UserController`
-- [ ] Step 14 — All Reports pages + `ReportController`
-- [ ] Step 15 — `InventorySummaryPage` + PDF export
+- [ ] Step 13 — `UserManagementPage` + `UserController` (admin-facing account management only; manager warehouse-scoping enforcement and ProfileModal wiring are explicitly out of scope — see 13.5 and 13.75 below)
+- [ ] Step 13.5 — `ProfileModal` live wiring (read user info from AuthContext; wire Change Password and Change PIN to the endpoints Step 13 establishes)
+- [ ] Step 13.75 — Manager warehouse-scoping cross-cutting pass (`WarehouseContext` filters by user role and `warehouse_id`; `WarehouseTabs` hides non-assigned warehouses for managers; `Navbar` hides the warehouse switcher for managers; audit all list pages to confirm they respect the active warehouse correctly)
+- [ ] Step 14 — All Reports pages + `ReportController` (7 report type pages + ReportsHistoryPage + filter bar wiring across all list pages)
+- [ ] Step 15 — `InventorySummaryPage` + PDF export (DomPDF / jsPDF)
