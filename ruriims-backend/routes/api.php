@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\IssueProductController;
+use App\Http\Controllers\UserController;
 use App\Http\Controllers\PinController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ReceiveOrderController;
@@ -18,6 +19,16 @@ Route::post('/login', [AuthController::class, 'login']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'user']);
+
+    Route::prefix('users')->group(function () {
+        Route::get('/', [UserController::class, 'index']);
+        Route::post('/', [UserController::class, 'store']);
+        Route::get('/{user}', [UserController::class, 'show'])->withTrashed();
+        Route::put('/{user}', [UserController::class, 'update'])->withTrashed();
+        Route::delete('/{user}', [UserController::class, 'destroy']);
+        Route::post('/{user}/reset-password', [UserController::class, 'resetPassword'])->withTrashed();
+        Route::post('/{user}/reset-pin', [UserController::class, 'resetPin'])->withTrashed();
+    });
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/warehouses', [WarehouseController::class, 'index']);
 

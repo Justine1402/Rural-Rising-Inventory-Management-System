@@ -516,6 +516,70 @@
 
 ---
 
+### Step 13, Stage 1 — Backend Foundation — 2026-05-25
+
+- [x] `add_soft_deletes_to_users_table` migration — adds nullable `deleted_at`
+      timestamp to `users` table via `$table->softDeletes()`. Run as Batch 4.
+- [x] `User` model — `SoftDeletes` trait added alongside existing traits
+      (`HasApiTokens`, `HasFactory`, `Notifiable`). No fillable changes needed —
+      existing fillable already covers all admin-managed fields (`name`, `email`,
+      `password`, `role`, `warehouse_id`, `position_title`, `pin`).
+- [x] `UserController.php` (new) — 7 admin-only methods, each guarded by
+      `abort_if($request->user()->role !== 'admin', 403)`:
+        - `index` — returns `User::withTrashed()->with('warehouse')` (includes
+          soft-deleted accounts so admin can see full account list)
+        - `store` — validates name/email/password/role/warehouse_id/
+          position_title/pin; role-conditional warehouse_id required for managers;
+          custom closure rule rejects temporary warehouses; PIN hashed via
+          `Hash::make()`; password hashed automatically via model `hashed` cast;
+          returns 201
+        - `show` — route-model binding with `withTrashed()` scoping; returns user
+          with warehouse relation
+        - `update` — same validation as store minus password/pin (dedicated
+          endpoints); self-demotion guard (admin cannot demote their own account);
+          email uniqueness ignores current user via `Rule::unique()->ignore()`
+        - `destroy` — soft-delete via `$user->delete()`; self-delete guard (admin
+          cannot delete their own account)
+        - `resetPassword` — validates `password` min:8; assigns via model property
+          (cast handles hashing); admin-scoped with withTrashed binding
+        - `resetPin` — validates `pin` digits:6; hashes manually via `Hash::make()`
+          (no cast for pin); admin-scoped with withTrashed binding
+- [x] 7 routes added under `Route::prefix('users')` inside existing `auth:sanctum`
+      group in `routes/api.php`: GET /, POST /, GET /{user} (withTrashed),
+      PUT /{user} (withTrashed), DELETE /{user},
+      POST /{user}/reset-password (withTrashed), POST /{user}/reset-pin (withTrashed).
+      Stage 4 will add POST /{user}/restore (withTrashed).
+- [x] `UserSeeder` housekeeping — `manager@ruriims.com` now assigned to the QC
+      warehouse (`warehouse_id = $qcWarehouse->id`); QC warehouse record resolved
+      from the same seeder run. `php artisan migrate:fresh --seed` run to apply
+      soft_deletes migration and re-seed.
+- [x] `.env.example` housekeeping — corrected Laravel default SQLite drift to
+      project's actual MySQL setup (`DB_CONNECTION=mysql`, `DB_HOST`, `DB_PORT`,
+      `DB_DATABASE=ruriims_db`, blank `DB_USERNAME`/`DB_PASSWORD`);
+      `SANCTUM_STATEFUL_DOMAINS=localhost:5173` added.
+- **In-flight fix — `User` model `warehouse()` relationship:** The plan assumed
+  this relationship already existed (the `warehouse_id` column was added in Step 9),
+  but the Eloquent method was never wired. Discovered when `->with('warehouse')`
+  threw `RelationNotFoundException` during the first verification pass. Added
+  `public function warehouse() { return $this->belongsTo(Warehouse::class); }` to
+  `User.php`, re-ran all 12 verification checks cleanly. The inverse
+  `Warehouse → users` hasMany was deliberately NOT added — matches the existing
+  project pattern of omitting unused inverse relations.
+- **Decision — SoftDeletes instead of is_active flag:** Preserves all transaction
+  history FK references cleanly (soft-deleted user's transactions remain
+  queryable). Uses Laravel's idiomatic pattern (global scope auto-excludes
+  deactivated users from default queries). Gives free `restore()` semantics for
+  Stage 4. `deleted_at IS NULL` = Active; `deleted_at IS NOT NULL` = Inactive.
+- **Decision — inline admin guard instead of middleware:** Matches the existing
+  inline role-check pattern in `ReconciliationController@confirm`. Single-feature
+  controller; no middleware reuse benefit.
+- **Decision — warehouse_id custom rule rejects temporary warehouses:** Managers
+  must be assigned to permanent warehouses only. A manager assigned to a TWH would
+  break the PIN verification rules (TRF accomplish, RO complete) that depend on
+  permanent warehouse_id matching.
+
+---
+
 ## Known Issues / Flagged for Future Fix
 
 - **Reconciliation reports not reachable from UI** — Step 12 reconciliation records

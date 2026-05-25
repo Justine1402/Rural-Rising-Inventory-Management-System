@@ -26,15 +26,18 @@ class UserSeeder extends Seeder
         );
         $admin->update(['role' => 'admin', 'pin' => Hash::make('123456')]);
 
+        $qcWarehouse = Warehouse::where('code', 'QC')->first();
+
         $manager = User::firstOrCreate(
             ['email' => 'manager@ruriims.com'],
             [
-                'name'     => 'Manager User',
-                'password' => Hash::make('password'),
-                'role'     => 'manager',
-                'pin'      => Hash::make('123456'),
+                'name'         => 'Manager User',
+                'password'     => Hash::make('password'),
+                'role'         => 'manager',
+                'warehouse_id' => $qcWarehouse->id,
+                'pin'          => Hash::make('123456'),
             ]
         );
-        $manager->update(['role' => 'manager', 'pin' => Hash::make('123456')]);
+        $manager->update(['role' => 'manager', 'warehouse_id' => $qcWarehouse->id, 'pin' => Hash::make('123456')]);
     }
 }

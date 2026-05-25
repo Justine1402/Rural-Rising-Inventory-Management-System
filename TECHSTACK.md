@@ -140,6 +140,13 @@ Routes defined in `ruriims-backend/routes/api.php`:
 | `POST` | `/api/login` | None | `{ "user": {...} }` |
 | `GET` | `/api/user` | `auth:sanctum` | `{ "user": {...} }` |
 | `POST` | `/api/logout` | `auth:sanctum` | `{ "message": "Logged out" }` |
+| `GET` | `/api/users` | `auth:sanctum` (admin) | `{ "users": [...] }` — withTrashed; includes warehouse relation |
+| `POST` | `/api/users` | `auth:sanctum` (admin) | `{ "user": {...} }` — creates account; role-conditional warehouse_id |
+| `GET` | `/api/users/{user}` | `auth:sanctum` (admin) | `{ "user": {...} }` — withTrashed binding |
+| `PUT` | `/api/users/{user}` | `auth:sanctum` (admin) | `{ "user": {...} }` — withTrashed binding |
+| `DELETE` | `/api/users/{user}` | `auth:sanctum` (admin) | `{ "message": "..." }` — soft delete |
+| `POST` | `/api/users/{user}/reset-password` | `auth:sanctum` (admin) | `{ "message": "..." }` — withTrashed binding |
+| `POST` | `/api/users/{user}/reset-pin` | `auth:sanctum` (admin) | `{ "message": "..." }` — withTrashed binding |
 | `GET` | `/api/warehouses` | `auth:sanctum` | `{ "warehouses": [...] }` |
 | `GET` | `/api/products` | `auth:sanctum` | `{ "products": [...], "warehouses": [...] }` — includes real stock per warehouse |
 | `POST` | `/api/products` | `auth:sanctum` | `{ "product": {...} }` — validates + PIN check + generates SKU |
@@ -240,6 +247,7 @@ Rural Rising Inventory Management System/   ← project root
     │   ├── Http/
     │   │   └── Controllers/
     │   │       ├── AuthController.php          ← login, logout, user
+    │   │       ├── UserController.php          ← index, store, show, update, destroy, resetPassword, resetPin (admin-only; SoftDeletes; role-conditional warehouse_id validation)
     │   │       ├── WarehouseController.php     ← index (returns all warehouses including TWH; is_temporary serialized via model cast)
     │   │       ├── ProductController.php       ← index (with warehouse_stock + harvest_date), store (PIN-verified), show
     │   │       ├── PinController.php           ← verify (standalone PIN check endpoint)
@@ -253,7 +261,7 @@ Rural Rising Inventory Management System/   ← project root
     │   │   ├── GeneratesTransactionCode.php    ← per-warehouse scoped code generator; used by RO, TRF, ISS controllers
     │   │   └── PlansBatchCascade.php           ← nearest-harvest-date batch cascade planner with FIFO tiebreak and fallback; used by TRF and ISS controllers
     │   └── Models/
-    │       ├── User.php                        ← fillable: name, email, password, role, warehouse_id, position_title, pin
+    │       ├── User.php                        ← fillable: name, email, password, role, warehouse_id, position_title, pin; SoftDeletes trait (deleted_at = inactive); belongsTo warehouse()
     │       ├── Warehouse.php                   ← fillable: name, code, is_temporary; cast is_temporary → boolean
     │       ├── Product.php                     ← fillable: sku_code, name, category, unit, shelf_life, created_by
     │       ├── StockInUse.php                  ← table: stock_in_use_codes; fillable: code, product_id, warehouse_id, quantity, harvest_date
@@ -298,7 +306,8 @@ Rural Rising Inventory Management System/   ← project root
     │   │   ├── create_temporary_warehouse_returns_table
     │   │   ├── create_reconciliations_table
     │   │   ├── create_reconciliation_items_table
-    │   │   └── create_reconciliation_batch_adjustments_table
+    │   │   ├── create_reconciliation_batch_adjustments_table
+    │   │   └── add_soft_deletes_to_users_table
     │   └── seeders/
     │       └── UserSeeder.php                 ← seeds 3 warehouses + 2 accounts:
     │                                              admin@ruriims.com (role=admin, PIN=123456)
