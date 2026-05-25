@@ -141,11 +141,13 @@ ruriims-frontend/
     │   │
     │   ├── receiveOrder/
     │   │   ├── ReceiveOrderListPage.jsx
-    │   │   └── ReceiveOrderFormPage.jsx     ← Handles both Stage 1 and Stage 2
+    │   │   ├── ReceiveOrderFormPage.jsx     ← Handles both Stage 1 and Stage 2
+    │   │   └── ReceiveOrderAuditPage.jsx    ← Read-only audit view for Accomplished RO records
     │   │
     │   ├── transferRequest/
     │   │   ├── TransferRequestListPage.jsx
-    │   │   └── TransferRequestFormPage.jsx  ← Handles both Stage 1 and Stage 2
+    │   │   ├── TransferRequestFormPage.jsx  ← Handles both Stage 1 and Stage 2
+    │   │   └── TransferRequestAuditPage.jsx ← Read-only audit view for Complete TRF records
     │   │
     │   ├── issueProduct/
     │   │   └── IssueProductFormPage.jsx     ← Create form only; list is on DashboardPage
@@ -190,8 +192,10 @@ ruriims-frontend/
 /admin/users                        → UserManagementPage               (protected, admin only)
 /products/:id                       → ProductDetailPage                (protected)
 /receive-orders                     → ReceiveOrderListPage             (protected)
+/receive-orders/:id/audit           → ReceiveOrderAuditPage            (protected)
 /receive-orders/:id                 → ReceiveOrderListPage + ReceiveOrderFormPage overlay (accomplish) (protected)
 /transfer-requests                  → TransferRequestListPage          (protected)
+/transfer-requests/:id/audit        → TransferRequestAuditPage         (protected)
 /transfer-requests/:id              → TransferRequestListPage + TransferRequestFormPage overlay (accomplish) (protected)
 /reconciliation                     → ReconciliationListPage           (protected)
 /reconciliation/new                 → ReconciliationFormPage           (protected)
@@ -821,6 +825,23 @@ status changes to Accomplished → Stock-In-Use codes generated per product line
 
 ---
 
+### `ReceiveOrderAuditPage`
+
+Route: `/receive-orders/:id/audit` — overlay (same visual shell as `ReceiveOrderFormPage`).
+Accessed by clicking an Accomplished row in `ReceiveOrderListPage`.
+
+On mount: fetches `GET /api/receive-orders/{id}`. RETURN navigates back via `navigate(-1)`.
+
+Read-only header fields (2-column grid): Supplier Name, Order Cost, Delivery Fee,
+Date Ordered, Date Arrived, Total, Warehouse, Created By, Verified By.
+
+Read-only product table columns:
+Product Code | Product Name | Unit | Qty Ordered | Qty Arrived | Harvest Date | Product Cost
+
+No action buttons. No PIN modal. No editable fields.
+
+---
+
 ### `TransferRequestListPage` (proto p.29-32, SRS §3.5.2)
 
 Rendered inside the dashboard area when the `Inventory` dropdown → "Transfer Requests"
@@ -937,6 +958,23 @@ ACCOMPLISH button → `PinVerificationModal` — PIN verification on ACCOMPLISH 
 → on verified → "Accomplished TRF-QC-000-003" label → status changes to Complete
 → stock deducted from source warehouse per recomputed cascade plan, new batches
 added to destination warehouse (one per source batch deducted).
+
+---
+
+### `TransferRequestAuditPage`
+
+Route: `/transfer-requests/:id/audit` — overlay (same visual shell as `TransferRequestFormPage`).
+Accessed by clicking a Complete row in `TransferRequestListPage`.
+
+On mount: fetches `GET /api/transfer-requests/{id}`. RETURN navigates back via `navigate(-1)`.
+
+Read-only header fields (2-column grid): Requested By, Date Requested, Source Warehouse,
+Destination Warehouse, Verified By, Date Received.
+
+Read-only product table columns:
+Product SKU | Product Name | Stock-In-Use Code | Qty Requested | Qty Received | Harvest Date
+
+No action buttons. No PIN modal. No editable fields.
 
 ---
 
@@ -1351,7 +1389,7 @@ One controller per feature in `ruriims-backend/app/Http/Controllers/`:
 
 ```
 AuthController.php                  login, logout, user
-UserController.php                  index, store, update, toggleStatus
+UserController.php                  index, store, show, update, destroy, restore, resetPassword, resetPin
 ProductController.php               index, store, show
 ReceiveOrderController.php          index, store, show, complete
 TransferRequestController.php       index, store, show, accomplish

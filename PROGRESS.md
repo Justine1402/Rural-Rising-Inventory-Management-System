@@ -754,22 +754,41 @@ Deferred:
   Reports History dropdown and a /reports/reconciliations page. Until then,
   reconciliation history is only visible through the /reconciliation list page.
 
-- **RO and TRF detail-from-list navigation gap:** `ReceiveOrderListPage` and
-  `TransferRequestListPage` have a click-guard (`if (status !== 'incomplete') return;`)
-  that prevents accomplished or complete rows from opening a detail view. The
-  verify/accomplish flow is gated to incomplete rows by design, but there is no
-  read-only detail page for finished RO/TRF records. Compare to
-  `ReconciliationListPage` which has a unified review+audit detail page that's always
-  clickable. Surfaced during Step 13 Stage 4.5 empirical verification when testing
-  soft-deleted user name resolution across all transaction types. Not a Step 13
-  defect; candidate for a future "transaction read-only audit pages" enhancement step
-  (proposed as Step 13.25).
+---
+
+### ✅ Step 13.25 — Transaction Audit Pages — 2026-05-26
+
+- Removed click-guard on Accomplished rows in `ReceiveOrderListPage` — clicking an
+  Accomplished row now navigates to `/receive-orders/:id/audit`. Incomplete row
+  behavior (select + action bar) unchanged.
+- Removed click-guard on Complete rows in `TransferRequestListPage` — clicking a
+  Complete row now navigates to `/transfer-requests/:id/audit`. Incomplete row
+  behavior unchanged.
+- `ReceiveOrderAuditPage.jsx` (`src/pages/receiveOrder/`) — new overlay (same visual
+  shell as `ReceiveOrderFormPage`); fetches `GET /api/receive-orders/{id}`; renders 9
+  read-only header fields in a 2-column grid (Supplier Name, Order Cost, Delivery Fee,
+  Date Ordered, Date Arrived, Total, Warehouse, Created By, Verified By) + 7-column
+  product table (Product Code, Product Name, Unit, Qty Ordered, Qty Arrived, Harvest
+  Date, Product Cost); RETURN navigates back.
+- `TransferRequestAuditPage.jsx` (`src/pages/transferRequest/`) — new overlay (same
+  visual shell as `TransferRequestFormPage`); fetches `GET /api/transfer-requests/{id}`;
+  renders 6 read-only header fields (Requested By, Date Requested, Source Warehouse,
+  Destination Warehouse, Verified By, Date Received) + 6-column product table (Product
+  SKU, Product Name, Stock-In-Use Code, Qty Requested, Qty Received, Harvest Date);
+  RETURN navigates back.
+- `App.jsx` — two new protected routes added: `/receive-orders/:id/audit` and
+  `/transfer-requests/:id/audit`, each mounting the list page + audit overlay together
+  (same pattern as the accomplish routes). Both declared before their respective `:id`
+  accomplish routes to prevent React Router from swallowing the "audit" segment.
+- No backend changes. Existing `GET /api/receive-orders/{id}` and
+  `GET /api/transfer-requests/{id}` show endpoints used as-is.
 
 ---
 
 ## Not Started
 
 - [x] Step 13 — `UserManagementPage` + `UserController` — COMPLETE (see ✅ Step 13 COMPLETE above)
+- [x] Step 13.25 — RO + TRF Transaction Audit Pages — COMPLETE (see ✅ Step 13.25 above)
 - [ ] Step 13.5 — `ProfileModal` live wiring (read user info from AuthContext; wire Change Password and Change PIN to the endpoints Step 13 establishes)
 - [ ] Step 13.75 — Manager warehouse-scoping cross-cutting pass (`WarehouseContext` filters by user role and `warehouse_id`; `WarehouseTabs` hides non-assigned warehouses for managers; `Navbar` hides the warehouse switcher for managers; audit all list pages to confirm they respect the active warehouse correctly)
 - [ ] Step 14 — All Reports pages + `ReportController` (7 report type pages + ReportsHistoryPage + filter bar wiring across all list pages)

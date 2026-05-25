@@ -25,7 +25,10 @@ export default function ReceiveOrderListPage() {
   }, [location.key, receiveOrderRefreshKey]);
 
   const handleRowClick = (order) => {
-    if (order.status !== 'incomplete') return;
+    if (order.status === 'accomplished') {
+      navigate(`/receive-orders/${order.id}/audit`);
+      return;
+    }
     setSelectedRow((prev) => (prev?.id === order.id ? null : order));
   };
 
@@ -87,7 +90,7 @@ export default function ReceiveOrderListPage() {
                     style={{
                       backgroundColor: isSelected ? '#f0fdf4' : undefined,
                       borderLeft: isSelected ? '4px solid #409645' : '4px solid transparent',
-                      cursor: order.status === 'incomplete' ? 'pointer' : 'default',
+                      cursor: 'pointer',
                     }}
                     onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.backgroundColor = '#f3f4f6'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = isSelected ? '#f0fdf4' : ''; }}

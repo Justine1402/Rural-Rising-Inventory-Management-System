@@ -20,6 +20,8 @@ import ReconciliationReviewPage from './pages/reconciliation/ReconciliationRevie
 import ReconciliationFormPage from './pages/reconciliation/ReconciliationFormPage';
 import UserManagementPage from './pages/admin/UserManagementPage';
 import UserFormPage from './pages/admin/UserFormPage';
+import ReceiveOrderAuditPage from './pages/receiveOrder/ReceiveOrderAuditPage';
+import TransferRequestAuditPage from './pages/transferRequest/TransferRequestAuditPage';
 
 function GuestRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -73,12 +75,22 @@ function AppRoutes() {
       <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
       <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
       <Route path="/receive-orders" element={<ProtectedRoute><ReceiveOrderListPage /></ProtectedRoute>} />
+      <Route path="/receive-orders/:id/audit" element={
+        <ProtectedRoute>
+          <><ReceiveOrderListPage /><ReceiveOrderAuditPage /></>
+        </ProtectedRoute>
+      } />
       <Route path="/receive-orders/:id" element={
         <ProtectedRoute>
           <><ReceiveOrderListPage /><ReceiveOrderFormPage /></>
         </ProtectedRoute>
       } />
       <Route path="/transfer-requests" element={<ProtectedRoute><TransferRequestListPage /></ProtectedRoute>} />
+      <Route path="/transfer-requests/:id/audit" element={
+        <ProtectedRoute>
+          <><TransferRequestListPage /><TransferRequestAuditPage /></>
+        </ProtectedRoute>
+      } />
       <Route path="/transfer-requests/:id" element={
         <ProtectedRoute>
           <><TransferRequestListPage /><TransferRequestFormPage /></>
