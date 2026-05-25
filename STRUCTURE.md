@@ -532,7 +532,7 @@ Content:
 - **Change PIN** — always visible; 2-column layout (Current PIN, New PIN);
   6-digit numeric inputs, centered and masked
 
-> **Current state:** User info (name, email, warehouse name) is hardcoded as placeholder values — not yet reading from `AuthContext`. Change Password and Change PIN are UI-only with no API calls. All three will be wired in a follow-up pass after Step 13 establishes the user-management backend — see PROGRESS.md Step 13.5.
+> **Step 13.5 complete:** All display fields read from `AuthContext.user` and `WarehouseContext.warehouses`. Change Password wired to `PATCH /api/user/password`. Change PIN wired to `PATCH /api/user/pin`. Both forms show inline red/green feedback and reset on modal close.
 
 Props:
 ```js

@@ -140,6 +140,8 @@ Routes defined in `ruriims-backend/routes/api.php`:
 | `POST` | `/api/login` | None | `{ "user": {...} }` |
 | `GET` | `/api/user` | `auth:sanctum` | `{ "user": {...} }` |
 | `POST` | `/api/logout` | `auth:sanctum` | `{ "message": "Logged out" }` |
+| `PATCH` | `/api/user/password` | `auth:sanctum` | `{ "message": "Password updated successfully." }` — verifies current password via Hash::check; updates own password; 422 on mismatch |
+| `PATCH` | `/api/user/pin` | `auth:sanctum` | `{ "message": "PIN updated successfully." }` — verifies current PIN via Hash::check; updates own PIN with Hash::make(); 422 on mismatch |
 | `GET` | `/api/users` | `auth:sanctum` (admin) | `{ "users": [...] }` — withTrashed; includes warehouse relation |
 | `POST` | `/api/users` | `auth:sanctum` (admin) | `{ "user": {...} }` — creates account; role-conditional warehouse_id |
 | `GET` | `/api/users/{user}` | `auth:sanctum` (admin) | `{ "user": {...} }` — withTrashed binding |

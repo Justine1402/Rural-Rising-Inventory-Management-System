@@ -785,11 +785,38 @@ Deferred:
 
 ---
 
+### ✅ Step 13.5 — ProfileModal Live Wiring — 2026-05-26
+
+**Backend (`AuthController.php` + `routes/api.php`):**
+- `changePassword` method: validates `current_password` + `new_password|min:8|confirmed`;
+  checks `Hash::check` against stored password; updates via model (auto-hashed by existing
+  `hashed` cast); returns 422 with clear message on mismatch.
+- `changePin` method: validates `current_pin|digits:6` + `new_pin|digits:6`; checks
+  `Hash::check` against stored pin; updates with `Hash::make()` explicitly (pin has no
+  model cast); returns 422 with clear message on mismatch.
+- Two new PATCH routes added below `GET /user`: `PATCH /api/user/password` and
+  `PATCH /api/user/pin`. Both are `auth:sanctum` only — not admin-gated.
+
+**Frontend (`ProfileModal.jsx`):**
+- All display fields now live: name, email, role (capitalized), avatar initial, warehouse
+  name (looked up from `WarehouseContext.warehouses` by `user.warehouse_id`; shows '—'
+  for admin since `warehouse_id` is null), position title (`user.position_title || '—'`).
+- Change Password: three-field form (Current, New, Confirm) with show/hide toggles;
+  client-side confirm-mismatch check; `PATCH /api/user/password` API call; inline red
+  error / green success feedback; fields clear on success.
+- Change PIN: two-field form (Current PIN, New PIN); client-side 6-digit regex check;
+  `PATCH /api/user/pin` API call; inline red error / green success feedback; fields
+  clear on success.
+- `handleClose` resets all 9 state fields — clean slate on every open.
+- Per-section submit buttons (UPDATE PASSWORD, UPDATE PIN); footer has only "Close".
+
+---
+
 ## Not Started
 
 - [x] Step 13 — `UserManagementPage` + `UserController` — COMPLETE (see ✅ Step 13 COMPLETE above)
 - [x] Step 13.25 — RO + TRF Transaction Audit Pages — COMPLETE (see ✅ Step 13.25 above)
-- [ ] Step 13.5 — `ProfileModal` live wiring (read user info from AuthContext; wire Change Password and Change PIN to the endpoints Step 13 establishes)
+- [x] Step 13.5 — `ProfileModal` live wiring — COMPLETE (see ✅ Step 13.5 above)
 - [ ] Step 13.75 — Manager warehouse-scoping cross-cutting pass (`WarehouseContext` filters by user role and `warehouse_id`; `WarehouseTabs` hides non-assigned warehouses for managers; `Navbar` hides the warehouse switcher for managers; audit all list pages to confirm they respect the active warehouse correctly)
 - [ ] Step 14 — All Reports pages + `ReportController` (7 report type pages + ReportsHistoryPage + filter bar wiring across all list pages)
 - [ ] Step 15 — `InventorySummaryPage` + PDF export (DomPDF / jsPDF)

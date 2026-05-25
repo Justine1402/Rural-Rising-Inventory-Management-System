@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import api from '../../api/axios';
+import { useAuth } from '../../context/AuthContext';
+import { useWarehouse } from '../../context/WarehouseContext';
 
 const EyeIcon = ({ open }) =>
   open ? (
@@ -56,16 +59,40 @@ const INITIAL_PASSWORDS = { current: '', newPass: '', confirm: '' };
 const INITIAL_PINS = { current: '', newPin: '' };
 
 export default function ProfileModal({ isOpen, onClose }) {
+  const { user } = useAuth();
+  const { warehouses } = useWarehouse();
+
   const [passwords, setPasswords] = useState(INITIAL_PASSWORDS);
   const [pins, setPins] = useState(INITIAL_PINS);
   const [passwordOpen, setPasswordOpen] = useState(false);
 
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState(null);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+
+  const [pinLoading, setPinLoading] = useState(false);
+  const [pinError, setPinError] = useState(null);
+  const [pinSuccess, setPinSuccess] = useState(false);
+
   if (!isOpen) return null;
+
+  const warehouseName =
+    warehouses.find((w) => w.id === user?.warehouse_id)?.name || '—';
+  const roleLabel = user?.role
+    ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
+    : '—';
+  const avatarInitial = user?.name?.[0]?.toUpperCase() ?? '?';
 
   const handleClose = () => {
     setPasswords(INITIAL_PASSWORDS);
     setPins(INITIAL_PINS);
     setPasswordOpen(false);
+    setPasswordLoading(false);
+    setPasswordError(null);
+    setPasswordSuccess(false);
+    setPinLoading(false);
+    setPinError(null);
+    setPinSuccess(false);
     onClose();
   };
 
@@ -73,6 +100,56 @@ export default function ProfileModal({ isOpen, onClose }) {
     const val = e.target.value.replace(/\D/g, '').slice(0, 6);
     setPins((prev) => ({ ...prev, [field]: val }));
   };
+
+  const handlePasswordSubmit = async () => {
+    if (passwords.newPass !== passwords.confirm) {
+      setPasswordError('New passwords do not match.');
+      return;
+    }
+    setPasswordLoading(true);
+    setPasswordError(null);
+    setPasswordSuccess(false);
+    try {
+      await api.patch('/user/password', {
+        current_password: passwords.current,
+        new_password: passwords.newPass,
+        new_password_confirmation: passwords.confirm,
+      });
+      setPasswordSuccess(true);
+      setPasswords(INITIAL_PASSWORDS);
+    } catch (err) {
+      setPasswordError(err.response?.data?.message ?? 'Something went wrong.');
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  const handlePinSubmit = async () => {
+    if (!/^\d{6}$/.test(pins.current) || !/^\d{6}$/.test(pins.newPin)) {
+      setPinError('Both PINs must be exactly 6 digits.');
+      return;
+    }
+    setPinLoading(true);
+    setPinError(null);
+    setPinSuccess(false);
+    try {
+      await api.patch('/user/pin', {
+        current_pin: pins.current,
+        new_pin: pins.newPin,
+      });
+      setPinSuccess(true);
+      setPins(INITIAL_PINS);
+    } catch (err) {
+      setPinError(err.response?.data?.message ?? 'Something went wrong.');
+    } finally {
+      setPinLoading(false);
+    }
+  };
+
+  const passwordSubmitDisabled =
+    passwordLoading || !passwords.current || !passwords.newPass || !passwords.confirm;
+  const pinSubmitDisabled =
+    pinLoading || pins.current.length !== 6 || pins.newPin.length !== 6;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
@@ -98,19 +175,18 @@ export default function ProfileModal({ isOpen, onClose }) {
               className="w-16 h-16 rounded-full flex-shrink-0 flex items-center justify-center text-white font-bold text-2xl"
               style={{ backgroundColor: '#409645' }}
             >
-              A
+              {avatarInitial}
             </div>
             <div>
-              <p className="font-bold text-gray-900 text-lg leading-tight">Admin User</p>
-              <p className="text-sm text-gray-500">admin@ruriims.com</p>
+              <p className="font-bold text-gray-900 text-lg leading-tight">{user?.name}</p>
+              <p className="text-sm text-gray-500">{user?.email}</p>
               <div className="flex items-center gap-2 mt-1.5">
                 <span className="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
-                  Admin
+                  {roleLabel}
                 </span>
-                <span className="text-xs text-gray-400">Quezon City Warehouse</span>
+                <span className="text-xs text-gray-400">{warehouseName}</span>
               </div>
-              {/* position_title — replace "—" with user.position_title once AuthContext returns it */}
-              <p className="text-xs text-gray-400 mt-0.5">—</p>
+              <p className="text-xs text-gray-400 mt-0.5">{user?.position_title || '—'}</p>
             </div>
           </div>
 
@@ -130,7 +206,7 @@ export default function ProfileModal({ isOpen, onClose }) {
 
             <div
               className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                passwordOpen ? 'max-h-64 mt-3' : 'max-h-0'
+                passwordOpen ? 'max-h-96 mt-3' : 'max-h-0'
               }`}
             >
               <div className="space-y-3">
@@ -149,6 +225,22 @@ export default function ProfileModal({ isOpen, onClose }) {
                   value={passwords.confirm}
                   onChange={(e) => setPasswords((p) => ({ ...p, confirm: e.target.value }))}
                 />
+                {passwordError && (
+                  <p className="text-xs text-red-600">{passwordError}</p>
+                )}
+                {passwordSuccess && (
+                  <p className="text-xs text-green-600">Password updated successfully.</p>
+                )}
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handlePasswordSubmit}
+                    disabled={passwordSubmitDisabled}
+                    className="px-5 py-2 text-sm font-medium text-white rounded-lg transition-colors btn-brand disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {passwordLoading ? 'Updating…' : 'UPDATE PASSWORD'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -190,22 +282,33 @@ export default function ProfileModal({ isOpen, onClose }) {
                 />
               </div>
             </div>
+            {pinError && (
+              <p className="text-xs text-red-600 mt-2">{pinError}</p>
+            )}
+            {pinSuccess && (
+              <p className="text-xs text-green-600 mt-2">PIN updated successfully.</p>
+            )}
+            <div className="flex justify-end mt-3">
+              <button
+                type="button"
+                onClick={handlePinSubmit}
+                disabled={pinSubmitDisabled}
+                className="px-5 py-2 text-sm font-medium text-white rounded-lg transition-colors btn-brand disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {pinLoading ? 'Updating…' : 'UPDATE PIN'}
+              </button>
+            </div>
           </div>
 
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50">
+        <div className="flex justify-end px-6 py-4 border-t border-gray-100 bg-gray-50">
           <button
             onClick={handleClose}
             className="px-5 py-2 text-sm font-medium text-gray-600 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors"
           >
-            Cancel
-          </button>
-          <button
-            className="px-5 py-2 text-sm font-medium text-white rounded-lg transition-colors btn-brand"
-          >
-            Save Changes
+            Close
           </button>
         </div>
 
