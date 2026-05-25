@@ -580,6 +580,52 @@
 
 ---
 
+### Step 13, Stage 2 — UserManagementPage list view — 2026-05-25
+
+- [x] `UIContext.jsx` — 3 new state pairs + 1 refresh function added, mirroring
+      exact existing patterns:
+        - `userFormOpen` / `setUserFormOpen` (boolean flag, mirrors
+          `reconciliationFormOpen` pattern) — Stage 3 mounts `UserFormOverlay`
+          when true
+        - `userDetailOverlayUserId` / `setUserDetailOverlayUserId` (ID-carrying
+          state, mirrors `temporaryWarehouseDetailOverlayTwhId` pattern) — Stage 3
+          mounts `UserDetailOverlay` when non-null
+        - `userRefreshKey` / `refreshUsers` (counter + incrementer, mirrors
+          `reconciliationRefreshKey` pattern) — triggers `UserManagementPage`
+          re-fetch after Stage 3 mutations
+- [x] `UserManagementPage.jsx` (new, `src/pages/admin/`) — admin-only full page;
+      `Navbar` only, no `WarehouseTabs`; fetches `GET /api/users` on `location.key`
+      and `userRefreshKey`; cancellable `useEffect` with `cancelled` flag; 7-column
+      table (Name, Email, Role, Warehouse, Position, Status, Date Created); inactive
+      users shown with `opacity-60` + red-tier `Inactive` `StatusBadge`; client-side
+      search wired (name/email); 3 filter dropdowns are presentational stubs (Role,
+      Status, Warehouse); `+ New User` → `setUserFormOpen(true)`; row click →
+      `setUserDetailOverlayUserId(u.id)`.
+- [x] `App.jsx` — `/admin/users` route swapped from placeholder `DashboardPage`
+      to `UserManagementPage`; import added.
+- [x] Navbar gear icon verified already wired (pre-Stage-1): `user?.role === 'admin'`
+      guard at line 75, `navigate('/admin/users')` on click at line 86. No changes
+      needed.
+- **Plan deviation — `res.data` vs `res.data.users`:** The plan showed
+  `setUsers(res.data)` but the `UserController@index` response shape is
+  `{ users: [...] }`. Fixed to `setUsers(res.data.users)` without plan amendment —
+  straightforward API shape correction.
+- **Plan deviation — `u.warehouse?.name` vs `u.warehouse`:** The plan showed
+  `u.warehouse?.name` in the table cell, but the controller serializes `warehouse`
+  as a string (the name), not an object. Fixed to `u.warehouse || '—'`.
+- **Test script locator note (Check 1 false negative):** The automated Stage 2
+  verification script asserted on `⚙` text content inside the gear-icon button,
+  but the gear is rendered as an `<svg>` React component with no text. Check 1
+  fails by the script's assertion, but Check 2 (clicking the same gear →
+  "Manage Accounts" → /admin/users) passes, directly proving the feature works.
+  Verification rerun via check1_fix.mjs confirmed the SVG is visible and the
+  dropdown opens correctly. The script assertion is a locator bug, not a feature
+  bug. If the script is reused for regression testing, update the assertion to
+  query the SVG element (e.g., `button[aria-label="Settings"] svg` or similar)
+  instead of text content.
+
+---
+
 ## Known Issues / Flagged for Future Fix
 
 - **Reconciliation reports not reachable from UI** — Step 12 reconciliation records

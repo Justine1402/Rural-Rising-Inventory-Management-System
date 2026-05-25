@@ -15,11 +15,15 @@ export function UIProvider({ children }) {
   const [transferRequestRefreshKey, setTransferRequestRefreshKey] = useState(0);
   const [reconciliationFormOpen, setReconciliationFormOpen] = useState(false);
   const [reconciliationRefreshKey, setReconciliationRefreshKey] = useState(0);
+  const [userFormOpen, setUserFormOpen] = useState(false);
+  const [userDetailOverlayUserId, setUserDetailOverlayUserId] = useState(null);
+  const [userRefreshKey, setUserRefreshKey] = useState(0);
 
   const refreshProducts = () => setProductRefreshKey((k) => k + 1);
   const refreshReceiveOrders = () => setReceiveOrderRefreshKey((k) => k + 1);
   const refreshTransferRequests = () => setTransferRequestRefreshKey((k) => k + 1);
   const refreshReconciliations = () => setReconciliationRefreshKey((k) => k + 1);
+  const refreshUsers = () => setUserRefreshKey((k) => k + 1);
 
   return (
     <UIContext.Provider value={{
@@ -35,6 +39,9 @@ export function UIProvider({ children }) {
       transferRequestRefreshKey, refreshTransferRequests,
       reconciliationFormOpen, setReconciliationFormOpen,
       reconciliationRefreshKey, refreshReconciliations,
+      userFormOpen, setUserFormOpen,
+      userDetailOverlayUserId, setUserDetailOverlayUserId,
+      userRefreshKey, refreshUsers,
     }}>
       {children}
     </UIContext.Provider>

@@ -279,6 +279,12 @@ a product is created — without navigating away.
   setReconciliationFormOpen: function,
   reconciliationRefreshKey: number,       // increments on each successful RC create/confirm
   refreshReconciliations: function,       // call this to trigger a Reconciliation list re-fetch
+  userFormOpen: boolean,                  // true = open UserFormOverlay (Stage 3)
+  setUserFormOpen: function,
+  userDetailOverlayUserId: number | null, // null = closed; number = user id to view/edit
+  setUserDetailOverlayUserId: function,
+  userRefreshKey: number,                 // increments on each successful user create/update/delete
+  refreshUsers: function,                 // call this to trigger a UserManagementPage re-fetch
 }
 ```
 
@@ -547,29 +553,42 @@ Flow: `getCsrfCookie()` → `POST /api/login` → set user in `AuthContext` → 
 
 ### `UserManagementPage` (admin only)
 
-Accessible only to users with `role === "admin"`. Reached via the Settings icon
-(⚙) in the Navbar. Non-admin users are redirected to `/` if they attempt to
-access `/admin/users` directly.
+Route: `/admin/users` — `ProtectedRoute adminOnly` guard. Reached via the Settings
+icon (⚙) in the Navbar → "Manage Accounts". Non-admin users are redirected to `/`
+via an in-component `useEffect` guard (in addition to the `ProtectedRoute` guard).
 
-**Account list table columns:**
-Name | Email | Position | Assigned Warehouse | Status | Actions
+**Layout:** `Navbar` + full-width card. No `WarehouseTabs` — user management is not
+warehouse-scoped.
 
-**Actions per row:**
-- **Disable / Enable** toggle — activates or deactivates the account. Disabled
-  accounts cannot log in.
-- **Edit** — opens an inline form to update name, email, assigned warehouse, or
-  position.
+**7-column table:**
+Name | Email | Role | Warehouse | Position | Status | Date Created
 
-**"+ Add Account" button** (top of page):
-Opens an inline form with fields:
-- Name (text)
-- Email (text)
-- Password (text — admin sets the initial password)
-- Position (text, e.g., "Main Warehouse Manager")
-- Assigned Warehouse (dropdown: Main Warehouse | Warehouse 2 | Warehouse 3)
+Inactive users (`deleted_at` is set) are displayed with `opacity-60` and a red-tier
+`Inactive` `StatusBadge`. Active users show a green-tier `Active` badge.
 
-Submitting creates the account via `POST /api/admin/users`. No PIN verification
-is required for account management — admin access is the authorization.
+**Filter bar (top-right of card):**
+- Search input — wired to client-side name/email filter via `useMemo`
+- Role dropdown (`All Roles / Admin / Manager`) — presentational stub
+- Status dropdown (`All Statuses / Active / Inactive`) — presentational stub
+- Warehouse dropdown (`All Warehouses`) — presentational stub; warehouse list
+  population deferred to a later pass
+
+**"+ New User" button** (top-left of card):
+Sets `userFormOpen = true` in UIContext. Stage 3 mounts the `UserFormOverlay`
+component that responds to this flag.
+
+**Row click:**
+Sets `userDetailOverlayUserId = u.id` in UIContext. Stage 3 mounts the
+`UserDetailOverlay` component that responds to this ID.
+
+**Re-fetch triggers:** `location.key` (route navigation) and `userRefreshKey`
+(incremented by Stage 3 overlays after successful create/update/delete).
+
+**API call:** `GET /api/users` — returns `withTrashed` list including soft-deleted
+accounts so admin sees full account history.
+
+**Admin guard:** `useEffect` redirects `user.role !== 'admin'` to `/` with
+`replace: true`. `ProtectedRoute adminOnly` provides a second layer at the router.
 
 Managers cannot self-register. There is no public registration flow anywhere in
 the system.

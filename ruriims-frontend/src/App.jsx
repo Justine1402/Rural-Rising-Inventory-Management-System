@@ -18,6 +18,7 @@ import TempWarehouseReportsPage from './pages/reports/TempWarehouseReportsPage';
 import ReconciliationListPage from './pages/reconciliation/ReconciliationListPage';
 import ReconciliationReviewPage from './pages/reconciliation/ReconciliationReviewPage';
 import ReconciliationFormPage from './pages/reconciliation/ReconciliationFormPage';
+import UserManagementPage from './pages/admin/UserManagementPage';
 
 function GuestRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -84,7 +85,7 @@ function AppRoutes() {
       <Route path="/reconciliation" element={<ProtectedRoute><ReconciliationListPage /></ProtectedRoute>} />
       <Route path="/reconciliation/:id/review" element={<ProtectedRoute><ReconciliationReviewPage /></ProtectedRoute>} />
       <Route path="/reports/temporary-warehouses" element={<ProtectedRoute><TempWarehouseReportsPage /></ProtectedRoute>} />
-      <Route path="/admin/users" element={<ProtectedRoute adminOnly><DashboardPage /></ProtectedRoute>} />
+      <Route path="/admin/users" element={<ProtectedRoute adminOnly><UserManagementPage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
