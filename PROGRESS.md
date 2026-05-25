@@ -698,13 +698,39 @@
 
 ---
 
+### Step 13, Stage 4.5 — Soft-Delete Relation Fix — 2026-05-25
+
+- Discovered during end-of-Step-13 empirical verification: soft-deleting a user with
+  associated transactions caused HTTP 500 on transaction list endpoints. Root cause:
+  Eloquent's global SoftDelete scope excludes soft-deleted users from eager loads, so
+  `$order->creator` returned null and `$order->creator->name` threw
+  "Attempt to read property 'name' on null".
+- Fix 1: Added `->withTrashed()` to every `belongsTo(User::class)` relation across all
+  transaction-side models: `ReceiveOrder`, `TransferRequest`, `IssueProduct`,
+  `TemporaryWarehouse`, `Reconciliation`, `Product`. 10 relations total.
+- Fix 2: Added null-safe `?->name` access in every controller that reads a User
+  relation's name field, as defense-in-depth against future missed relations or
+  legitimately-null FKs. 10 expressions fixed across 5 controllers.
+- Fix 3: Added `|| '—'` fallback in all four transaction list pages that display
+  creator/requester/reconciledBy names: `ReceiveOrderListPage`, `TransferRequestListPage`,
+  `ReconciliationListPage`, `TempWarehouseReportsPage`. All four needed the fix.
+- Re-verified empirically: all transaction list pages and detail views load cleanly
+  after a creator is soft-deleted.
+
+Rationale for shipping in Step 13 instead of a follow-up step: the defect blocks Step
+13's primary claim that "admins can deactivate users without breaking the system."
+Step 13 is not complete without this fix.
+
+---
+
 ## ✅ Step 13 COMPLETE — 2026-05-25
 
-All four stages delivered:
+All five stages delivered:
 - Stage 1: UserController + soft delete + admin-only routes (d450579)
 - Stage 2: UserManagementPage list view + admin route guard (2f74b42)
 - Stage 3: UserFormPage create/edit overlay + reset password/PIN (05123c9)
-- Stage 4: Delete + restore + login gate (this commit)
+- Stage 4: Delete + restore + login gate (d7ac6e4)
+- Stage 4.5: Soft-delete relation fix
 
 What's enabled now: Admins can create, edit, deactivate, and reactivate user
 accounts. Self-protection prevents admins from demoting or deleting themselves.
@@ -727,6 +753,17 @@ Deferred:
   temporarily hard-routed to /reports/temporary-warehouses. Step 14 will add the
   Reports History dropdown and a /reports/reconciliations page. Until then,
   reconciliation history is only visible through the /reconciliation list page.
+
+- **RO and TRF detail-from-list navigation gap:** `ReceiveOrderListPage` and
+  `TransferRequestListPage` have a click-guard (`if (status !== 'incomplete') return;`)
+  that prevents accomplished or complete rows from opening a detail view. The
+  verify/accomplish flow is gated to incomplete rows by design, but there is no
+  read-only detail page for finished RO/TRF records. Compare to
+  `ReconciliationListPage` which has a unified review+audit detail page that's always
+  clickable. Surfaced during Step 13 Stage 4.5 empirical verification when testing
+  soft-deleted user name resolution across all transaction types. Not a Step 13
+  defect; candidate for a future "transaction read-only audit pages" enhancement step
+  (proposed as Step 13.25).
 
 ---
 

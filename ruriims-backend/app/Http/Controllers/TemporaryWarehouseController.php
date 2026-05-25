@@ -32,7 +32,7 @@ class TemporaryWarehouseController extends Controller
             'event_date'       => $t->event_date->format('M d, Y'),
             'created_at'       => $t->created_at->format('M d, Y'),
             'status'           => $t->status,
-            'created_by'       => $t->creator->name,
+            'created_by'       => $t->creator?->name,
             'closed_by'        => $t->closer?->name ?? '—',
             'date_closed'      => $t->date_closed?->format('M d, Y') ?? '—',
         ]);
@@ -150,7 +150,7 @@ class TemporaryWarehouseController extends Controller
             'event_date'       => $temporaryWarehouse->event_date->format('Y-m-d'),
             'status'           => $temporaryWarehouse->status,
             'warehouse_id'     => $temporaryWarehouse->warehouse_id,
-            'created_by'       => $temporaryWarehouse->creator->name,
+            'created_by'       => $temporaryWarehouse->creator?->name,
             'closed_by'        => $temporaryWarehouse->closer?->name,
             'date_closed'      => $temporaryWarehouse->date_closed?->format('Y-m-d'),
             'products_transferred_in' => $transferredIn,

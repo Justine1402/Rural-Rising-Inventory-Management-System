@@ -26,7 +26,7 @@ class ReceiveOrderController extends Controller
                 'warehouse'         => $o->warehouse->name,
                 'date_created'      => $o->created_at->format('M d, Y'),
                 'date_accomplished' => $o->date_arrived?->format('M d, Y') ?? '—',
-                'created_by'        => $o->creator->name,
+                'created_by'        => $o->creator?->name,
                 'verified_by'       => $o->verifier?->name ?? '—',
                 'status'            => $o->status,
             ]);
@@ -108,7 +108,7 @@ class ReceiveOrderController extends Controller
             'date_ordered'  => $receiveOrder->date_ordered->format('Y-m-d'),
             'date_arrived'  => $receiveOrder->date_arrived?->format('Y-m-d'),
             'status'        => $receiveOrder->status,
-            'created_by'    => $receiveOrder->creator->name,
+            'created_by'    => $receiveOrder->creator?->name,
             'verified_by'   => $receiveOrder->verifier?->name,
             'items'         => $receiveOrder->items->map(fn ($i) => [
                 'id'               => $i->id,

@@ -98,7 +98,7 @@ export default function TransferRequestListPage() {
                     <td className="px-5 py-3 text-gray-600">{transfer.destination_warehouse}</td>
                     <td className="px-5 py-3 text-gray-600">{transfer.date_requested}</td>
                     <td className="px-5 py-3 text-gray-600">{transfer.date_accomplished}</td>
-                    <td className="px-5 py-3 text-gray-600">{transfer.requested_by}</td>
+                    <td className="px-5 py-3 text-gray-600">{transfer.requested_by || '—'}</td>
                     <td className="px-5 py-3 text-gray-600">{transfer.verified_by}</td>
                     <td className="px-5 py-3"><StatusBadge status={statusLabel(transfer.status)} /></td>
                   </tr>

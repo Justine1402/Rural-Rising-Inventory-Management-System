@@ -251,7 +251,7 @@ Rural Rising Inventory Management System/   ← project root
     │   ├── Http/
     │   │   └── Controllers/
     │   │       ├── AuthController.php          ← login, logout, user
-    │   │       ├── UserController.php          ← index, store, show, update, destroy, resetPassword, resetPin (admin-only; SoftDeletes; role-conditional warehouse_id validation)
+    │   │       ├── UserController.php          ← index, store, show, update, destroy, restore, resetPassword, resetPin (admin-only; SoftDeletes; role-conditional warehouse_id validation)
     │   │       ├── WarehouseController.php     ← index (returns all warehouses including TWH; is_temporary serialized via model cast)
     │   │       ├── ProductController.php       ← index (with warehouse_stock + harvest_date), store (PIN-verified), show
     │   │       ├── PinController.php           ← verify (standalone PIN check endpoint)
@@ -267,19 +267,19 @@ Rural Rising Inventory Management System/   ← project root
     │   └── Models/
     │       ├── User.php                        ← fillable: name, email, password, role, warehouse_id, position_title, pin; SoftDeletes trait (deleted_at = inactive); belongsTo warehouse()
     │       ├── Warehouse.php                   ← fillable: name, code, is_temporary; cast is_temporary → boolean
-    │       ├── Product.php                     ← fillable: sku_code, name, category, unit, shelf_life, created_by
+    │       ├── Product.php                     ← fillable: sku_code, name, category, unit, shelf_life, created_by; creator() uses withTrashed() so soft-deleted users still resolve in eager loads
     │       ├── StockInUse.php                  ← table: stock_in_use_codes; fillable: code, product_id, warehouse_id, quantity, harvest_date
-    │       ├── ReceiveOrder.php                ← fillable; belongsTo warehouse/creator/verifier; hasMany items
+    │       ├── ReceiveOrder.php                ← fillable; belongsTo warehouse/creator/verifier; hasMany items; User relations use withTrashed() so soft-deleted users still resolve in eager loads
     │       ├── ReceiveOrderItem.php            ← fillable; belongsTo product/receiveOrder
-    │       ├── TransferRequest.php             ← fillable; date casts; belongsTo sourceWarehouse/destinationWarehouse/requester/verifier; hasMany items
+    │       ├── TransferRequest.php             ← fillable; date casts; belongsTo sourceWarehouse/destinationWarehouse/requester/verifier; hasMany items; User relations (requester/verifier) use withTrashed() so soft-deleted users still resolve in eager loads
     │       ├── TransferRequestItem.php         ← fillable; date cast; belongsTo product/transferRequest/stockInUse
     │       ├── TransferRequestBatchDeduction.php ← records per-batch deductions from a TRF item; belongsTo transferRequestItem/stockInUse
-    │       ├── IssueProduct.php                ← fillable; cast date_issued; belongsTo warehouse + issuedBy (User); hasMany items
+    │       ├── IssueProduct.php                ← fillable; cast date_issued; belongsTo warehouse + issuedBy (User); hasMany items; issuedBy() uses withTrashed() so soft-deleted users still resolve in eager loads
     │       ├── IssueProductItem.php            ← fillable; cast harvest_date; belongsTo issueProduct/product/stockInUse
     │       ├── IssueProductBatchDeduction.php  ← records per-batch deductions from an ISS item; belongsTo issueProductItem/stockInUse
-    │       ├── TemporaryWarehouse.php          ← fillable; casts event_date/date_closed → date; belongsTo warehouse/creator/closer; hasMany returns
+    │       ├── TemporaryWarehouse.php          ← fillable; casts event_date/date_closed → date; belongsTo warehouse/creator/closer; hasMany returns; User relations (creator/closer) use withTrashed() so soft-deleted users still resolve in eager loads
     │       ├── TemporaryWarehouseReturn.php    ← fillable; cast harvest_date; belongsTo temporaryWarehouse/product/sourceStockInUse/destinationStockInUse/destinationWarehouse
-    │       ├── Reconciliation.php              ← fillable; casts date_reconciled/date_reviewed → date; belongsTo warehouse/reconciledBy/reviewedBy; hasMany items
+    │       ├── Reconciliation.php              ← fillable; casts date_reconciled/date_reviewed → date; belongsTo warehouse/reconciledBy/reviewedBy; hasMany items; User relations (reconciledBy/reviewedBy) use withTrashed() so soft-deleted users still resolve in eager loads
     │       ├── ReconciliationItem.php          ← fillable; casts expected_stock/actual_count/discrepancy decimal:3; belongsTo reconciliation/product; hasMany adjustments
     │       └── ReconciliationBatchAdjustment.php ← fillable; cast quantity decimal:3; direction enum (deduction/addition); harvest_date_source nullable enum; belongsTo reconciliationItem/stockInUse
     ├── bootstrap/

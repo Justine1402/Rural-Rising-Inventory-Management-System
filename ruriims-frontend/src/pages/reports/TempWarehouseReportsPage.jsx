@@ -66,7 +66,7 @@ export default function TempWarehouseReportsPage() {
                   <td className="px-5 py-3 text-gray-600">{twh.location}</td>
                   <td className="px-5 py-3 text-gray-600">{twh.event_date}</td>
                   <td className="px-5 py-3 text-gray-600">{twh.created_at}</td>
-                  <td className="px-5 py-3 text-gray-600">{twh.created_by}</td>
+                  <td className="px-5 py-3 text-gray-600">{twh.created_by || '—'}</td>
                   <td className="px-5 py-3 text-gray-600">{twh.closed_by}</td>
                   <td className="px-5 py-3 text-gray-600">{twh.date_closed}</td>
                   <td className="px-5 py-3"><StatusBadge status={statusLabel(twh.status)} /></td>

@@ -29,7 +29,7 @@ class IssueProductController extends Controller
                 'warehouse'   => $ip->warehouse->name,
                 'issue_type'  => $ip->issue_type,
                 'date_issued' => $ip->date_issued->format('M d, Y'),
-                'issued_by'   => $ip->issuedBy->name,
+                'issued_by'   => $ip->issuedBy?->name,
             ]);
 
         return response()->json(['issues' => $issues]);
@@ -136,7 +136,7 @@ class IssueProductController extends Controller
             'warehouse'    => $issueProduct->warehouse->name,
             'issue_type'   => $issueProduct->issue_type,
             'date_issued'  => $issueProduct->date_issued->format('M d, Y'),
-            'issued_by'    => $issueProduct->issuedBy->name,
+            'issued_by'    => $issueProduct->issuedBy?->name,
             'items'        => $issueProduct->items->map(fn ($i) => [
                 'id'                => $i->id,
                 'product_id'        => $i->product_id,

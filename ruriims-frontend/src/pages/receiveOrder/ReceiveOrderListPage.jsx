@@ -96,7 +96,7 @@ export default function ReceiveOrderListPage() {
                     <td className="px-5 py-3 text-gray-600">{order.warehouse}</td>
                     <td className="px-5 py-3 text-gray-600">{order.date_created}</td>
                     <td className="px-5 py-3 text-gray-600">{order.date_accomplished}</td>
-                    <td className="px-5 py-3 text-gray-600">{order.created_by}</td>
+                    <td className="px-5 py-3 text-gray-600">{order.created_by || '—'}</td>
                     <td className="px-5 py-3 text-gray-600">{order.verified_by}</td>
                     <td className="px-5 py-3"><StatusBadge status={statusLabel(order.status)} /></td>
                   </tr>

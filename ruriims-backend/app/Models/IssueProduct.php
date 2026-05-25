@@ -21,7 +21,7 @@ class IssueProduct extends Model
 
     public function issuedBy()
     {
-        return $this->belongsTo(User::class, 'issued_by');
+        return $this->belongsTo(User::class, 'issued_by')->withTrashed();
     }
 
     public function items()

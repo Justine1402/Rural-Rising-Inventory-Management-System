@@ -31,7 +31,7 @@ class TransferRequestController extends Controller
                 'destination_warehouse' => $t->destinationWarehouse->name,
                 'date_requested'        => $t->date_requested->format('M d, Y'),
                 'date_accomplished'     => $t->date_received?->format('M d, Y') ?? '—',
-                'requested_by'          => $t->requester->name,
+                'requested_by'          => $t->requester?->name,
                 'verified_by'           => $t->verifier?->name ?? '—',
                 'status'                => $t->status,
             ]);
@@ -140,7 +140,7 @@ class TransferRequestController extends Controller
             'date_requested'            => $transferRequest->date_requested->format('M d, Y'),
             'date_received'             => $transferRequest->date_received?->format('Y-m-d'),
             'status'                    => $transferRequest->status,
-            'requested_by'              => $transferRequest->requester->name,
+            'requested_by'              => $transferRequest->requester?->name,
             'verified_by'               => $transferRequest->verifier?->name,
             'items'                     => $transferRequest->items->map(fn ($i) => [
                 'id'                 => $i->id,

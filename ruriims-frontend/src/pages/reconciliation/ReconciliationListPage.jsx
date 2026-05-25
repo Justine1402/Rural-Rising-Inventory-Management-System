@@ -130,7 +130,7 @@ export default function ReconciliationListPage() {
                     <td className="px-5 py-3 text-gray-600">{rec.warehouse}</td>
                     <td className="px-5 py-3 text-gray-600">{rec.date_reconciled}</td>
                     <td className="px-5 py-3 text-gray-600">{pluralizeProducts(rec.products_with_discrepancy)}</td>
-                    <td className="px-5 py-3 text-gray-600">{rec.reconciled_by}</td>
+                    <td className="px-5 py-3 text-gray-600">{rec.reconciled_by || '—'}</td>
                     <td className="px-5 py-3 text-gray-600">{rec.reviewed_by !== '—' ? rec.reviewed_by : ''}</td>
                     <td className="px-5 py-3">
                       <StatusBadge status={rec.status === 'pending_review' ? 'Pending Review' : 'Reviewed'} />

@@ -28,12 +28,12 @@ class Reconciliation extends Model
 
     public function reconciledBy()
     {
-        return $this->belongsTo(User::class, 'reconciled_by');
+        return $this->belongsTo(User::class, 'reconciled_by')->withTrashed();
     }
 
     public function reviewedBy()
     {
-        return $this->belongsTo(User::class, 'reviewed_by');
+        return $this->belongsTo(User::class, 'reviewed_by')->withTrashed();
     }
 
     public function items()

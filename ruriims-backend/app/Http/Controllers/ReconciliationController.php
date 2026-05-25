@@ -40,7 +40,7 @@ class ReconciliationController extends Controller
             'warehouse'                 => $r->warehouse->name,
             'date_reconciled'           => $r->date_reconciled->format('M d, Y'),
             'date_reviewed'             => $r->date_reviewed?->format('M d, Y') ?? '—',
-            'reconciled_by'             => $r->reconciledBy->name,
+            'reconciled_by'             => $r->reconciledBy?->name,
             'reviewed_by'               => $r->reviewedBy?->name ?? '—',
             'status'                    => $r->status,
             'products_with_discrepancy' => $r->products_with_discrepancy,
@@ -172,7 +172,7 @@ class ReconciliationController extends Controller
             'date_reconciled'  => $reconciliation->date_reconciled->format('Y-m-d'),
             'date_reviewed'    => $reconciliation->date_reviewed?->format('Y-m-d'),
             'status'           => $reconciliation->status,
-            'reconciled_by'    => $reconciliation->reconciledBy->name,
+            'reconciled_by'    => $reconciliation->reconciledBy?->name,
             'reviewed_by'      => $reconciliation->reviewedBy?->name,
             'items'            => $reconciliation->items->map(fn ($item) => [
                 'id'             => $item->id,
