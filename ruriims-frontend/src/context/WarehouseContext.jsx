@@ -43,8 +43,15 @@ export function WarehouseProvider({ children }) {
         permRes.data.warehouses ?? [],
         twhRes.data.temporary_warehouses ?? [],
       );
-      setWarehouses(list);
-      if (list.length > 0) setActiveWarehouse(list[0]);
+      if (user.role === 'manager') {
+        const assigned = list.find((w) => !w.isTemporary && w.id === user.warehouse_id);
+        const managerList = assigned ? [assigned] : list.slice(0, 1);
+        setWarehouses(managerList);
+        setActiveWarehouse(managerList[0] ?? null);
+      } else {
+        setWarehouses(list);
+        setActiveWarehouse(null);
+      }
     }).catch(() => {});
   }, [user]);
 
@@ -60,21 +67,28 @@ export function WarehouseProvider({ children }) {
         permRes.data.warehouses ?? [],
         twhRes.data.temporary_warehouses ?? [],
       );
-      setWarehouses(list);
-      if (selectWarehouseId !== null) {
-        const target = list.find((w) => w.id === selectWarehouseId && w.isTemporary);
-        setActiveWarehouse(target ?? (list.length > 0 ? list[0] : null));
+      if (user?.role === 'manager') {
+        const assigned = list.find((w) => !w.isTemporary && w.id === user.warehouse_id);
+        const managerList = assigned ? [assigned] : list.slice(0, 1);
+        setWarehouses(managerList);
+        setActiveWarehouse(managerList[0] ?? null);
       } else {
-        setActiveWarehouse((prev) => {
-          if (prev === null) return null; // admin explicitly chose All Warehouses
-          const match = list.find(
-            (w) => w.id === prev.id && w.isTemporary === prev.isTemporary,
-          );
-          return match ?? (list.length > 0 ? list[0] : null);
-        });
+        setWarehouses(list);
+        if (selectWarehouseId !== null) {
+          const target = list.find((w) => w.id === selectWarehouseId && w.isTemporary);
+          setActiveWarehouse(target ?? (list.length > 0 ? list[0] : null));
+        } else {
+          setActiveWarehouse((prev) => {
+            if (prev === null) return null; // admin explicitly chose All Warehouses
+            const match = list.find(
+              (w) => w.id === prev.id && w.isTemporary === prev.isTemporary,
+            );
+            return match ?? null;
+          });
+        }
       }
     }).catch(() => {});
-  }, []);
+  }, [user]);
 
   return (
     <WarehouseContext.Provider value={{ activeWarehouse, warehouses, setActiveWarehouse, refreshWarehouses }}>

@@ -19,8 +19,6 @@ const GearIcon = () => (
   </svg>
 );
 
-const STATIC_ACTION_BUTTONS = [];
-
 const BUTTON_ORDER = ['+ Create Product', '+ Receive Order', '+ Transfer Request', '+ Issue Product', '+ Create Temporary Warehouse'];
 
 export default function Navbar() {

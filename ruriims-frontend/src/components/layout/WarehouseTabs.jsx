@@ -6,6 +6,8 @@ export default function WarehouseTabs() {
   const { warehouses, activeWarehouse, setActiveWarehouse } = useWarehouse();
   const isAdmin = user?.role === 'admin';
 
+  if (user?.role === 'manager') return null;
+
   const activeClass = 'btn-brand text-white text-sm font-medium px-5 py-2 rounded transition-colors';
   const inactiveClass = 'bg-white text-[#1A381E] border border-[#1A381E] text-sm font-medium px-5 py-2 rounded transition-colors hover:bg-green-50';
 

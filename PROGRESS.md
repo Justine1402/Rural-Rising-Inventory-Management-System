@@ -812,11 +812,49 @@ Deferred:
 
 ---
 
+---
+
+### ✅ Step 13.75 — Manager Warehouse-Scoping — 2026-05-26
+
+**`WarehouseContext.jsx`:**
+- `useEffect` (initial login load) now branches by role. Manager branch: filters
+  warehouse list to the single permanent warehouse matching `user.warehouse_id`
+  (fallback to `list[0]` if not found); sets `activeWarehouse` to that warehouse.
+  Admin branch: `setActiveWarehouse(null)` — "All Warehouses" is the default on
+  login instead of `list[0]`.
+- `refreshWarehouses` applies the same manager branch. Admin fallback changed from
+  `list[0]` to `null` — if the previously-active warehouse disappears after refresh,
+  the admin returns to "All Warehouses" rather than snapping to the first warehouse.
+- `useCallback` deps changed from `[]` to `[user]` to prevent stale closure when
+  manager filtering needs the current `user.warehouse_id`.
+
+**`WarehouseTabs.jsx`:**
+- Early return `null` for managers — no tab switcher rendered.
+- "All Warehouses" tab already correctly called `setActiveWarehouse(null)` and
+  highlighted on `activeWarehouse === null`; no changes needed.
+
+**`DashboardPage.jsx`:**
+- Three-branch rendering logic:
+  - **Branch A** (`activeWarehouse?.isTemporary === true`): existing TWH simplified
+    table — unchanged.
+  - **Branch B** (`activeWarehouse === null`): existing multi-column all-warehouses
+    table — unchanged, now also the admin login default.
+  - **Branch C** (`activeWarehouse !== null && !activeWarehouse.isTemporary`): new
+    single-warehouse simplified table (Name | Quantity | Harvest Date | Status) using
+    `warehouse_stock[activeWarehouse.id]` and
+    `harvest_date_per_warehouse[activeWarehouse.id]`; always shows qty even if 0
+    (`"0 kg"`); status derived per-warehouse.
+
+**`Navbar.jsx`:** Warehouse label already had `?? 'All Warehouses'` fallback —
+no change needed.
+
+---
+
 ## Not Started
 
 - [x] Step 13 — `UserManagementPage` + `UserController` — COMPLETE (see ✅ Step 13 COMPLETE above)
 - [x] Step 13.25 — RO + TRF Transaction Audit Pages — COMPLETE (see ✅ Step 13.25 above)
 - [x] Step 13.5 — `ProfileModal` live wiring — COMPLETE (see ✅ Step 13.5 above)
-- [ ] Step 13.75 — Manager warehouse-scoping cross-cutting pass (`WarehouseContext` filters by user role and `warehouse_id`; `WarehouseTabs` hides non-assigned warehouses for managers; `Navbar` hides the warehouse switcher for managers; audit all list pages to confirm they respect the active warehouse correctly)
+- [x] Step 13.75 — Manager warehouse-scoping cross-cutting pass — COMPLETE (see ✅ Step 13.75 above)
 - [ ] Step 14 — All Reports pages + `ReportController` (7 report type pages + ReportsHistoryPage + filter bar wiring across all list pages)
 - [ ] Step 15 — `InventorySummaryPage` + PDF export (DomPDF / jsPDF)

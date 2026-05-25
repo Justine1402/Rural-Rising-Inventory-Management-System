@@ -334,10 +334,14 @@ non-null (i.e., after auth is confirmed). The `useEffect` depends on `[user]` �
 `[]` — so it never fires before the Sanctum session is established, and it clears the
 warehouse list on logout. Temporary warehouses are appended dynamically when active.
 
-> **Current state:** `activeWarehouse` defaults to `list[0]` (the first warehouse)
-> for all users on login, including admin. The intended "All Warehouses" null default
-> for admin is not yet implemented — it will be addressed alongside the manager
-> single-warehouse scoping in Step 13.75.
+**Role-based initialization (Step 13.75):**
+- **Admin:** `warehouses` contains all permanent + active TWH entries; `activeWarehouse`
+  defaults to `null` on login, representing "All Warehouses". `refreshWarehouses()` preserves
+  `null` if `prev === null`, falls back to `null` (not `list[0]`) if the previously-selected
+  warehouse disappears.
+- **Manager:** `warehouses` is filtered to a single-entry list containing only the manager's
+  assigned permanent warehouse (matched by `user.warehouse_id`; fallback to `list[0]` if not
+  found); `activeWarehouse` is set to that warehouse. Manager sees no tab switcher.
 
 ---
 
@@ -402,10 +406,12 @@ Bottom row of tabs. Active tab highlighted dark green. Clicking updates
 **Admin account tabs:** All Warehouses | Quezon City Warehouse | Alabang Warehouse |
 Mandaluyong Warehouse | [Active Temporary Warehouse name, if any]
 
-**Manager account tabs (planned):** Only the single warehouse the manager is assigned to.
-No tab switcher is shown for manager accounts.
+"All Warehouses" tab calls `setActiveWarehouse(null)`; highlighted when
+`activeWarehouse === null`. Specific warehouse tabs call `setActiveWarehouse(warehouse)`;
+highlighted when `activeWarehouse?.id === warehouse.id`.
 
-> **Current state:** all users currently see all warehouse tabs (manager single-warehouse restriction deferred to a post-Step 13 cross-cutting pass — see PROGRESS.md Step 13.75)
+**Manager account:** Returns `null` immediately — no tabs rendered. Manager's
+`activeWarehouse` is always set to their assigned warehouse by `WarehouseContext`.
 
 ---
 
@@ -697,7 +703,32 @@ in the Reports section.
 
 ---
 
-#### Standard Inventory Table (permanent warehouse active)
+The dashboard renders one of three table branches based on `activeWarehouse`:
+
+---
+
+#### Branch A — Temporary Warehouse View (`activeWarehouse.isTemporary === true`)
+
+When `WarehouseContext.activeWarehouse.isTemporary === true`, the dashboard
+switches to a simplified table:
+
+**Columns:** Name | Quantity | Harvest Date | Status
+
+Stock quantities and harvest dates are read from `warehouse_stock[activeWarehouse.id]`
+and `harvest_date_per_warehouse[activeWarehouse.id]`. Harvest Date is hidden (shown as
+"—") when quantity is zero. All rows will initially show "Out of Stock" until stock is
+transferred in via Transfer Request.
+
+The `All Products` dropdown, sort mode dropdown, and `Inventory` dropdown remain in
+the Navbar. The Navbar action buttons change to only:
+`+ Issue Product` | `+ Transfer Request` | `+ Close Temporary Warehouse`
+
+---
+
+#### Branch B — All Warehouses View (`activeWarehouse === null`)
+
+When `activeWarehouse` is `null` (admin has selected "All Warehouses" tab or just
+logged in), the dashboard shows the multi-column permanent warehouse table:
 
 **Default columns (FIFO / LIFO mode):**
 Name | Main Warehouse | Alabang Warehouse | Mandaluyong Warehouse | Harvest Date | Status
@@ -710,21 +741,25 @@ The 5th column header changes based on the active sort mode. Sorting behavior:
 - **FEFO** — ascending days before expiration; can be negative for expired stock
 - **LIFO** — descending harvest date (newest first)
 
-`All Products` dropdown filters rows by category. Table is read-only.
+`All Products` dropdown filters rows by category. Table is read-only. Warehouse
+columns are driven by `permanentWarehouses` from `WarehouseContext` (filtered to
+`!isTemporary`) — not from the products API response — to prevent spurious TWH columns.
 
 ---
 
-#### Temporary Warehouse View (TWH tab active)
+#### Branch C — Specific Permanent Warehouse View (`activeWarehouse !== null && !activeWarehouse.isTemporary`)
 
-When `WarehouseContext.activeWarehouse.isTemporary === true`, the dashboard
-switches to a simplified table:
+When admin selects a specific permanent warehouse tab (or manager is logged in),
+the dashboard shows a simplified single-warehouse table:
 
 **Columns:** Name | Quantity | Harvest Date | Status
 
-All rows will initially show "Out of Stock" until stock is transferred in via
-Transfer Request. The `All Products` dropdown, sort mode dropdown, and `Inventory`
-dropdown remain in the Navbar. The Navbar action buttons change to only:
-`+ Issue Product` | `+ Transfer Request` | `+ Close Temporary Warehouse`
+- **Quantity:** `warehouse_stock[activeWarehouse.id]` formatted as `{qty} {unit}`;
+  shows `"0 kg"` (or relevant unit) when zero — never blank.
+- **Harvest Date:** `harvest_date_per_warehouse[activeWarehouse.id] || '—'`
+- **Status:** `"In Stock"` (green) when `qty > 0`; `"Out of Stock"` (red) when `qty === 0`.
+
+Empty state: "No products in stock at this warehouse." (when `products.length === 0`).
 
 ---
 

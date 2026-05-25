@@ -29,6 +29,7 @@ export default function DashboardPage() {
   }, [location.key, productRefreshKey]);
 
   const isTwh = activeWarehouse?.isTemporary === true;
+  const isAllWarehouses = activeWarehouse === null;
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
@@ -38,7 +39,7 @@ export default function DashboardPage() {
         <div className="bg-white rounded-xl shadow overflow-hidden">
 
           {isTwh ? (
-            /* ── Temporary Warehouse simplified table ── */
+            /* ── Branch A: Temporary Warehouse simplified table ── */
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-white" style={{ backgroundColor: '#1A381E' }}>
@@ -90,8 +91,8 @@ export default function DashboardPage() {
                 })}
               </tbody>
             </table>
-          ) : (
-            /* ── Standard multi-warehouse table ── */
+          ) : isAllWarehouses ? (
+            /* ── Branch B: All Warehouses — multi-column table ── */
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-white" style={{ backgroundColor: '#1A381E' }}>
@@ -139,6 +140,58 @@ export default function DashboardPage() {
                     </td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          ) : (
+            /* ── Branch C: Specific permanent warehouse — single-warehouse table ── */
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-white" style={{ backgroundColor: '#1A381E' }}>
+                  <th className="text-left font-semibold px-5 py-3">Name</th>
+                  <th className="text-left font-semibold px-5 py-3">Quantity</th>
+                  <th className="text-left font-semibold px-5 py-3">Harvest Date</th>
+                  <th className="text-left font-semibold px-5 py-3">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading && (
+                  <tr>
+                    <td colSpan={4} className="px-5 py-6 text-center text-gray-400">
+                      Loading products…
+                    </td>
+                  </tr>
+                )}
+                {error && (
+                  <tr>
+                    <td colSpan={4} className="px-5 py-6 text-center text-red-500">
+                      {error}
+                    </td>
+                  </tr>
+                )}
+                {!loading && !error && products.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-5 py-6 text-center text-gray-400">
+                      No products in stock at this warehouse.
+                    </td>
+                  </tr>
+                )}
+                {!loading && !error && products.map((product) => {
+                  const qty = product.warehouse_stock?.[activeWarehouse.id] ?? 0;
+                  const warehouseStatus = qty > 0 ? 'In Stock' : 'Out of Stock';
+                  const harvestDate = product.harvest_date_per_warehouse?.[activeWarehouse.id] || '—';
+                  return (
+                    <tr key={product.sku_code} className="border-b border-gray-100 odd:bg-white even:bg-gray-50 hover:bg-gray-100 cursor-pointer">
+                      <td className="px-5 py-3 text-gray-800">{product.name}</td>
+                      <td className="px-5 py-3 text-gray-600">
+                        {qty.toLocaleString('en-PH', { maximumFractionDigits: 3 })} {product.unit}
+                      </td>
+                      <td className="px-5 py-3 text-gray-600">{harvestDate}</td>
+                      <td className="px-5 py-3">
+                        <StatusBadge status={warehouseStatus} />
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}
