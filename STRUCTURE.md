@@ -595,6 +595,72 @@ the system.
 
 ---
 
+### `UserFormPage` (admin only, overlay)
+
+**Trigger conditions:**
+- `userFormOpen === true` in UIContext → create mode ("New User" header)
+- `userDetailOverlayUserId !== null` in UIContext → edit mode ("Edit User" header)
+- Both falsy → component returns `null` (always mounted in `GlobalOverlays`, self-guarding)
+
+**Layout:** Fixed-position overlay — `bg-black/20 backdrop-blur-sm z-40` backdrop +
+`w-[700px]` card `z-50`. Backdrop click closes overlay (same as other overlays).
+`max-h-[calc(100vh-150px)] overflow-y-auto` allows scrolling on small screens.
+
+**7 form fields with mode-dependent visibility:**
+
+| Field | Create mode | Edit mode |
+|---|---|---|
+| Name | text, required | text, required |
+| Email | email, required, unique | email, required, unique-ignoring-self |
+| Password | password input, required, min 8 | Hidden — replaced by Reset Password link |
+| Role | dropdown (Admin/Manager), required | dropdown, **hidden if editing self** |
+| Warehouse | dropdown of permanent warehouses, required if role=manager | same |
+| Position Title | text, optional | text, optional |
+| PIN | 6-digit input, required | Hidden — replaced by Reset PIN link |
+
+**Self-edit role-hiding rule:** When the admin edits their own account
+(`editingUser.id === authUser.id`), the Role dropdown is hidden entirely. The server
+enforces the self-demotion guard regardless, but the UI removes the field to avoid
+confusion.
+
+**Manager-requires-warehouse rule:** When `formData.role === 'manager'`, the Warehouse
+label shows a `*` required indicator. The server enforces the rule via conditional
+validation in `UserController@store` and `UserController@update`.
+
+**Read-only mode (deactivated user):** When `editingUser.deleted_at` is set, a red
+notice banner "This user is deactivated." appears at the top. All form fields render
+with `bg-gray-100` disabled styling. The submit button, Reset Password link, and Reset
+PIN link are all hidden. Only the RETURN button is active.
+
+**Reset Password sub-flow (edit mode, not read-only):**
+A "Reset Password" link below the form fields expands an inline section (not a stacked
+modal). The section contains one password input and Confirm/Cancel buttons.
+`POST /api/users/{id}/reset-password`. On success: collapses the sub-form, shows
+"Password reset" inline label for 2 seconds.
+
+**Reset PIN sub-flow:** Identical pattern. `POST /api/users/{id}/reset-pin`. PIN is
+validated client-side (`/^\d{6}$/.test(value)`) before submission.
+
+**Submit success behavior:** Shows "Created [name]" or "Updated [name]" success label,
+calls `refreshUsers()` (triggers `UserManagementPage` re-fetch via `userRefreshKey`),
+then `setTimeout 1500ms → handleClose()`.
+
+**handleClose:** Resets all local state to defaults, calls `setUserFormOpen(false)` AND
+`setUserDetailOverlayUserId(null)` (safe to reset both even though only one is set).
+
+**API calls:**
+- Load user (edit mode): `GET /api/users/{id}` → `res.data.user`
+- Load warehouses: `GET /api/warehouses`, filtered to `!is_temporary`
+- Create: `POST /api/users` with all 7 fields
+- Update: `PUT /api/users/{id}` with name, email, role, warehouse_id, position_title (password and PIN excluded)
+- Reset password: `POST /api/users/{id}/reset-password`
+- Reset PIN: `POST /api/users/{id}/reset-pin`
+
+**Validation errors:** Server-returned 422 `errors` object displayed inline per field
+(`errors.field[0]`). Global `errors._global` shown in a red banner at the top.
+
+---
+
 ### `DashboardPage` (proto p.4, 9-11, 21-22, 33, 39, 42, 52, SRS §3.2)
 
 The primary view after login. The `Inventory` dropdown in the Navbar switches

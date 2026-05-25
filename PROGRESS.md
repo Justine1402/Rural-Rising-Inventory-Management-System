@@ -626,6 +626,45 @@
 
 ---
 
+### Step 13, Stage 3 — UserFormPage create/edit overlay — 2026-05-25
+
+- [x] `UserFormPage.jsx` (new, `src/pages/admin/`) — dual-mode overlay (create +
+      edit + read-only) matching `CreateProductPage` visual language. Mounted in
+      `GlobalOverlays` in `App.jsx` — always in tree, self-guards on UIContext flags.
+- [x] Mode detection: `userFormOpen === true` → create mode; `userDetailOverlayUserId
+      !== null` → edit mode; both falsy → `return null`.
+- [x] Effect 1 — load user in edit mode: cancellable `useEffect` on
+      `[isEditMode, userDetailOverlayUserId]`; populates `editingUser` + `formData`
+      from `GET /api/users/{id}`.
+- [x] Effect 2 — load warehouses on open: filters `GET /api/warehouses` to
+      `!is_temporary` permanent warehouses only for the dropdown.
+- [x] Create mode fields: Name, Email, Password, Role, Warehouse, Position Title, PIN.
+- [x] Edit mode fields: Name, Email, Role (hidden if editing self), Warehouse, Position
+      Title. Password and PIN inputs replaced by Reset Password / Reset PIN links.
+- [x] Self-edit role-hiding rule: Role dropdown hidden when `editingUser.id ===
+      authUser.id` to prevent admin from demoting their own account via UI (server
+      enforces the guard regardless).
+- [x] Manager-requires-warehouse: Warehouse label shows `*` when `formData.role ===
+      'manager'`. Server-side validation enforces the rule.
+- [x] Read-only mode: when `editingUser.deleted_at` is set, a red "This user is
+      deactivated." banner renders; all fields disabled (`bg-gray-100`); submit button,
+      Reset Password, and Reset PIN are all hidden.
+- [x] Reset Password inline sub-flow: "Reset Password" link expands a bordered section
+      within the same panel; one password input + Confirm/Cancel; `POST /api/users/
+      {id}/reset-password`; success collapses sub-form + shows "Password reset" label
+      for 2 seconds.
+- [x] Reset PIN inline sub-flow: identical pattern; client-side `/^\d{6}$/` validation
+      before submit; `POST /api/users/{id}/reset-pin`.
+- [x] Submit: create → `POST /api/users`, edit → `PUT /api/users/{id}` (password/pin
+      excluded); 422 errors displayed inline per field; success label → 1.5s →
+      `handleClose()` → `refreshUsers()`.
+- [x] `handleClose`: resets all 16 local state values; calls both
+      `setUserFormOpen(false)` and `setUserDetailOverlayUserId(null)`.
+- [x] `App.jsx` — `UserFormPage` imported and mounted unconditionally in
+      `GlobalOverlays` (self-guards). No conditional wrapping needed at mount site.
+
+---
+
 ## Known Issues / Flagged for Future Fix
 
 - **Reconciliation reports not reachable from UI** — Step 12 reconciliation records

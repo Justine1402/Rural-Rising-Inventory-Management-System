@@ -19,6 +19,7 @@ import ReconciliationListPage from './pages/reconciliation/ReconciliationListPag
 import ReconciliationReviewPage from './pages/reconciliation/ReconciliationReviewPage';
 import ReconciliationFormPage from './pages/reconciliation/ReconciliationFormPage';
 import UserManagementPage from './pages/admin/UserManagementPage';
+import UserFormPage from './pages/admin/UserFormPage';
 
 function GuestRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -61,6 +62,7 @@ function GlobalOverlays() {
       )}
       <CloseTemporaryWarehousePage />
       <TemporaryWarehouseDetailPage />
+      <UserFormPage />
     </>
   );
 }
