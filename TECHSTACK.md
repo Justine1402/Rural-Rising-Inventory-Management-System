@@ -147,6 +147,7 @@ Routes defined in `ruriims-backend/routes/api.php`:
 | `DELETE` | `/api/users/{user}` | `auth:sanctum` (admin) | `{ "message": "..." }` — soft delete |
 | `POST` | `/api/users/{user}/reset-password` | `auth:sanctum` (admin) | `{ "message": "..." }` — withTrashed binding |
 | `POST` | `/api/users/{user}/reset-pin` | `auth:sanctum` (admin) | `{ "message": "..." }` — withTrashed binding |
+| `POST` | `/api/users/{user}/restore` | `auth:sanctum` (admin) | `{ "user": {...}, "message": "..." }` — withTrashed binding; reactivates soft-deleted user |
 | `GET` | `/api/warehouses` | `auth:sanctum` | `{ "warehouses": [...] }` |
 | `GET` | `/api/products` | `auth:sanctum` | `{ "products": [...], "warehouses": [...] }` — includes real stock per warehouse |
 | `POST` | `/api/products` | `auth:sanctum` | `{ "product": {...} }` — validates + PIN check + generates SKU |
@@ -208,7 +209,7 @@ Rural Rising Inventory Management System/   ← project root
 │   │   ├── pages/
 │   │   │   ├── admin/
 │   │   │   │   ├── UserManagementPage.jsx ← admin-only; 7-column user list; client-side search; filter stubs; row click → userDetailOverlayUserId; + New User → userFormOpen
-│   │   │   │   └── UserFormPage.jsx       ← dual-mode overlay (create + edit + read-only); self-guards on UIContext flags; Reset Password + Reset PIN inline sub-flows
+│   │   │   │   └── UserFormPage.jsx       ← dual-mode overlay (create + edit + read-only); self-guards on UIContext flags; Reset Password + Reset PIN inline sub-flows; Delete + inline confirm (hidden for self); Restore button in read-only mode
 │   │   │   ├── auth/
 │   │   │   │   └── LoginPage.jsx          ← sign in form
 │   │   │   ├── dashboard/

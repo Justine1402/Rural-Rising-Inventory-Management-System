@@ -41,6 +41,7 @@ export default function UserFormPage() {
   const [resetPinError, setResetPinError] = useState('');
   const [resetPasswordSuccess, setResetPasswordSuccess] = useState('');
   const [resetPinSuccess, setResetPinSuccess] = useState('');
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   useEffect(() => {
     if (!isEditMode) return;
@@ -99,6 +100,7 @@ export default function UserFormPage() {
     setResetPinError('');
     setResetPasswordSuccess('');
     setResetPinSuccess('');
+    setDeleteConfirmOpen(false);
   }
 
   function setField(field) {
@@ -162,6 +164,32 @@ export default function UserFormPage() {
       setTimeout(() => setResetPinSuccess(''), 2000);
     } catch (err) {
       setResetPinError(err.response?.data?.message || 'Failed to reset PIN.');
+    }
+  }
+
+  async function handleDelete() {
+    setSubmitting(true);
+    try {
+      await api.delete(`/users/${editingUser.id}`);
+      refreshUsers();
+      handleClose();
+    } catch (err) {
+      setErrors({ _global: err.response?.data?.message || 'Delete failed.' });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleRestore() {
+    setSubmitting(true);
+    try {
+      await api.post(`/users/${editingUser.id}/restore`);
+      refreshUsers();
+      handleClose();
+    } catch (err) {
+      setErrors({ _global: err.response?.data?.message || 'Restore failed.' });
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -334,7 +362,19 @@ export default function UserFormPage() {
           </form>
         )}
 
-        {/* Reset Password / Reset PIN — edit mode, not read-only */}
+        {/* Restore button — read-only mode only */}
+        {isReadOnly && (
+          <button
+            type="button"
+            onClick={handleRestore}
+            disabled={submitting}
+            className="btn-brand text-white px-4 py-2 rounded mt-4 font-semibold text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {submitting ? 'Restoring…' : 'Restore User'}
+          </button>
+        )}
+
+        {/* Reset Password / Reset PIN / Delete — edit mode, not read-only */}
         {isEditMode && editingUser && !isReadOnly && (
           <div className="mt-6 pt-6 border-t border-gray-100 space-y-4">
 
@@ -432,6 +472,45 @@ export default function UserFormPage() {
                 </div>
               )}
             </div>
+
+            {/* Delete — hidden when editing self */}
+            {!isSelf && (
+              <div>
+                {!deleteConfirmOpen ? (
+                  <button
+                    type="button"
+                    onClick={() => setDeleteConfirmOpen(true)}
+                    className="px-4 py-2 border border-red-300 text-red-600 rounded text-sm hover:bg-red-50"
+                  >
+                    Delete User
+                  </button>
+                ) : (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <h3 className="font-semibold text-red-900 mb-2">Delete user?</h3>
+                    <p className="text-sm text-red-800 mb-3">
+                      {editingUser.name} will be deactivated. Their past transaction records will remain intact, but they will no longer be able to log in.
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleDelete}
+                        disabled={submitting}
+                        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm disabled:opacity-60"
+                      >
+                        Delete
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteConfirmOpen(false)}
+                        className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
           </div>
         )}

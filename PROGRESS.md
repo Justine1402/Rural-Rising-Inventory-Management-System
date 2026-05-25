@@ -665,6 +665,61 @@
 
 ---
 
+### Step 13, Stage 4 — Delete + Restore + Login Gate — 2026-05-25
+
+- [x] `UserController@restore` (new method) — `abort_if` admin guard; calls
+      `$user->restore()`; loads `warehouse` relation; returns full user map with
+      hardcoded `deleted_at: null` (just restored). Placed after `destroy()` to
+      keep related methods together.
+- [x] `POST /api/users/{user}/restore` route — added inside existing
+      `Route::prefix('users')` group with `->withTrashed()` binding so
+      soft-deleted users can be targeted. Route count now 8.
+- [x] `AuthController@login` — patched to reject soft-deleted users before
+      `Auth::attempt()`. Queries `User::withTrashed()->where('email', ...)->first()`
+      and returns 403 `{ "message": "This account has been deactivated." }` if
+      `deleted_at` is set. Deactivated users get a clear message instead of the
+      misleading 401 "invalid credentials" that Auth::attempt would produce (it
+      excludes soft-deleted records via the global scope, making them appear as
+      non-existent). `use App\Models\User` import added.
+- [x] `UserFormPage.jsx` — Delete flow: `deleteConfirmOpen` state added; Delete User
+      button visible in edit mode (hidden when `isSelf`); inline red `bg-red-50`
+      confirmation section with user name in warning text; `handleDelete` calls
+      `DELETE /api/users/{id}` → `refreshUsers()` → `handleClose()`. No PIN
+      verification required — admin authentication sufficient; soft delete is
+      reversible.
+- [x] `UserFormPage.jsx` — Restore flow: Restore User button visible only in
+      read-only mode (`isReadOnly`); `handleRestore` calls
+      `POST /api/users/{id}/restore` → `refreshUsers()` → `handleClose()`. No
+      confirmation required — positive action, reversible by re-deleting.
+- [x] `UserFormPage.jsx` — `handleClose` updated to reset `deleteConfirmOpen`.
+      Total state values reset on close: 17.
+- [x] Self-protection: Delete User button hidden when `isSelf` (editing own account).
+      Server enforces same guard independently via 422.
+
+---
+
+## ✅ Step 13 COMPLETE — 2026-05-25
+
+All four stages delivered:
+- Stage 1: UserController + soft delete + admin-only routes (d450579)
+- Stage 2: UserManagementPage list view + admin route guard (2f74b42)
+- Stage 3: UserFormPage create/edit overlay + reset password/PIN (05123c9)
+- Stage 4: Delete + restore + login gate (this commit)
+
+What's enabled now: Admins can create, edit, deactivate, and reactivate user
+accounts. Self-protection prevents admins from demoting or deleting themselves.
+Soft-deleted users cannot log in. Manager warehouse assignments are validated
+against permanent warehouses only. Transaction history FKs remain intact after
+soft delete (deleted_at, not physical removal).
+
+Deferred:
+- Step 13.5: ProfileModal wiring to AuthContext + Change Password / Change PIN
+  endpoints (the modal currently has hardcoded values)
+- Step 13.75: Manager warehouse-scoping enforcement in WarehouseTabs + Navbar
+  (managers currently see all warehouse tabs)
+
+---
+
 ## Known Issues / Flagged for Future Fix
 
 - **Reconciliation reports not reachable from UI** — Step 12 reconciliation records
@@ -677,7 +732,7 @@
 
 ## Not Started
 
-- [ ] Step 13 — `UserManagementPage` + `UserController` (admin-facing account management only; manager warehouse-scoping enforcement and ProfileModal wiring are explicitly out of scope — see 13.5 and 13.75 below)
+- [x] Step 13 — `UserManagementPage` + `UserController` — COMPLETE (see ✅ Step 13 COMPLETE above)
 - [ ] Step 13.5 — `ProfileModal` live wiring (read user info from AuthContext; wire Change Password and Change PIN to the endpoints Step 13 establishes)
 - [ ] Step 13.75 — Manager warehouse-scoping cross-cutting pass (`WarehouseContext` filters by user role and `warehouse_id`; `WarehouseTabs` hides non-assigned warehouses for managers; `Navbar` hides the warehouse switcher for managers; audit all list pages to confirm they respect the active warehouse correctly)
 - [ ] Step 14 — All Reports pages + `ReportController` (7 report type pages + ReportsHistoryPage + filter bar wiring across all list pages)

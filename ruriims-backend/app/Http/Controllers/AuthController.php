@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
@@ -14,6 +15,11 @@ class AuthController extends Controller
             'email'    => 'required|email',
             'password' => 'required|string',
         ]);
+
+        $candidate = User::withTrashed()->where('email', $request->email)->first();
+        if ($candidate && $candidate->deleted_at) {
+            return response()->json(['message' => 'This account has been deactivated.'], 403);
+        }
 
         if (!Auth::attempt($request->only('email', 'password'))) {
             throw ValidationException::withMessages([

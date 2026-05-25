@@ -629,8 +629,9 @@ validation in `UserController@store` and `UserController@update`.
 
 **Read-only mode (deactivated user):** When `editingUser.deleted_at` is set, a red
 notice banner "This user is deactivated." appears at the top. All form fields render
-with `bg-gray-100` disabled styling. The submit button, Reset Password link, and Reset
-PIN link are all hidden. Only the RETURN button is active.
+with `bg-gray-100` disabled styling. The submit button, Reset Password link, Reset PIN
+link, and Delete button are all hidden. A green **Restore User** button is shown
+instead. See Restore flow below.
 
 **Reset Password sub-flow (edit mode, not read-only):**
 A "Reset Password" link below the form fields expands an inline section (not a stacked
@@ -641,12 +642,27 @@ modal). The section contains one password input and Confirm/Cancel buttons.
 **Reset PIN sub-flow:** Identical pattern. `POST /api/users/{id}/reset-pin`. PIN is
 validated client-side (`/^\d{6}$/.test(value)`) before submission.
 
+**Delete flow (edit mode, not read-only, not self):** A "Delete User" button with red
+border (`border-red-300 text-red-600`) appears below the Reset PIN sub-flow. Hidden
+when `isSelf` (editing own account). Clicking expands an inline red-tinted confirmation
+section (`bg-red-50 border-red-200`) with the user's name in the warning text. Delete
+button calls `DELETE /api/users/{id}` → `refreshUsers()` → `handleClose()`. No PIN
+verification required — admin authentication is sufficient; soft delete is reversible.
+Cancel collapses the confirmation. The Delete button is also hidden in read-only mode
+(overlaps: if `isReadOnly` is true, this block does not render at all).
+
+**Restore flow (read-only mode only):** A green "Restore User" button appears when
+`isReadOnly` is true. No confirmation required — it's a positive action (the admin
+can re-delete if needed). Calls `POST /api/users/{id}/restore` → `refreshUsers()` →
+`handleClose()`. Button shows "Restoring…" while `submitting`.
+
 **Submit success behavior:** Shows "Created [name]" or "Updated [name]" success label,
 calls `refreshUsers()` (triggers `UserManagementPage` re-fetch via `userRefreshKey`),
 then `setTimeout 1500ms → handleClose()`.
 
-**handleClose:** Resets all local state to defaults, calls `setUserFormOpen(false)` AND
-`setUserDetailOverlayUserId(null)` (safe to reset both even though only one is set).
+**handleClose:** Resets all 17 local state values to defaults, calls
+`setUserFormOpen(false)` AND `setUserDetailOverlayUserId(null)` (safe to reset both
+even though only one is set). `deleteConfirmOpen` is among the reset values.
 
 **API calls:**
 - Load user (edit mode): `GET /api/users/{id}` → `res.data.user`
@@ -655,6 +671,8 @@ then `setTimeout 1500ms → handleClose()`.
 - Update: `PUT /api/users/{id}` with name, email, role, warehouse_id, position_title (password and PIN excluded)
 - Reset password: `POST /api/users/{id}/reset-password`
 - Reset PIN: `POST /api/users/{id}/reset-pin`
+- Delete: `DELETE /api/users/{id}`
+- Restore: `POST /api/users/{id}/restore`
 
 **Validation errors:** Server-returned 422 `errors` object displayed inline per field
 (`errors.field[0]`). Global `errors._global` shown in a red banner at the top.

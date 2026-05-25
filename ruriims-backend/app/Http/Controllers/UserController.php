@@ -157,6 +157,29 @@ class UserController extends Controller
         return response()->json(['message' => 'User deactivated successfully.']);
     }
 
+    public function restore(Request $request, User $user)
+    {
+        abort_if($request->user()->role !== 'admin', 403);
+
+        $user->restore();
+        $user->load('warehouse');
+
+        return response()->json([
+            'user' => [
+                'id'             => $user->id,
+                'name'           => $user->name,
+                'email'          => $user->email,
+                'role'           => $user->role,
+                'warehouse_id'   => $user->warehouse_id,
+                'warehouse'      => $user->warehouse?->name,
+                'position_title' => $user->position_title,
+                'deleted_at'     => null,
+                'created_at'     => $user->created_at?->toISOString(),
+            ],
+            'message' => 'User reactivated successfully.',
+        ]);
+    }
+
     public function resetPassword(Request $request, User $user)
     {
         abort_if($request->user()->role !== 'admin', 403);

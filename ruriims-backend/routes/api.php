@@ -28,6 +28,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/{user}', [UserController::class, 'destroy']);
         Route::post('/{user}/reset-password', [UserController::class, 'resetPassword'])->withTrashed();
         Route::post('/{user}/reset-pin', [UserController::class, 'resetPin'])->withTrashed();
+        Route::post('/{user}/restore', [UserController::class, 'restore'])->withTrashed();
     });
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/warehouses', [WarehouseController::class, 'index']);
