@@ -982,6 +982,38 @@ no change needed.
       `Stage 3` divs replaced with `ProductReportsPage`, `ReceiveOrderReportsPage`,
       `TransferRequestReportsPage`; 4 new imports added.
 
+### Step 14, Stage 4 — IssueProductAuditPage + 2 Report Pages — 2026-05-26
+
+- [x] `IssueProductAuditPage.jsx` created (`src/pages/issueProduct/`) — read-only audit view at
+      `/issue-products/:id/audit`; fetches `GET /api/issue-products/{id}`; header bar (dark green)
+      shows RETURN button + ISS code (`issue.code`); displays Issued By, Date Issued, Warehouse,
+      Issue Type (formatted via `fmtIssueType`); product table: Product SKU | Product Name |
+      Stock-In-Use Code | Quantity Issued | Harvest Date | Note; all item fields are flat on the
+      item object (no nested `product` sub-object): `item.product_code`, `item.product_name`,
+      `item.unit`, `item.stock_in_use_code`, `item.quantity_issued`, `item.harvest_date`,
+      `item.note`; `date_issued` and `harvest_date` are pre-formatted strings from the API
+      (not YYYY-MM-DD) — rendered as-is, not through `fmtDate`; RETURN uses `navigate(-1)`.
+- [x] `IssueProductReportsPage.jsx` created (`src/pages/reports/`) — 6-column table at
+      `/reports/issue-products`; fetches `GET /api/reports/issue-products`; columns: Transaction
+      Code | Issue Type | Total Products | Date Issued | Issued By | Status;
+      `total_quantity_summary` rendered as-is (backend returns formatted string e.g. "200.000 kg");
+      row click → `/issue-products/:id/audit`; PDF button present (console.log stub, Stage 5).
+- [x] `ReconciliationReportsPage.jsx` created (`src/pages/reports/`) — 7-column table at
+      `/reports/reconciliation`; fetches `GET /api/reports/reconciliation`; columns: Reconciliation
+      Code | Warehouse | Date Reconciled | Products with Discrepancy | Reconciled By | Reviewed By |
+      Status; `products_with_discrepancy` pluralized: 1 → "1 Product", N → "N Products"; row click
+      → `/reconciliation/:id/review` (existing page handles both pending_review and reviewed states);
+      no PDF button.
+- [x] `App.jsx` updated — `/issue-products/:id/audit` route added (after `/reconciliation/:id/review`);
+      `IssueProductAuditPage`, `IssueProductReportsPage`, `ReconciliationReportsPage` imported;
+      2 Stage 4 placeholder divs replaced; `/reports/inventory-summary` placeholder remains for
+      Step 15.
+
+**Architecture note:** `IssueProductAuditPage` built as a dedicated standalone route page
+(matching `ReceiveOrderAuditPage` and `TransferRequestAuditPage` from Step 13.25) rather than
+adding a read-only mode to the existing `IssueProductFormPage` UIContext overlay, which has no
+URL and no read-only mode built into it.
+
 ---
 
 ## Not Started
@@ -993,5 +1025,6 @@ no change needed.
 - [x] Step 14, Stage 1 — `ReportController` backend — COMPLETE (see above)
 - [x] Step 14, Stage 2 — ReportsFilterBar + ReportsHistoryPage + Navbar fix — COMPLETE (see above)
 - [x] Step 14, Stage 3 — ProductDetailPage + 3 Report Pages — COMPLETE (see above)
-- [ ] Step 14, Stages 4–5 — IssueProductReportsPage + ReconciliationReportsPage + PDF export
+- [x] Step 14, Stage 4 — IssueProductAuditPage + 2 Report Pages — COMPLETE (see above)
+- [ ] Step 14, Stage 5 — PDF export (jsPDF / DomPDF)
 - [ ] Step 15 — `InventorySummaryPage` + PDF export (DomPDF / jsPDF)
