@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
+import { exportTablePdf } from '../../utils/exportPdf';
 import Navbar from '../../components/layout/Navbar';
 import WarehouseTabs from '../../components/layout/WarehouseTabs';
 import ReportsFilterBar from '../../components/shared/ReportsFilterBar';
@@ -46,6 +47,30 @@ export default function TransferRequestReportsPage() {
     return () => { isCancelled = true; };
   }, [warehouseId, dateFrom, dateTo, search, location.key]);
 
+  const handleExportPdf = () => {
+    exportTablePdf({
+      title: 'Transfer Request Reports',
+      filename: 'transfer-request-reports.pdf',
+      orientation: 'landscape',
+      columns: [
+        'Transaction Code', 'Source Warehouse', 'Destination Warehouse',
+        'Total Products', 'Date Requested', 'Date Accomplished',
+        'Requested By', 'Verified By', 'Status',
+      ],
+      rows: transfers.map(r => [
+        r.transaction_code,
+        r.source_warehouse,
+        r.destination_warehouse,
+        r.total_products,
+        r.date_requested    ? new Date(r.date_requested    + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—',
+        r.date_accomplished ? new Date(r.date_accomplished + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—',
+        r.requested_by,
+        r.verified_by,
+        r.status,
+      ]),
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
       <Navbar />
@@ -66,7 +91,7 @@ export default function TransferRequestReportsPage() {
             search={search}
             onSearchChange={setSearch}
             showPdfButton={true}
-            onExportPdf={() => console.log('PDF export — Stage 5')}
+            onExportPdf={handleExportPdf}
           />
 
           {error && <p className="px-4 py-3 text-red-500 text-sm">{error}</p>}

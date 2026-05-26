@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
+import { exportTablePdf } from '../../utils/exportPdf';
 import Navbar from '../../components/layout/Navbar';
 import WarehouseTabs from '../../components/layout/WarehouseTabs';
 import ReportsFilterBar from '../../components/shared/ReportsFilterBar';
@@ -46,6 +47,26 @@ export default function IssueProductReportsPage() {
     return () => { isCancelled = true; };
   }, [warehouseId, dateFrom, dateTo, search, location.key]);
 
+  const handleExportPdf = () => {
+    exportTablePdf({
+      title: 'Issue Product Reports',
+      filename: 'issue-product-reports.pdf',
+      orientation: 'portrait',
+      columns: [
+        'Transaction Code', 'Issue Type', 'Total Products',
+        'Date Issued', 'Issued By', 'Status',
+      ],
+      rows: issues.map(r => [
+        r.transaction_code,
+        r.issue_type,
+        r.total_quantity_summary,
+        r.date_issued ? new Date(r.date_issued + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—',
+        r.issued_by,
+        r.status,
+      ]),
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
       <Navbar />
@@ -66,7 +87,7 @@ export default function IssueProductReportsPage() {
             search={search}
             onSearchChange={setSearch}
             showPdfButton={true}
-            onExportPdf={() => console.log('PDF export — Stage 5')}
+            onExportPdf={handleExportPdf}
           />
 
           {error && <p className="px-4 py-3 text-red-500 text-sm">{error}</p>}

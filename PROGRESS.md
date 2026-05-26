@@ -1014,6 +1014,27 @@ no change needed.
 adding a read-only mode to the existing `IssueProductFormPage` UIContext overlay, which has no
 URL and no read-only mode built into it.
 
+### Step 14, Stage 5 — PDF Export (jsPDF) — 2026-05-26
+
+- [x] `src/utils/exportPdf.js` created — shared PDF export utility; exports
+      `exportTablePdf({ title, filename, columns, rows, orientation })`; uses jsPDF v4
+      (named import `{ jsPDF } from 'jspdf'`); draws title block ("Rural Rising Philippines"
+      + report name + export date), dark green (#1A381E) divider line, dark green header
+      row with white text, zebra-striped data rows (white / gray-50); auto-paginates on
+      overflow; triggers browser download via `doc.save(filename)`.
+- [x] `ReceiveOrderReportsPage.jsx` updated — `handleExportPdf` added; exports current
+      `orders` state as 10-column landscape PDF (`receive-order-reports.pdf`); `console.log`
+      stub replaced; Total Cost formatted with `₱` prefix and `en-PH` locale.
+- [x] `TransferRequestReportsPage.jsx` updated — `handleExportPdf` added; exports current
+      `transfers` state as 9-column landscape PDF (`transfer-request-reports.pdf`); `console.log`
+      stub replaced.
+- [x] `IssueProductReportsPage.jsx` updated — `handleExportPdf` added; exports current
+      `issues` state as 6-column portrait PDF (`issue-product-reports.pdf`); `console.log`
+      stub replaced; portrait orientation used (6 columns fits A4 portrait).
+- PDF content reflects currently loaded/filtered component state — no additional API calls.
+- `jsPDF` imported only in `exportPdf.js`; all pages import `exportTablePdf` from the utility.
+- No backend changes; DomPDF reserved for Step 15 InventorySummaryPage.
+
 ---
 
 ## Not Started
@@ -1026,5 +1047,5 @@ URL and no read-only mode built into it.
 - [x] Step 14, Stage 2 — ReportsFilterBar + ReportsHistoryPage + Navbar fix — COMPLETE (see above)
 - [x] Step 14, Stage 3 — ProductDetailPage + 3 Report Pages — COMPLETE (see above)
 - [x] Step 14, Stage 4 — IssueProductAuditPage + 2 Report Pages — COMPLETE (see above)
-- [ ] Step 14, Stage 5 — PDF export (jsPDF / DomPDF)
+- [x] Step 14, Stage 5 — PDF export (jsPDF) — COMPLETE (see above)
 - [ ] Step 15 — `InventorySummaryPage` + PDF export (DomPDF / jsPDF)

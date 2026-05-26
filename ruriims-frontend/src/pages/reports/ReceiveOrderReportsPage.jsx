@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
+import { exportTablePdf } from '../../utils/exportPdf';
 import Navbar from '../../components/layout/Navbar';
 import WarehouseTabs from '../../components/layout/WarehouseTabs';
 import ReportsFilterBar from '../../components/shared/ReportsFilterBar';
@@ -46,6 +47,31 @@ export default function ReceiveOrderReportsPage() {
     return () => { isCancelled = true; };
   }, [warehouseId, dateFrom, dateTo, search, location.key]);
 
+  const handleExportPdf = () => {
+    exportTablePdf({
+      title: 'Receive Order Reports',
+      filename: 'receive-order-reports.pdf',
+      orientation: 'landscape',
+      columns: [
+        'Transaction Code', 'Supplier Name', 'Warehouse', 'Total Products',
+        'Total Cost', 'Date Ordered', 'Date Accomplished', 'Created By',
+        'Verified By', 'Status',
+      ],
+      rows: orders.map(r => [
+        r.transaction_code,
+        r.supplier_name,
+        r.warehouse,
+        r.total_products,
+        '₱' + Number(r.total_cost).toLocaleString('en-PH', { minimumFractionDigits: 2 }),
+        r.date_ordered       ? new Date(r.date_ordered       + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—',
+        r.date_accomplished  ? new Date(r.date_accomplished  + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—',
+        r.created_by,
+        r.verified_by,
+        r.status,
+      ]),
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
       <Navbar />
@@ -66,7 +92,7 @@ export default function ReceiveOrderReportsPage() {
             search={search}
             onSearchChange={setSearch}
             showPdfButton={true}
-            onExportPdf={() => console.log('PDF export — Stage 5')}
+            onExportPdf={handleExportPdf}
           />
 
           {error && <p className="px-4 py-3 text-red-500 text-sm">{error}</p>}
