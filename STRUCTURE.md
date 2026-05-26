@@ -150,7 +150,8 @@ ruriims-frontend/
     │   │   └── TransferRequestAuditPage.jsx ← Read-only audit view for Complete TRF records
     │   │
     │   ├── issueProduct/
-    │   │   └── IssueProductFormPage.jsx     ← Create form only; list is on DashboardPage
+    │   │   ├── IssueProductFormPage.jsx     ← Create form only; list is on DashboardPage
+    │   │   └── IssueProductAuditPage.jsx    ← Read-only audit view for completed ISS records
     │   │
     │   ├── temporaryWarehouse/
     │   │   ├── TemporaryWarehouseDetailPage.jsx ← Read-only view for closed TWH records
@@ -173,7 +174,8 @@ ruriims-frontend/
     │       └── InventorySummaryPage.jsx         ← Inventory Summary Report
     │
     ├── utils/
-    │   └── planBatchCascade.js          ← Frontend mirror of PlansBatchCascade trait; cascade planner for Transfer and Issue validation
+    │   ├── planBatchCascade.js          ← Frontend mirror of PlansBatchCascade trait; cascade planner for Transfer and Issue validation
+    │   └── exportPdf.js                 ← Shared PDF export utility (jsPDF v4); used by report pages for client-side PDF generation
     │
     ├── routes/
     │   └── ProtectedRoute.jsx           ← Auth guard → redirects to /login
@@ -200,9 +202,8 @@ ruriims-frontend/
 /reconciliation                     → ReconciliationListPage           (protected)
 /reconciliation/new                 → ReconciliationFormPage           (protected)
 /reconciliation/:id/review          → ReconciliationReviewPage         (protected)
+/issue-products/:id/audit           → IssueProductAuditPage            (protected)
 /reports                            → ReportsHistoryPage               (protected)
-# Reports History Navbar button temporarily routes to /reports/temporary-warehouses
-# until Step 14 builds the ReportsHistoryPage landing.
 /reports/products                   → ProductReportsPage               (protected)
 /reports/receive-orders             → ReceiveOrderReportsPage          (protected)
 /reports/transfer-requests          → TransferRequestReportsPage       (protected)
@@ -790,8 +791,8 @@ new product appears on dashboard immediately with 0 quantity and Out of Stock st
 ### `ProductDetailPage` (proto p.54, SRS §3.3)
 
 Read-only. The product's SKU is shown as the header title (e.g., "SKU-007").
-Fields shown: Name, Unit (dropdown, disabled), Category (dropdown, disabled),
-Shelf Life. RETURN button navigates back.
+Fields shown: Name, Unit, Category, Shelf Life (plain text in a 2-column grid).
+RETURN button navigates back via `navigate(-1)`.
 
 Accessed from: `ProductReportsPage` row click → `/products/:id`
 
@@ -1074,6 +1075,31 @@ deducted immediately per cascade plan → dashboard quantities update.
 
 ---
 
+### `IssueProductAuditPage`
+
+Route: `/issue-products/:id/audit` — standalone full page.
+Accessed by clicking a row in `IssueProductReportsPage`.
+
+On mount: fetches `GET /api/issue-products/{id}`. RETURN navigates back via `navigate(-1)`.
+
+Header bar (dark green): RETURN button (left) + ISS code as title (`issue.code`).
+
+Read-only header fields (2-column grid): Issued By, Date Issued, Warehouse, Issue Type.
+- Issue Type displayed as "Internal Use" or "Sale" (formatted from `issue_type` value).
+- `date_issued` rendered as-is — the show endpoint returns a pre-formatted string, not YYYY-MM-DD.
+
+Read-only product table columns:
+Product SKU | Product Name | Stock-In-Use Code | Quantity Issued | Harvest Date | Note
+
+All item fields are flat on the item object (no nested `product` sub-object):
+`item.product_code`, `item.product_name`, `item.unit`, `item.stock_in_use_code`,
+`item.quantity_issued`, `item.harvest_date`, `item.note`.
+`harvest_date` is also pre-formatted by the API — render as-is.
+
+No action buttons. No PIN modal. No editable fields.
+
+---
+
 ### `TemporaryWarehouseFormPage` (proto p.40-42, SRS §3.7.2-3.7.3)
 
 Accessed via `+ Create Temporary Warehouse` Navbar button.
@@ -1267,7 +1293,7 @@ Row click → `/products/:id` (ProductDetailPage)
 Transaction Code | Supplier Name | Warehouse | Total Products | Total Cost |
 Date Ordered | Date Accomplished | Created By | Verified By | Status
 
-Export as PDF button visible. Row click → `ReceiveOrderFormPage` (read-only view).
+Export as PDF button visible. Row click → `/receive-orders/:id/audit` (ReceiveOrderAuditPage).
 
 ---
 
@@ -1283,8 +1309,7 @@ Export as PDF button visible.
 Transaction Code | Issue Type | Total Products (e.g., "2 Products | 45 KG") |
 Date Issued | Issued By | Status
 
-Export as PDF button visible. Row click → `IssueProductFormPage` in read-only
-view mode, showing the ISS code as the header title.
+Export as PDF button visible. Row click → `/issue-products/:id/audit` (IssueProductAuditPage).
 
 ---
 
@@ -1292,7 +1317,7 @@ view mode, showing the ISS code as the header title.
 Transaction Code | Warehouse Name | Location | Event Date | Date Created |
 Created By | Closed By | Date Closed | Status
 
-Route: `/reports/temporary-warehouses`. Row click → `setTemporaryWarehouseDetailOverlayTwhId(twh.id)` (UIContext overlay). No filter bar (deferred to Step 14).
+Route: `/reports/temporary-warehouses`. Row click → `setTemporaryWarehouseDetailOverlayTwhId(twh.id)` (UIContext overlay). Filter bar wired in Step 14 Stage 2 with client-side filtering; warehouse filter is a no-op since TWH records are themselves the warehouse.
 
 ---
 
@@ -1431,7 +1456,7 @@ TransferRequestController.php       index, store, show, accomplish
 IssueProductController.php          index, store, show
 TemporaryWarehouseController.php    index, store, show, close
 ReconciliationController.php        index, store, show, confirm
-ReportController.php                index (per type), inventorySummary, exportPdf
+ReportController.php                allReports, products, receiveOrders, transferRequests, issueProducts, temporaryWarehouses, reconciliation, inventorySummary
 PinController.php                   verify
 WarehouseController.php             index (returns permanent + active temp warehouses)
 StockInUseController.php            index (returns available batches by SKU + warehouse)

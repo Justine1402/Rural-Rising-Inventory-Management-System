@@ -748,12 +748,6 @@ Deferred:
 
 ## Known Issues / Flagged for Future Fix
 
-- **Reconciliation reports not reachable from UI** — Step 12 reconciliation records
-  are created and confirmed, but the existing Reports History Navbar button is
-  temporarily hard-routed to /reports/temporary-warehouses. Step 14 will add the
-  Reports History dropdown and a /reports/reconciliations page. Until then,
-  reconciliation history is only visible through the /reconciliation list page.
-
 ---
 
 ### ✅ Step 13.25 — Transaction Audit Pages — 2026-05-26
