@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\IssueProductController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\PinController;
 use App\Http\Controllers\ProductController;
@@ -67,4 +68,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/reconciliations', [ReconciliationController::class, 'store']);
     Route::get('/reconciliations/{id}', [ReconciliationController::class, 'show']);
     Route::post('/reconciliations/{id}/confirm', [ReconciliationController::class, 'confirm']);
+
+    Route::prefix('reports')->group(function () {
+        Route::get('/',                     [ReportController::class, 'allReports']);
+        Route::get('/products',             [ReportController::class, 'products']);
+        Route::get('/receive-orders',       [ReportController::class, 'receiveOrders']);
+        Route::get('/transfer-requests',    [ReportController::class, 'transferRequests']);
+        Route::get('/issue-products',       [ReportController::class, 'issueProducts']);
+        Route::get('/temporary-warehouses', [ReportController::class, 'temporaryWarehouses']);
+        Route::get('/reconciliation',       [ReportController::class, 'reconciliation']);
+        Route::get('/inventory-summary',    [ReportController::class, 'inventorySummary']);
+    });
 });

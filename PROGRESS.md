@@ -850,11 +850,95 @@ no change needed.
 
 ---
 
+---
+
+### Step 14, Stage 1 — ReportController (Backend) — 2026-05-26
+
+- [x] `app/Http/Controllers/ReportController.php` (new) — read-only reporting controller;
+      all 8 methods require `auth:sanctum`; no PIN verification, no admin-only gating.
+- [x] `routes/api.php` — 8 routes added inside existing `auth:sanctum` group under
+      `Route::prefix('reports')`:
+        - `GET /api/reports` → `allReports()`
+        - `GET /api/reports/products` → `products()`
+        - `GET /api/reports/receive-orders` → `receiveOrders()`
+        - `GET /api/reports/transfer-requests` → `transferRequests()`
+        - `GET /api/reports/issue-products` → `issueProducts()`
+        - `GET /api/reports/temporary-warehouses` → `temporaryWarehouses()`
+        - `GET /api/reports/reconciliation` → `reconciliation()`
+        - `GET /api/reports/inventory-summary` → `inventorySummary()`
+
+**Methods built:**
+
+- `allReports()` — Option A union approach: queries each of the 5 transaction models
+  separately (ReceiveOrder, TransferRequest, IssueProduct, TemporaryWarehouse,
+  Reconciliation), normalizes each to a common 6-field shape
+  (`transaction_code`, `transaction_type`, `warehouse`, `date_accomplished`,
+  `accomplished_by`, `status`), merges into one collection, sorts descending by
+  `date_accomplished` (nulls last). All 4 shared filters applied per sub-query
+  before merging.
+- `products()` — `Product::with(['creator'])`; row shape: id, product_code, product_name,
+  shelf_life, date_created, created_by, status (always "Active"). Filters: date_from/to on
+  `created_at`, search on `name` or `sku_code`. `warehouse_id` not applicable.
+- `receiveOrders()` — `ReceiveOrder::with(['warehouse', 'creator', 'verifier', 'items'])`;
+  row shape: id, transaction_code, supplier_name, warehouse, total_products (items count),
+  total_cost, date_ordered, date_accomplished (date_arrived), created_by, verified_by,
+  status. Filters: warehouse_id, date_from/to on `date_ordered`, search on `code` or
+  `supplier_name`.
+- `transferRequests()` — `TransferRequest::with([..., 'items'])`; row shape: id,
+  transaction_code, source_warehouse, destination_warehouse, total_products, date_requested,
+  date_accomplished (date_received), requested_by, verified_by, status. Filters:
+  warehouse_id on `source_warehouse_id`, date_from/to on `date_requested`, search on `code`.
+- `issueProducts()` — `IssueProduct::with(['warehouse', 'issuedBy', 'items.product'])`;
+  row shape: id, transaction_code, issue_type (formatted via `formatStatus`), total_items,
+  total_quantity_summary (built by `buildQuantitySummary()` private helper), date_issued,
+  issued_by, status (always "Complete"). Filters: warehouse_id, date_from/to on
+  `date_issued`, search on `code`.
+- `temporaryWarehouses()` — `TemporaryWarehouse::with(['warehouse', 'creator', 'closer'])`;
+  row shape: id, transaction_code, warehouse_name (warehouse relation name), location,
+  event_date, date_created (created_at), created_by, closed_by, date_closed, status.
+  Filters: date_from/to on `event_date`, search on `transaction_code` or `name`.
+  `warehouse_id` not applicable (TWH records are themselves the warehouse).
+- `reconciliation()` — `Reconciliation::with([..., 'items'])`; row shape: id,
+  transaction_code, warehouse, date_reconciled, products_with_discrepancy (items where
+  `|discrepancy| >= 0.0005`, same epsilon as `ReconciliationController`), reconciled_by,
+  reviewed_by, status. Filters: warehouse_id, date_from/to on `date_reconciled`, search
+  on `transaction_code`.
+- `inventorySummary()` — PHP-side grouping (not SQL): fetches all non-zero
+  `StockInUse` rows with product+warehouse eager loads, groups in PHP by `product_id`,
+  then by `warehouse_id` within each product; computes per-warehouse `total_quantity`
+  and `grand_total` (summed across all warehouses for that product); also returns all
+  `Warehouse` rows as `warehouses` array for use as filter options. Filters:
+  warehouse_id (pre-grouping), search on product `name` or `sku_code` (post-grouping).
+
+**Shared infrastructure:**
+- `formatStatus(string $status): string` — private helper; `ucwords(str_replace('_', ' ', $status))`;
+  handles "pending_review" → "Pending Review", "internal_use" → "Internal Use", etc.
+- `buildQuantitySummary($items): string` — private helper for `issueProducts()`;
+  single item: `"{qty} {unit}"`; multiple items: `"{n} Products | {sum} {unit}"` where
+  sum = all `quantity_issued` values, unit = first item's product unit.
+- All 4 common filters (`warehouse_id`, `date_from`, `date_to`, `search`) applied only
+  when the parameter is present and non-empty (`$request->filled()`).
+- Discrepancy epsilon constant: `const DISCREPANCY_EPSILON = 0.0005` — matches
+  `ReconciliationController` (lines 108, 250).
+
+**Verification results (tinker):**
+- `products`: 1 product returned
+- `receiveOrders`: 2 orders returned
+- `allReports`: 6 total rows merged (2 RO + 2 TRF + 1 ISS + 0 TWH + 1 RC)
+- `transferRequests`: 2 transfers returned
+- `issueProducts`: 1 issue returned; `total_quantity_summary` = `"200.000 kg"` (single item)
+- `temporaryWarehouses`: 0 rows (no TWH in demo data at time of test)
+- `reconciliation`: 1 row; `products_with_discrepancy` = 1
+- `inventorySummary`: 1 product, 2 warehouses; `grand_total` = "598.000"
+
+---
+
 ## Not Started
 
 - [x] Step 13 — `UserManagementPage` + `UserController` — COMPLETE (see ✅ Step 13 COMPLETE above)
 - [x] Step 13.25 — RO + TRF Transaction Audit Pages — COMPLETE (see ✅ Step 13.25 above)
 - [x] Step 13.5 — `ProfileModal` live wiring — COMPLETE (see ✅ Step 13.5 above)
 - [x] Step 13.75 — Manager warehouse-scoping cross-cutting pass — COMPLETE (see ✅ Step 13.75 above)
-- [ ] Step 14 — All Reports pages + `ReportController` (7 report type pages + ReportsHistoryPage + filter bar wiring across all list pages)
+- [x] Step 14, Stage 1 — `ReportController` backend — COMPLETE (see above)
+- [ ] Step 14, Stages 2–5 — All Reports pages + filter wiring + PDF export
 - [ ] Step 15 — `InventorySummaryPage` + PDF export (DomPDF / jsPDF)
