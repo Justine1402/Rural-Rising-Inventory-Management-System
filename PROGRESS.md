@@ -931,6 +931,57 @@ no change needed.
 - `reconciliation`: 1 row; `products_with_discrepancy` = 1
 - `inventorySummary`: 1 product, 2 warehouses; `grand_total` = "598.000"
 
+### Step 14, Stage 2 — ReportsFilterBar + ReportsHistoryPage + Navbar Fix — 2026-05-26
+
+- [x] `ReportsFilterBar.jsx` created (`src/components/shared/`) — shared filter bar used by
+      all report pages; props: `warehouses`, `currentType`, `onTypeChange`, `warehouseId`,
+      `onWarehouseChange`, `dateFrom`, `onDateFromChange`, `dateTo`, `onDateToChange`,
+      `search`, `onSearchChange`, `showPdfButton`, `onExportPdf`; type dropdown navigates
+      internally via `useNavigate`; only non-temporary warehouses shown in warehouse filter;
+      Export as PDF button uses inline style for brand color since `btn-brand-outline` has no
+      default text/border color.
+- [x] `ReportsHistoryPage.jsx` created (`src/pages/reports/`) — All Reports landing page at
+      `/reports`; fetches `GET /api/reports` with warehouse_id/date_from/date_to/search params;
+      6-column table: Transaction Code | Transaction Type | Warehouse | Date Accomplished |
+      Accomplished By | Status; cancellable useEffect; `fmtDate` helper for date display;
+      no row click.
+- [x] `TempWarehouseReportsPage.jsx` updated — `ReportsFilterBar` wired in with
+      `currentType="temporary-warehouses"`; client-side filtering (no re-fetch on filter
+      change); warehouse filter no-op by design (TWH records are themselves the warehouse);
+      table renders from `filtered` array.
+- [x] `Navbar.jsx` — "Reports History" button target changed from
+      `/reports/temporary-warehouses` → `/reports`.
+- [x] `App.jsx` — `ReportsHistoryPage` import added; 6 placeholder report routes + 1 real
+      `TempWarehouseReportsPage` route added (all `/reports/*` sub-routes declared before
+      `/reports` index to prevent React Router swallowing path segments).
+
+---
+
+### Step 14, Stage 3 — ProductDetailPage + 3 Report Pages — 2026-05-26
+
+- [x] `ProductDetailPage.jsx` created (`src/pages/products/`) — read-only product detail at
+      `/products/:id`; fetches `GET /api/products/{id}` via `useParams`; header bar (dark green)
+      shows RETURN button + SKU code; displays Name, Unit, Category, Shelf Life in 2-col grid;
+      loading/error/not-found states handled; RETURN navigates back with `navigate(-1)`.
+- [x] `ProductReportsPage.jsx` created (`src/pages/reports/`) — 6-column table at
+      `/reports/products`; fetches `GET /api/reports/products`; columns: Product Code |
+      Product Name | Shelf Life | Date Created | Created By | Status; row click → `/products/:id`;
+      no PDF button (`showPdfButton={false}`).
+- [x] `ReceiveOrderReportsPage.jsx` created (`src/pages/reports/`) — 10-column table at
+      `/reports/receive-orders`; fetches `GET /api/reports/receive-orders`; columns: Transaction
+      Code | Supplier Name | Warehouse | Total Products | Total Cost | Date Ordered |
+      Date Accomplished | Created By | Verified By | Status; Total Cost formatted as
+      `₱{n.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`; row click →
+      `/receive-orders/:id/audit`; PDF button present (console.log stub, Stage 5).
+- [x] `TransferRequestReportsPage.jsx` created (`src/pages/reports/`) — 9-column table at
+      `/reports/transfer-requests`; fetches `GET /api/reports/transfer-requests`; columns:
+      Transaction Code | Source Warehouse | Destination Warehouse | Total Products |
+      Date Requested | Date Accomplished | Requested By | Verified By | Status; row click →
+      `/transfer-requests/:id/audit`; PDF button present (console.log stub, Stage 5).
+- [x] `App.jsx` updated — `/products/:id` route added (before catch-all); 3 placeholder
+      `Stage 3` divs replaced with `ProductReportsPage`, `ReceiveOrderReportsPage`,
+      `TransferRequestReportsPage`; 4 new imports added.
+
 ---
 
 ## Not Started
@@ -940,5 +991,7 @@ no change needed.
 - [x] Step 13.5 — `ProfileModal` live wiring — COMPLETE (see ✅ Step 13.5 above)
 - [x] Step 13.75 — Manager warehouse-scoping cross-cutting pass — COMPLETE (see ✅ Step 13.75 above)
 - [x] Step 14, Stage 1 — `ReportController` backend — COMPLETE (see above)
-- [ ] Step 14, Stages 2–5 — All Reports pages + filter wiring + PDF export
+- [x] Step 14, Stage 2 — ReportsFilterBar + ReportsHistoryPage + Navbar fix — COMPLETE (see above)
+- [x] Step 14, Stage 3 — ProductDetailPage + 3 Report Pages — COMPLETE (see above)
+- [ ] Step 14, Stages 4–5 — IssueProductReportsPage + ReconciliationReportsPage + PDF export
 - [ ] Step 15 — `InventorySummaryPage` + PDF export (DomPDF / jsPDF)

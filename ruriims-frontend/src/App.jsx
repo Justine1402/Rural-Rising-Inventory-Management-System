@@ -23,6 +23,10 @@ import UserManagementPage from './pages/admin/UserManagementPage';
 import UserFormPage from './pages/admin/UserFormPage';
 import ReceiveOrderAuditPage from './pages/receiveOrder/ReceiveOrderAuditPage';
 import TransferRequestAuditPage from './pages/transferRequest/TransferRequestAuditPage';
+import ProductDetailPage from './pages/products/ProductDetailPage';
+import ProductReportsPage from './pages/reports/ProductReportsPage';
+import ReceiveOrderReportsPage from './pages/reports/ReceiveOrderReportsPage';
+import TransferRequestReportsPage from './pages/reports/TransferRequestReportsPage';
 
 function GuestRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -99,14 +103,15 @@ function AppRoutes() {
       } />
       <Route path="/reconciliation" element={<ProtectedRoute><ReconciliationListPage /></ProtectedRoute>} />
       <Route path="/reconciliation/:id/review" element={<ProtectedRoute><ReconciliationReviewPage /></ProtectedRoute>} />
-      <Route path="/reports/products" element={<ProtectedRoute><div className="p-8 text-gray-500">Product Reports — coming in Stage 3</div></ProtectedRoute>} />
-      <Route path="/reports/receive-orders" element={<ProtectedRoute><div className="p-8 text-gray-500">Receive Order Reports — coming in Stage 3</div></ProtectedRoute>} />
-      <Route path="/reports/transfer-requests" element={<ProtectedRoute><div className="p-8 text-gray-500">Transfer Request Reports — coming in Stage 3</div></ProtectedRoute>} />
+      <Route path="/reports/products" element={<ProtectedRoute><ProductReportsPage /></ProtectedRoute>} />
+      <Route path="/reports/receive-orders" element={<ProtectedRoute><ReceiveOrderReportsPage /></ProtectedRoute>} />
+      <Route path="/reports/transfer-requests" element={<ProtectedRoute><TransferRequestReportsPage /></ProtectedRoute>} />
       <Route path="/reports/issue-products" element={<ProtectedRoute><div className="p-8 text-gray-500">Issue Product Reports — coming in Stage 4</div></ProtectedRoute>} />
       <Route path="/reports/temporary-warehouses" element={<ProtectedRoute><TempWarehouseReportsPage /></ProtectedRoute>} />
       <Route path="/reports/reconciliation" element={<ProtectedRoute><div className="p-8 text-gray-500">Reconciliation Reports — coming in Stage 4</div></ProtectedRoute>} />
       <Route path="/reports/inventory-summary" element={<ProtectedRoute><div className="p-8 text-gray-500">Inventory Summary — coming in Step 15</div></ProtectedRoute>} />
       <Route path="/reports" element={<ProtectedRoute><ReportsHistoryPage /></ProtectedRoute>} />
+      <Route path="/products/:id" element={<ProtectedRoute><ProductDetailPage /></ProtectedRoute>} />
       <Route path="/admin/users" element={<ProtectedRoute adminOnly><UserManagementPage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
