@@ -237,7 +237,7 @@ export default function Navbar() {
             LIFO <ChevronDown />
           </button>
           <button
-            onClick={() => navigate('/reports/temporary-warehouses')}
+            onClick={() => navigate('/reports')}
             className="btn-brand-outline text-white text-xs font-medium px-3 py-1.5 rounded border border-white transition-colors"
           >
             Reports History

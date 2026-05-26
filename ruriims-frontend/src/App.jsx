@@ -15,6 +15,7 @@ import TemporaryWarehouseFormPage from './pages/temporaryWarehouse/TemporaryWare
 import CloseTemporaryWarehousePage from './pages/temporaryWarehouse/CloseTemporaryWarehousePage';
 import TemporaryWarehouseDetailPage from './pages/temporaryWarehouse/TemporaryWarehouseDetailPage';
 import TempWarehouseReportsPage from './pages/reports/TempWarehouseReportsPage';
+import ReportsHistoryPage from './pages/reports/ReportsHistoryPage';
 import ReconciliationListPage from './pages/reconciliation/ReconciliationListPage';
 import ReconciliationReviewPage from './pages/reconciliation/ReconciliationReviewPage';
 import ReconciliationFormPage from './pages/reconciliation/ReconciliationFormPage';
@@ -98,7 +99,14 @@ function AppRoutes() {
       } />
       <Route path="/reconciliation" element={<ProtectedRoute><ReconciliationListPage /></ProtectedRoute>} />
       <Route path="/reconciliation/:id/review" element={<ProtectedRoute><ReconciliationReviewPage /></ProtectedRoute>} />
+      <Route path="/reports/products" element={<ProtectedRoute><div className="p-8 text-gray-500">Product Reports — coming in Stage 3</div></ProtectedRoute>} />
+      <Route path="/reports/receive-orders" element={<ProtectedRoute><div className="p-8 text-gray-500">Receive Order Reports — coming in Stage 3</div></ProtectedRoute>} />
+      <Route path="/reports/transfer-requests" element={<ProtectedRoute><div className="p-8 text-gray-500">Transfer Request Reports — coming in Stage 3</div></ProtectedRoute>} />
+      <Route path="/reports/issue-products" element={<ProtectedRoute><div className="p-8 text-gray-500">Issue Product Reports — coming in Stage 4</div></ProtectedRoute>} />
       <Route path="/reports/temporary-warehouses" element={<ProtectedRoute><TempWarehouseReportsPage /></ProtectedRoute>} />
+      <Route path="/reports/reconciliation" element={<ProtectedRoute><div className="p-8 text-gray-500">Reconciliation Reports — coming in Stage 4</div></ProtectedRoute>} />
+      <Route path="/reports/inventory-summary" element={<ProtectedRoute><div className="p-8 text-gray-500">Inventory Summary — coming in Step 15</div></ProtectedRoute>} />
+      <Route path="/reports" element={<ProtectedRoute><ReportsHistoryPage /></ProtectedRoute>} />
       <Route path="/admin/users" element={<ProtectedRoute adminOnly><UserManagementPage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

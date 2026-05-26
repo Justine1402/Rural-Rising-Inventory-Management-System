@@ -2,15 +2,22 @@ import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import api from '../../api/axios';
 import Navbar from '../../components/layout/Navbar';
+import ReportsFilterBar from '../../components/shared/ReportsFilterBar';
 import StatusBadge from '../../components/ui/StatusBadge';
 import { useUI } from '../../context/UIContext';
+import { useWarehouse } from '../../context/WarehouseContext';
 
 export default function TempWarehouseReportsPage() {
   const location = useLocation();
   const { setTemporaryWarehouseDetailOverlayTwhId } = useUI();
+  const { warehouses } = useWarehouse();
   const [twhs, setTwhs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [warehouseId, setWarehouseId] = useState('');
+  const [dateFrom, setDateFrom]       = useState('');
+  const [dateTo, setDateTo]           = useState('');
+  const [search, setSearch]           = useState('');
 
   useEffect(() => {
     setLoading(true);
@@ -21,6 +28,13 @@ export default function TempWarehouseReportsPage() {
       .finally(() => setLoading(false));
   }, [location.key]);
 
+  const filtered = twhs
+    .filter((r) => !dateFrom || r.event_date >= dateFrom)
+    .filter((r) => !dateTo   || r.event_date <= dateTo)
+    .filter((r) => !search
+      || r.transaction_code?.toLowerCase().includes(search.toLowerCase())
+      || r.name?.toLowerCase().includes(search.toLowerCase()));
+
   const statusLabel = (s) => s === 'active' ? 'Active' : 'Closed';
 
   return (
@@ -29,6 +43,20 @@ export default function TempWarehouseReportsPage() {
 
       <main className="flex-1 p-5">
         <div className="bg-white rounded-xl shadow overflow-hidden">
+          <ReportsFilterBar
+            warehouses={warehouses}
+            currentType="temporary-warehouses"
+            onTypeChange={() => {}}
+            warehouseId={warehouseId}
+            onWarehouseChange={setWarehouseId}
+            dateFrom={dateFrom}
+            onDateFromChange={setDateFrom}
+            dateTo={dateTo}
+            onDateToChange={setDateTo}
+            search={search}
+            onSearchChange={setSearch}
+            showPdfButton={false}
+          />
           <table className="w-full text-sm">
             <thead>
               <tr className="text-white" style={{ backgroundColor: '#1A381E' }}>
@@ -50,10 +78,10 @@ export default function TempWarehouseReportsPage() {
               {error && (
                 <tr><td colSpan={9} className="px-5 py-6 text-center text-red-500">{error}</td></tr>
               )}
-              {!loading && !error && twhs.length === 0 && (
+              {!loading && !error && filtered.length === 0 && (
                 <tr><td colSpan={9} className="px-5 py-6 text-center text-gray-400">No temporary warehouses yet.</td></tr>
               )}
-              {!loading && !error && twhs.map((twh) => (
+              {!loading && !error && filtered.map((twh) => (
                 <tr
                   key={twh.id}
                   onClick={() => setTemporaryWarehouseDetailOverlayTwhId(twh.id)}
