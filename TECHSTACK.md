@@ -170,7 +170,7 @@ Routes defined in `ruriims-backend/routes/api.php`:
 | `GET` | `/api/temporary-warehouses` | `auth:sanctum` | `{ "temporary_warehouses": [...] }` — optional `?status=active\|closed` filter |
 | `POST` | `/api/temporary-warehouses` | `auth:sanctum` | `{ "temporary_warehouse": { id, warehouse_id, transaction_code, name } }` — PIN (same manager) + creates warehouses row + TWH row |
 | `GET` | `/api/temporary-warehouses/{id}` | `auth:sanctum` | `{ "temporary_warehouse": { ...with products_transferred_in [+stock_in_use_code, +source_warehouse], products_issued [+stock_in_use_code, +issue_type], products_returned } }` |
-| `POST` | `/api/temporary-warehouses/{id}/close` | `auth:sanctum` | `{ "message": "Closed TWH-..." }` — PIN (same manager) + lockForUpdate header + per-batch deduction + dest StockInUse creation |
+| `POST` | `/api/temporary-warehouses/{id}/close` | `auth:sanctum` | `{ "message": "Closed TWH-..." }` — PIN (any authorized manager) + lockForUpdate header + per-batch deduction + dest StockInUse creation |
 | `GET` | `/api/reconciliations` | `auth:sanctum` | `{ "reconciliations": [...] }` — optional `?warehouse_id` + `?status` filters; includes products_with_discrepancy count |
 | `GET` | `/api/reconciliations/expected-stock` | `auth:sanctum` | `{ "products": [{id, sku_code, name, unit, total_quantity}] }` — required `?warehouse_id`; one row per product, summed across batches |
 | `POST` | `/api/reconciliations` | `auth:sanctum` | `{ "reconciliation": { "transaction_code": "RC-..." } }` — PIN (same manager) + snapshot items + RC code; no inventory changes at submit |
@@ -201,7 +201,8 @@ Rural Rising Inventory Management System/   ← project root
 │   │   │   │   ├── PinVerificationModal.jsx ← 6-digit PIN entry modal (z-[60])
 │   │   │   │   ├── AddProductsModal.jsx   ← multi-select master SKU picker (z-[70])
 │   │   │   │   ├── StockInUseModal.jsx    ← single-select batch picker (z-[70])
-│   │   │   │   └── CascadePreviewModal.jsx ← per-batch draw breakdown modal (z-[80]); mirrors planBatchCascade output
+│   │   │   │   ├── CascadePreviewModal.jsx ← per-batch draw breakdown modal (z-[80]); mirrors planBatchCascade output
+│   │   │   │   └── ReportsFilterBar.jsx   ← shared filter bar (all reports pages); report-type, warehouse, date-range, search, PDF export
 │   │   │   └── ui/
 │   │   │       └── StatusBadge.jsx        ← colored pill: green for In Stock/Accomplished/Complete/Active/Reviewed; amber for Pending Review; red for Out of Stock/Incomplete/Closed and fallback
 │   │   ├── context/
@@ -235,7 +236,13 @@ Rural Rising Inventory Management System/   ← project root
 │   │   │   │   ├── CloseTemporaryWarehousePage.jsx ← UIContext overlay (no route); reads id from closeTemporaryWarehouseOverlayTwhId; fetches remaining stock via stock-in-use API; per-row Return To dropdown; PIN-verified close; closes overlay on success
 │   │   │   │   └── TemporaryWarehouseDetailPage.jsx ← UIContext overlay (no route); reads id from temporaryWarehouseDetailOverlayTwhId; metadata block + three sub-tables with enriched columns
 │   │   │   └── reports/
-│   │   │       └── TempWarehouseReportsPage.jsx ← standalone full page (/reports/temporary-warehouses); 9-column list of all TWHs; row click → temporaryWarehouseDetailOverlayTwhId; "Reports History" nav button wired here temporarily
+│   │   │       ├── ReportsHistoryPage.jsx          ← /reports; "All Reports" union view
+│   │   │       ├── ProductReportsPage.jsx          ← /reports/products
+│   │   │       ├── ReceiveOrderReportsPage.jsx     ← /reports/receive-orders; PDF export
+│   │   │       ├── TransferRequestReportsPage.jsx  ← /reports/transfer-requests; PDF export
+│   │   │       ├── IssueProductReportsPage.jsx     ← /reports/issue-products; PDF export
+│   │   │       ├── TempWarehouseReportsPage.jsx    ← /reports/temporary-warehouses; row click → detail overlay
+│   │   │       └── ReconciliationReportsPage.jsx   ← /reports/reconciliation
 │   │   ├── utils/
 │   │   │   ├── planBatchCascade.js        ← frontend mirror of PlansBatchCascade trait; nearest-harvest-date cascade planner with FIFO tiebreak
 │   │   │   └── reconciliationFormat.js    ← shared discrepancy formatter (formatDiscrepancy, formatAdjustmentArrow, EPSILON); used by ReconciliationFormPage, ReconciliationReviewPage, and future Step 14 reports

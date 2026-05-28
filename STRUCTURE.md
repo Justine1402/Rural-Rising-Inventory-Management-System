@@ -120,7 +120,8 @@ ruriims-frontend/
     │   │   ├── StockInUseModal.jsx          ← Batch picker — opened by clicking the
     │   │   │                                    Stock-In-Use Code cell per product row
     │   │   │                                    (Transfer and Issue flows)
-    │   │   └── CascadePreviewModal.jsx      ← Per-batch draw breakdown; opened via "preview" link in cascade hint rows (Transfer and Issue flows)
+    │   │   ├── CascadePreviewModal.jsx      ← Per-batch draw breakdown; opened via "preview" link in cascade hint rows (Transfer and Issue flows)
+    │   │   └── ReportsFilterBar.jsx         ← Shared report-type/warehouse/date-range filter bar (all reports pages)
     │   │
     │   └── ui/
     │       └── StatusBadge.jsx          ← Colored pill badge for all statuses
@@ -130,7 +131,8 @@ ruriims-frontend/
     │   │   └── LoginPage.jsx
     │   │
     │   ├── admin/
-    │   │   └── UserManagementPage.jsx       ← Admin-only: create, disable, assign accounts
+    │   │   ├── UserManagementPage.jsx       ← Admin-only: create, disable, assign accounts
+    │   │   └── UserFormPage.jsx             ← Dual-mode overlay: create / edit / read-only; Reset Password+PIN, Delete, Restore
     │   │
     │   ├── dashboard/
     │   │   └── DashboardPage.jsx            ← Main inventory view + Issue Product list
@@ -175,6 +177,7 @@ ruriims-frontend/
     │
     ├── utils/
     │   ├── planBatchCascade.js          ← Frontend mirror of PlansBatchCascade trait; cascade planner for Transfer and Issue validation
+    │   ├── reconciliationFormat.js      ← Shared discrepancy formatter (formatDiscrepancy, formatAdjustmentArrow, EPSILON)
     │   └── exportPdf.js                 ← Shared PDF export utility (jsPDF v4); used by report pages for client-side PDF generation
     │
     ├── routes/
