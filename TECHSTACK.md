@@ -245,7 +245,9 @@ Rural Rising Inventory Management System/   ← project root
 │   │   │       └── ReconciliationReportsPage.jsx   ← /reports/reconciliation
 │   │   ├── utils/
 │   │   │   ├── planBatchCascade.js        ← frontend mirror of PlansBatchCascade trait; nearest-harvest-date cascade planner with FIFO tiebreak
-│   │   │   └── reconciliationFormat.js    ← shared discrepancy formatter (formatDiscrepancy, formatAdjustmentArrow, EPSILON); used by ReconciliationFormPage, ReconciliationReviewPage, and future Step 14 reports
+│   │   │   ├── reconciliationFormat.js    ← shared discrepancy formatter (formatDiscrepancy, formatAdjustmentArrow, EPSILON); used by ReconciliationFormPage and ReconciliationReviewPage
+│   │   │   ├── formatDate.js              ← shared date formatter (MMM D, YYYY en-US locale; '—' fallback); used by all six report pages and (planned) InventorySummaryPage
+│   │   │   └── exportPdf.js               ← shared PDF export utility (jsPDF v4 named import); used by ReceiveOrder, TransferRequest, and IssueProduct report pages for client-side PDF generation
 │   │   ├── routes/
 │   │   │   └── ProtectedRoute.jsx         ← auth + adminOnly route guard
 │   │   ├── App.jsx                        ← BrowserRouter + providers + AppRoutes + GlobalOverlays

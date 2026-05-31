@@ -6,13 +6,7 @@ import WarehouseTabs from '../../components/layout/WarehouseTabs';
 import ReportsFilterBar from '../../components/shared/ReportsFilterBar';
 import StatusBadge from '../../components/ui/StatusBadge';
 import { useWarehouse } from '../../context/WarehouseContext';
-
-const fmtDate = (d) => {
-  if (!d || d === '—') return '—';
-  return new Date(d + 'T00:00:00').toLocaleDateString('en-US', {
-    year: 'numeric', month: 'short', day: 'numeric',
-  });
-};
+import { formatDate } from '../../utils/formatDate';
 
 export default function ReportsHistoryPage() {
   const location = useLocation();
@@ -106,7 +100,7 @@ export default function ReportsHistoryPage() {
                     <td className="px-4 py-3 font-mono text-xs text-gray-700">{r.transaction_code}</td>
                     <td className="px-4 py-3 text-gray-800">{r.transaction_type}</td>
                     <td className="px-4 py-3 text-gray-600">{r.warehouse}</td>
-                    <td className="px-4 py-3 text-gray-600">{fmtDate(r.date_accomplished)}</td>
+                    <td className="px-4 py-3 text-gray-600">{formatDate(r.date_accomplished)}</td>
                     <td className="px-4 py-3 text-gray-600">{r.accomplished_by}</td>
                     <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
                   </tr>

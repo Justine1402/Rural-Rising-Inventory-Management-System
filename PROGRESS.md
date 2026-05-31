@@ -1031,6 +1031,14 @@ URL and no read-only mode built into it.
 
 ---
 
+### Codebase Cleanup — 2026-05-31
+- Items 1–3 of the cleanup pass applied.
+- Deleted the stale `// Step 14 reports will reuse this as well.` forward-looking comment from `src/utils/reconciliationFormat.js` (was line 3). The 2026-05-16 audit deferred this note; confirmed false — Step 14 report pages render the pre-formatted `products_with_discrepancy` integer directly and do not import this utility.
+- Annotated the four unused inverse `belongsTo` relations on `IssueProductBatchDeduction` (`issueProductItem()`, `stockInUse()`) and `TransferRequestBatchDeduction` (`transferRequestItem()`, `stockInUse()`) with a two-line "Intentionally retained: planned backward-traversal feature" comment block. The 2026-05-16 entry grouped `StockInUse` with these models as having unused inverse relations, but the audit found `StockInUse`'s `product()` and `warehouse()` relations are actively used by `ReportController` — only the `BatchDeduction` models carry genuinely unused inverses. Not dead code — do not remove in future audits.
+- Extracted the duplicated `fmtDate` helper from six report pages (`ReportsHistoryPage`, `ProductReportsPage`, `ReceiveOrderReportsPage`, `TransferRequestReportsPage`, `IssueProductReportsPage`, `ReconciliationReportsPage`) into a shared `formatDate` utility at `src/utils/formatDate.js`. Function renamed from `fmtDate` to `formatDate` for clarity at call sites. Behavior unchanged (en-US locale, MMM D YYYY format, '—' fallback). The 2026-05-26 audit deferred this until a 7th consumer appeared; extracting now ahead of Step 15's `InventorySummaryPage`. Visual verification in the browser confirmed identical rendering across all six report pages, including the '—' fallback in the Date Accomplished column for incomplete Transfer Requests.
+
+---
+
 ## Not Started
 
 - [x] Step 13 — `UserManagementPage` + `UserController` — COMPLETE (see ✅ Step 13 COMPLETE above)

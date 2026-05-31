@@ -2,18 +2,12 @@ import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 import { exportTablePdf } from '../../utils/exportPdf';
+import { formatDate } from '../../utils/formatDate';
 import Navbar from '../../components/layout/Navbar';
 import WarehouseTabs from '../../components/layout/WarehouseTabs';
 import ReportsFilterBar from '../../components/shared/ReportsFilterBar';
 import StatusBadge from '../../components/ui/StatusBadge';
 import { useWarehouse } from '../../context/WarehouseContext';
-
-const fmtDate = (d) => {
-  if (!d || d === '—') return '—';
-  return new Date(d + 'T00:00:00').toLocaleDateString('en-US', {
-    year: 'numeric', month: 'short', day: 'numeric',
-  });
-};
 
 export default function TransferRequestReportsPage() {
   const location = useLocation();
@@ -132,8 +126,8 @@ export default function TransferRequestReportsPage() {
                     <td className="px-4 py-3 text-gray-800">{row.source_warehouse}</td>
                     <td className="px-4 py-3 text-gray-600">{row.destination_warehouse}</td>
                     <td className="px-4 py-3 text-gray-600">{row.total_products}</td>
-                    <td className="px-4 py-3 text-gray-600">{fmtDate(row.date_requested)}</td>
-                    <td className="px-4 py-3 text-gray-600">{fmtDate(row.date_accomplished)}</td>
+                    <td className="px-4 py-3 text-gray-600">{formatDate(row.date_requested)}</td>
+                    <td className="px-4 py-3 text-gray-600">{formatDate(row.date_accomplished)}</td>
                     <td className="px-4 py-3 text-gray-600">{row.requested_by}</td>
                     <td className="px-4 py-3 text-gray-600">{row.verified_by}</td>
                     <td className="px-4 py-3"><StatusBadge status={row.status} /></td>

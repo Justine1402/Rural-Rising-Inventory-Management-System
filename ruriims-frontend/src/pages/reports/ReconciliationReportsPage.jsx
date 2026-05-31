@@ -6,13 +6,7 @@ import WarehouseTabs from '../../components/layout/WarehouseTabs';
 import ReportsFilterBar from '../../components/shared/ReportsFilterBar';
 import StatusBadge from '../../components/ui/StatusBadge';
 import { useWarehouse } from '../../context/WarehouseContext';
-
-const fmtDate = (d) => {
-  if (!d || d === '—') return '—';
-  return new Date(d + 'T00:00:00').toLocaleDateString('en-US', {
-    year: 'numeric', month: 'short', day: 'numeric',
-  });
-};
+import { formatDate } from '../../utils/formatDate';
 
 export default function ReconciliationReportsPage() {
   const location = useLocation();
@@ -102,7 +96,7 @@ export default function ReconciliationReportsPage() {
                   >
                     <td className="px-4 py-3 font-mono text-xs text-gray-700">{row.transaction_code}</td>
                     <td className="px-4 py-3 text-gray-800">{row.warehouse}</td>
-                    <td className="px-4 py-3 text-gray-600">{fmtDate(row.date_reconciled)}</td>
+                    <td className="px-4 py-3 text-gray-600">{formatDate(row.date_reconciled)}</td>
                     <td className="px-4 py-3 text-gray-600">
                       {row.products_with_discrepancy} Product{row.products_with_discrepancy === 1 ? '' : 's'}
                     </td>
