@@ -1,6 +1,5 @@
 // Shared discrepancy formatting for Reconciliation pages.
 // Used by ReconciliationFormPage (Stage 3) and ReconciliationReviewPage (Stage 4).
-// Step 14 reports will reuse this as well.
 
 export const EPSILON = 0.0005;
 
