@@ -30,6 +30,7 @@ import TransferRequestReportsPage from './pages/reports/TransferRequestReportsPa
 import IssueProductAuditPage from './pages/issueProduct/IssueProductAuditPage';
 import IssueProductReportsPage from './pages/reports/IssueProductReportsPage';
 import ReconciliationReportsPage from './pages/reports/ReconciliationReportsPage';
+import InventorySummaryPage from './pages/reports/InventorySummaryPage';
 
 function GuestRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -113,7 +114,7 @@ function AppRoutes() {
       <Route path="/reports/issue-products" element={<ProtectedRoute><IssueProductReportsPage /></ProtectedRoute>} />
       <Route path="/reports/temporary-warehouses" element={<ProtectedRoute><TempWarehouseReportsPage /></ProtectedRoute>} />
       <Route path="/reports/reconciliation" element={<ProtectedRoute><ReconciliationReportsPage /></ProtectedRoute>} />
-      <Route path="/reports/inventory-summary" element={<ProtectedRoute><div className="p-8 text-gray-500">Inventory Summary — coming in Step 15</div></ProtectedRoute>} />
+      <Route path="/reports/inventory-summary" element={<ProtectedRoute><InventorySummaryPage /></ProtectedRoute>} />
       <Route path="/reports" element={<ProtectedRoute><ReportsHistoryPage /></ProtectedRoute>} />
       <Route path="/products/:id" element={<ProtectedRoute><ProductDetailPage /></ProtectedRoute>} />
       <Route path="/admin/users" element={<ProtectedRoute adminOnly><UserManagementPage /></ProtectedRoute>} />

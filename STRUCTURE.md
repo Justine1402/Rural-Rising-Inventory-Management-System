@@ -1332,10 +1332,19 @@ Reconciled By | Reviewed By | Status
 ---
 
 **`InventorySummaryPage` (SRS §3.9):**
-Aggregated view of total stock per product across all warehouses. Filters:
-warehouse and date range. Export as PDF button. Uses `jspdf` (already installed)
-for client-side export or a `GET /api/reports/inventory-summary/pdf` backend
-endpoint via DomPDF.
+Aggregated view of total stock per product across all warehouses. Route: `/reports/inventory-summary`. No row click. No status badges.
+
+**Filter bar:** `ReportsFilterBar` with `currentType="inventory-summary"` and `showPdfButton={true}`. Warehouse and date range inputs visible; date range sent as params but ignored by the backend (current-snapshot semantics — see PROGRESS.md Step 15 for rationale).
+
+**Column rendering (two branches):**
+- `warehouseId === ''` (All Warehouses): Product SKU | Product Name | Unit | [one column per permanent warehouse] | Grand Total
+- Specific warehouse selected: Product SKU | Product Name | Unit | [that warehouse only]
+
+Warehouse column headers driven by `WarehouseContext.warehouses.filter(w => !w.isTemporary)` — never from the API response. Per-warehouse qty from `product.warehouses` array (key returned by `ReportController@inventorySummary`); zero-quantity cells render `0 {unit}`, never blank.
+
+**Quantity formatting:** `parseFloat(qty)` strips trailing zeros and appends unit (e.g. `298 kg`, `27.5 kg`).
+
+**PDF export:** `exportTablePdf` from `src/utils/exportPdf`; landscape orientation; columns and rows reflect current filter state; filename `inventory-summary.pdf`.
 
 ---
 

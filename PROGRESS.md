@@ -1027,7 +1027,27 @@ URL and no read-only mode built into it.
       stub replaced; portrait orientation used (6 columns fits A4 portrait).
 - PDF content reflects currently loaded/filtered component state — no additional API calls.
 - `jsPDF` imported only in `exportPdf.js`; all pages import `exportTablePdf` from the utility.
-- No backend changes; DomPDF reserved for Step 15 InventorySummaryPage.
+- No backend changes; jsPDF reused for Step 15 InventorySummaryPage (DomPDF not needed).
+
+---
+
+### ✅ Step 15 — InventorySummaryPage + PDF Export — 2026-06-01
+
+- [x] `InventorySummaryPage.jsx` created (`src/pages/reports/`) — standalone full page at `/reports/inventory-summary`; fetches `GET /api/reports/inventory-summary` with optional `warehouse_id` and `search` params; cancellable useEffect pattern; no backend changes.
+- [x] Column headers driven by `permanentWarehouses` from `WarehouseContext.warehouses.filter(w => !w.isTemporary)` — NOT from any warehouses array in the API response. Matches the `permanentWarehouses` pattern established in DashboardPage Branch B.
+- [x] Two-branch column rendering: **All Warehouses** (`warehouseId === ''`) shows one column per permanent warehouse plus Grand Total (rightmost); **single warehouse** (specific `warehouseId` set) shows one warehouse column only with Grand Total omitted.
+- [x] Quantity formatting via `fmtQty(qty, unit)` — `parseFloat(qty)` strips trailing decimal zeros and appends unit label (e.g. `298 kg`, `27.5 kg`). Zero-quantity cells render `0 {unit}` — never blank.
+- [x] Per-warehouse quantity looked up from `product.warehouses` (the key name used by `ReportController@inventorySummary`); fallback to `0 {unit}` when a warehouse has no entry for a given product.
+- [x] `handleExportPdf` — calls `exportTablePdf` from `src/utils/exportPdf` with `orientation: 'landscape'`; columns and rows reflect current filter state; filename `inventory-summary.pdf`. No additional API call.
+- [x] `ReportsFilterBar` wired with `currentType="inventory-summary"` and `showPdfButton={true}`. Date From / Date To inputs are visible and wired to state but the backend does not consume them — inventory summary is a current-snapshot view. Params are sent but silently ignored. Noted as a known limitation below.
+- [x] `App.jsx` — `InventorySummaryPage` imported; `/reports/inventory-summary` placeholder div from Step 14 Stage 4 replaced with `<InventorySummaryPage />`.
+
+**Decisions:**
+- **jsPDF chosen over DomPDF** — `exportTablePdf` from `src/utils/exportPdf` already handles title block, header row, zebra rows, and auto-pagination. Adding InventorySummaryPage as a 4th caller required no new infrastructure. DomPDF would have required a new backend route, Blade template, and controller method for equivalent output.
+- **`permanentWarehouses` from WarehouseContext** — consistent with DashboardPage Branch B which established this pattern to prevent spurious TWH columns when a Temporary Warehouse is active.
+- **Date filter visible but not consumed by backend** — `date_from`/`date_to` are forwarded as query params but `ReportController@inventorySummary` does not filter on them. Semantics of date-scoped stock snapshots are ambiguous; deferred for follow-up if client requests it.
+
+**Known limitation / backlog:** Date range filter on Inventory Summary is a stub — backend extension needed if date-scoped stock snapshots are required. Scope to be confirmed with client.
 
 ---
 
@@ -1059,4 +1079,4 @@ URL and no read-only mode built into it.
 - [x] Step 14, Stage 3 — ProductDetailPage + 3 Report Pages — COMPLETE (see above)
 - [x] Step 14, Stage 4 — IssueProductAuditPage + 2 Report Pages — COMPLETE (see above)
 - [x] Step 14, Stage 5 — PDF export (jsPDF) — COMPLETE (see above)
-- [ ] Step 15 — `InventorySummaryPage` + PDF export (DomPDF / jsPDF)
+- [x] Step 15 — `InventorySummaryPage` + PDF export (jsPDF) — COMPLETE (see ✅ Step 15 below)
