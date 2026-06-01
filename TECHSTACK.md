@@ -221,16 +221,19 @@ Rural Rising Inventory Management System/   ← project root
 │   │   │   │   └── CreateProductPage.jsx  ← overlay card; PIN-verified product creation; opened via UIContext
 │   │   │   ├── receiveOrder/
 │   │   │   │   ├── ReceiveOrderListPage.jsx ← standalone page; re-fetches on location.key + receiveOrderRefreshKey; contextual accomplish bar
-│   │   │   │   └── ReceiveOrderFormPage.jsx ← dual-mode: create (UIContext overlay) + accomplish (/receive-orders/:id)
+│   │   │   │   ├── ReceiveOrderFormPage.jsx ← dual-mode: create (UIContext overlay) + accomplish (/receive-orders/:id)
+│   │   │   │   └── ReceiveOrderAuditPage.jsx ← read-only audit overlay; /receive-orders/:id/audit
 │   │   │   ├── transferRequest/
 │   │   │       ├── TransferRequestListPage.jsx ← standalone page; re-fetches on location.key + transferRequestRefreshKey; contextual accomplish bar
-│   │   │       └── TransferRequestFormPage.jsx ← dual-mode: create (UIContext overlay) + accomplish (/transfer-requests/:id); two-step product flow
+│   │   │       ├── TransferRequestFormPage.jsx ← dual-mode: create (UIContext overlay) + accomplish (/transfer-requests/:id); two-step product flow
+│   │   │       └── TransferRequestAuditPage.jsx ← read-only audit overlay; /transfer-requests/:id/audit
 │   │   │   ├── reconciliation/
 │   │   │       ├── ReconciliationListPage.jsx ← standalone page; re-fetches on location.key + reconciliationRefreshKey; selectedId toggle; label-swap button (+ New Reconciliation / + Review & Confirm)
 │   │   │       ├── ReconciliationFormPage.jsx ← UIContext overlay (no route); create flow; auto-populates from expectedStock endpoint; three-state discrepancy encoding; same-manager PIN
 │   │   │       └── ReconciliationReviewPage.jsx ← standalone full page (/reconciliation/:id/review); read-only review + confirm; status-branched (pending_review shows CONFIRM + PIN modal; reviewed is fully read-only); post-confirm refreshes reconciliations + products, navigates to list after 1.5s
 │   │   │   ├── issueProduct/
-│   │   │   │   └── IssueProductFormPage.jsx   ← UIContext overlay (no route); single-stage issue + StockInUse deduction; same-manager PIN
+│   │   │   │   ├── IssueProductFormPage.jsx   ← UIContext overlay (no route); single-stage issue + StockInUse deduction; same-manager PIN
+│   │   │   │   └── IssueProductAuditPage.jsx  ← read-only audit overlay; /issue-products/:id/audit
 │   │   │   ├── temporaryWarehouse/
 │   │   │   │   ├── TemporaryWarehouseFormPage.jsx ← UIContext overlay (no route); creates TWH + warehouses row; same-manager PIN; calls refreshWarehouses(warehouse_id) to auto-select new tab
 │   │   │   │   ├── CloseTemporaryWarehousePage.jsx ← UIContext overlay (no route); reads id from closeTemporaryWarehouseOverlayTwhId; fetches remaining stock via stock-in-use API; per-row Return To dropdown; PIN-verified close; closes overlay on success
