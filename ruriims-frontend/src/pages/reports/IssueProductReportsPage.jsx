@@ -54,7 +54,7 @@ export default function IssueProductReportsPage() {
         r.transaction_code,
         r.issue_type,
         r.total_quantity_summary,
-        r.date_issued ? new Date(r.date_issued + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—',
+        formatDate(r.date_issued),
         r.issued_by,
         r.status,
       ]),

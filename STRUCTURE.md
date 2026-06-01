@@ -178,7 +178,7 @@ ruriims-frontend/
     ├── utils/
     │   ├── planBatchCascade.js          ← Frontend mirror of PlansBatchCascade trait; cascade planner for Transfer and Issue validation
     │   ├── reconciliationFormat.js      ← Shared discrepancy formatter (formatDiscrepancy, formatAdjustmentArrow, EPSILON)
-    │   ├── formatDate.js                ← Shared date formatter (MMM D, YYYY en-US locale; '—' fallback for null/empty input); used by all report pages
+    │   ├── formatDate.js                ← Shared date formatter (MMM D, YYYY en-US locale; '—' fallback for null/empty input); used by all report pages, ReconciliationReviewPage, and CascadePreviewModal
     │   └── exportPdf.js                 ← Shared PDF export utility (jsPDF v4); used by report pages for client-side PDF generation
     │
     ├── routes/

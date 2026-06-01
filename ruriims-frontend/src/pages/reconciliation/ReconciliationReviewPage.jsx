@@ -9,18 +9,10 @@ import {
   formatAdjustmentArrow,
   formatDiscrepancy,
 } from '../../utils/reconciliationFormat';
+import { formatDate } from '../../utils/formatDate';
 
 const readonlyClass =
   'w-full bg-gray-100 border border-transparent rounded-lg px-4 py-2.5 text-sm text-gray-500';
-
-const formatDate = (d) =>
-  d
-    ? new Date(d + 'T00:00:00').toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      })
-    : '—';
 
 export default function ReconciliationReviewPage() {
   const { id } = useParams();
