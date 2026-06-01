@@ -22,6 +22,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'user']);
     Route::patch('/user/password', [AuthController::class, 'changePassword']);
     Route::patch('/user/pin', [AuthController::class, 'changePin']);
+    Route::patch('/user/profile', [AuthController::class, 'updateProfile']);
 
     Route::prefix('users')->group(function () {
         Route::get('/', [UserController::class, 'index']);

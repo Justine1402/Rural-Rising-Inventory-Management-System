@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -46,6 +47,33 @@ class AuthController extends Controller
     public function user(Request $request)
     {
         return response()->json(['user' => $request->user()]);
+    }
+
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'name'   => ['sometimes', 'string', 'min:2', 'max:255'],
+            'avatar' => ['sometimes', 'image', 'max:2048'],
+        ]);
+
+        if ($request->hasFile('avatar')) {
+            if ($user->avatar) {
+                Storage::disk('public')->delete($user->avatar);
+            }
+            // Requires `php artisan storage:link` so public/storage → storage/app/public
+            $path = $request->file('avatar')->store('avatars', 'public');
+            $user->avatar = $path;
+        }
+
+        if (isset($validated['name'])) {
+            $user->name = $validated['name'];
+        }
+
+        $user->save();
+
+        return response()->json(['user' => $user]);
     }
 
     public function changePassword(Request $request)

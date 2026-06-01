@@ -22,6 +22,7 @@ class UserController extends Controller
             'warehouse_id'    => $u->warehouse_id,
             'warehouse'       => $u->warehouse?->name,
             'position_title'  => $u->position_title,
+            'avatar_url'      => $u->avatar_url,
             'deleted_at'      => $u->deleted_at?->toISOString(),
             'created_at'      => $u->created_at?->toISOString(),
         ]);
@@ -72,6 +73,7 @@ class UserController extends Controller
             'warehouse_id'   => $user->warehouse_id,
             'warehouse'      => $user->warehouse?->name,
             'position_title' => $user->position_title,
+            'avatar_url'     => $user->avatar_url,
             'deleted_at'     => null,
             'created_at'     => $user->created_at?->toISOString(),
         ]], 201);
@@ -91,6 +93,7 @@ class UserController extends Controller
             'warehouse_id'   => $user->warehouse_id,
             'warehouse'      => $user->warehouse?->name,
             'position_title' => $user->position_title,
+            'avatar_url'     => $user->avatar_url,
             'deleted_at'     => $user->deleted_at?->toISOString(),
             'created_at'     => $user->created_at?->toISOString(),
         ]]);
@@ -139,6 +142,7 @@ class UserController extends Controller
             'warehouse_id'   => $user->warehouse_id,
             'warehouse'      => $user->warehouse?->name,
             'position_title' => $user->position_title,
+            'avatar_url'     => $user->avatar_url,
             'deleted_at'     => $user->deleted_at?->toISOString(),
             'created_at'     => $user->created_at?->toISOString(),
         ]]);
@@ -173,6 +177,7 @@ class UserController extends Controller
                 'warehouse_id'   => $user->warehouse_id,
                 'warehouse'      => $user->warehouse?->name,
                 'position_title' => $user->position_title,
+                'avatar_url'     => $user->avatar_url,
                 'deleted_at'     => null,
                 'created_at'     => $user->created_at?->toISOString(),
             ],

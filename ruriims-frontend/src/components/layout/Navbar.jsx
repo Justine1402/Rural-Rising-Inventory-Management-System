@@ -21,7 +21,7 @@ const GearIcon = () => (
 
 const BUTTON_ORDER = ['+ Create Product', '+ Receive Order', '+ Transfer Request', '+ Issue Product', '+ Create Temporary Warehouse'];
 
-export default function Navbar() {
+export default function Navbar({ selectedCategory = '', onCategoryChange = () => {}, sortMode = 'LIFO', onSortModeChange = () => {} }) {
   const { user, logout } = useAuth();
   const { activeWarehouse } = useWarehouse();
   const { setReceiveOrderFormOpen, setCreateProductFormOpen, setTransferRequestFormOpen, setIssueProductFormOpen, setTemporaryWarehouseFormOpen, setCloseTemporaryWarehouseOverlayTwhId } = useUI();
@@ -38,16 +38,22 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [gearOpen, setGearOpen] = useState(false);
   const [inventoryOpen, setInventoryOpen] = useState(false);
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const menuRef = useRef(null);
   const gearRef = useRef(null);
   const inventoryRef = useRef(null);
+  const categoryRef = useRef(null);
+  const sortRef = useRef(null);
 
   useEffect(() => {
     function handleClickOutside(e) {
       if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
       if (gearRef.current && !gearRef.current.contains(e.target)) setGearOpen(false);
       if (inventoryRef.current && !inventoryRef.current.contains(e.target)) setInventoryOpen(false);
+      if (categoryRef.current && !categoryRef.current.contains(e.target)) setCategoryOpen(false);
+      if (sortRef.current && !sortRef.current.contains(e.target)) setSortOpen(false);
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -95,8 +101,17 @@ export default function Navbar() {
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setMenuOpen((v) => !v)}
-              className="w-8 h-8 rounded-full bg-gray-400 flex-shrink-0 hover:ring-2 hover:ring-white transition-all"
-            />
+              className="w-8 h-8 rounded-full flex-shrink-0 hover:ring-2 hover:ring-white transition-all overflow-hidden flex items-center justify-center"
+              style={!user?.avatar_url ? { backgroundColor: '#1A381E' } : {}}
+            >
+              {user?.avatar_url ? (
+                <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-white text-xs font-bold">
+                  {user?.name?.[0]?.toUpperCase() ?? '?'}
+                </span>
+              )}
+            </button>
 
             {menuOpen && (
               <div className="absolute right-0 top-10 w-48 bg-white rounded-lg shadow-lg z-50 overflow-hidden">
@@ -194,9 +209,34 @@ export default function Navbar() {
 
         {/* Center-right controls */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          <button className="flex items-center gap-1 btn-brand text-white text-xs font-medium px-3 py-1.5 rounded-full transition-colors">
-            All Products <ChevronDown />
-          </button>
+          <div className="relative" ref={categoryRef}>
+            <button
+              onClick={() => setCategoryOpen((v) => !v)}
+              className="flex items-center gap-1 btn-brand text-white text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
+            >
+              {selectedCategory || 'All Products'} <ChevronDown />
+            </button>
+            {categoryOpen && (
+              <div className="absolute left-0 top-8 w-48 bg-white rounded-lg shadow-lg z-50 overflow-hidden">
+                {[
+                  { value: '', label: 'All Products' },
+                  { value: 'Fruits', label: 'Fruits' },
+                  { value: 'Vegetables', label: 'Vegetables' },
+                  { value: 'Poultry', label: 'Poultry' },
+                  { value: 'Herbs & Spices', label: 'Herbs & Spices' },
+                  { value: 'Processed Goods', label: 'Processed Goods' },
+                ].map(({ value, label }) => (
+                  <button
+                    key={value}
+                    onClick={() => { onCategoryChange(value); setCategoryOpen(false); }}
+                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="relative" ref={inventoryRef}>
             <button
               onClick={() => setInventoryOpen((v) => !v)}
@@ -233,12 +273,30 @@ export default function Navbar() {
               </div>
             )}
           </div>
-          <button className="flex items-center gap-1 btn-brand text-white text-xs font-medium px-3 py-1.5 rounded-full transition-colors">
-            LIFO <ChevronDown />
-          </button>
+          <div className="relative" ref={sortRef}>
+            <button
+              onClick={() => setSortOpen((v) => !v)}
+              className="flex items-center gap-1 btn-brand text-white text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
+            >
+              {sortMode} <ChevronDown />
+            </button>
+            {sortOpen && (
+              <div className="absolute left-0 top-8 w-32 bg-white rounded-lg shadow-lg z-50 overflow-hidden">
+                {['FIFO', 'LIFO', 'FEFO'].map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => { onSortModeChange(mode); setSortOpen(false); }}
+                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    {mode}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <button
             onClick={() => navigate('/reports')}
-            className="btn-brand-outline text-white text-xs font-medium px-3 py-1.5 rounded border border-white transition-colors"
+            className="btn-brand text-white text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
           >
             Reports History
           </button>

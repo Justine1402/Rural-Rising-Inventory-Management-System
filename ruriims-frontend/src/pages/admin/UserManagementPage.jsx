@@ -16,9 +16,9 @@ export default function UserManagementPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [warehouseFilter, setWarehouseFilter] = useState('all');
+  const [roleFilter, setRoleFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [warehouseFilter, setWarehouseFilter] = useState('');
 
   useEffect(() => {
     if (user && user.role !== 'admin') {
@@ -48,14 +48,29 @@ export default function UserManagementPage() {
     return () => { cancelled = true; };
   }, [location.key, userRefreshKey]);
 
+  const warehouseOptions = useMemo(() => {
+    return users
+      .map(u => u.warehouse)
+      .filter(Boolean)
+      .filter((v, i, a) => a.indexOf(v) === i)
+      .sort();
+  }, [users]);
+
   const filteredUsers = useMemo(() => {
     return users.filter(u => {
-      if (!searchTerm) return true;
-      const term = searchTerm.toLowerCase();
-      return u.name.toLowerCase().includes(term) ||
-             u.email.toLowerCase().includes(term);
+      const matchesSearch =
+        !searchTerm ||
+        u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.email.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesRole = !roleFilter || u.role === roleFilter;
+      const matchesStatus =
+        !statusFilter ||
+        (statusFilter === 'active' && !u.deleted_at) ||
+        (statusFilter === 'inactive' && !!u.deleted_at);
+      const matchesWarehouse = !warehouseFilter || u.warehouse === warehouseFilter;
+      return matchesSearch && matchesRole && matchesStatus && matchesWarehouse;
     });
-  }, [users, searchTerm]);
+  }, [users, searchTerm, roleFilter, statusFilter, warehouseFilter]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -87,7 +102,7 @@ export default function UserManagementPage() {
                 onChange={e => setRoleFilter(e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
               >
-                <option value="all">All Roles</option>
+                <option value="">All Roles</option>
                 <option value="admin">Admin</option>
                 <option value="manager">Manager</option>
               </select>
@@ -97,7 +112,7 @@ export default function UserManagementPage() {
                 onChange={e => setStatusFilter(e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
               >
-                <option value="all">All Statuses</option>
+                <option value="">All Statuses</option>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
               </select>
@@ -107,7 +122,10 @@ export default function UserManagementPage() {
                 onChange={e => setWarehouseFilter(e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
               >
-                <option value="all">All Warehouses</option>
+                <option value="">All Warehouses</option>
+                {warehouseOptions.map(name => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
               </select>
             </div>
           </div>
@@ -132,7 +150,6 @@ export default function UserManagementPage() {
                 <thead>
                   <tr className="text-white text-left" style={{ backgroundColor: '#1A381E' }}>
                     <th className="px-4 py-3 font-semibold">Name</th>
-                    <th className="px-4 py-3 font-semibold">Email</th>
                     <th className="px-4 py-3 font-semibold">Role</th>
                     <th className="px-4 py-3 font-semibold">Warehouse</th>
                     <th className="px-4 py-3 font-semibold">Position</th>
@@ -149,8 +166,33 @@ export default function UserManagementPage() {
                         className={`border-b border-gray-100 hover:bg-gray-50 cursor-pointer${isInactive ? ' opacity-60' : ''}`}
                         onClick={() => setUserDetailOverlayUserId(u.id)}
                       >
-                        <td className="px-4 py-3 text-gray-800">{u.name}</td>
-                        <td className="px-4 py-3 text-gray-700">{u.email}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="relative flex-shrink-0">
+                              {u.avatar_url ? (
+                                <img
+                                  src={u.avatar_url}
+                                  alt={u.name}
+                                  className="w-9 h-9 rounded-full object-cover"
+                                />
+                              ) : (
+                                <div
+                                  className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0"
+                                  style={{ backgroundColor: '#1A381E' }}
+                                >
+                                  {u.name.charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                              <span
+                                className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white ${u.deleted_at ? 'bg-red-400' : 'bg-green-400'}`}
+                              />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">{u.name}</p>
+                              <p className="text-xs text-gray-500 truncate">{u.email}</p>
+                            </div>
+                          </div>
+                        </td>
                         <td className="px-4 py-3 text-gray-700">
                           {u.role.charAt(0).toUpperCase() + u.role.slice(1)}
                         </td>
