@@ -1,3 +1,5 @@
+import { EPSILON } from './reconciliationFormat';
+
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /**
@@ -17,7 +19,7 @@ export function planBatchCascade(batches, selectedBatchId, requestedQty) {
 
   const totalAvailable = nonZero.reduce((sum, b) => sum + b.quantity, 0);
 
-  if (totalAvailable < requestedQty - 0.0005) return null;
+  if (totalAvailable < requestedQty - EPSILON) return null;
 
   if (selected.quantity >= requestedQty) {
     return [{ id: selected.id, code: selected.code, harvestDate: selected.harvest_date, quantityDeducted: requestedQty }];
@@ -45,13 +47,13 @@ export function planBatchCascade(batches, selectedBatchId, requestedQty) {
     });
 
   for (const batch of others) {
-    if (remaining <= 0.0005) break;
+    if (remaining <= EPSILON) break;
     const take = Math.min(remaining, batch.quantity);
     plan.push({ id: batch.id, code: batch.code, harvestDate: batch.harvest_date, quantityDeducted: take });
     remaining -= take;
   }
 
-  if (remaining > 0.0005) return null;
+  if (remaining > EPSILON) return null;
 
   return plan;
 }

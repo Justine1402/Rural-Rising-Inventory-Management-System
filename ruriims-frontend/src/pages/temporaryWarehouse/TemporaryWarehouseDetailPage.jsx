@@ -1,13 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useUI } from '../../context/UIContext';
 import api from '../../api/axios';
-
-function formatDate(iso) {
-  if (!iso) return '—';
-  const [y, m, d] = iso.split('-');
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return `${months[parseInt(m, 10) - 1]} ${parseInt(d, 10)}, ${y}`;
-}
+import { formatDate } from '../../utils/formatDate';
 
 function SubTable({ title, headers, rows, emptyMessage }) {
   return (

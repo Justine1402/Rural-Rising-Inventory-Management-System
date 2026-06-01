@@ -1060,11 +1060,13 @@ URL and no read-only mode built into it.
 #### 2026-06-01 — `formatDate` extension (missed consumers)
 - Extended `formatDate` import to two additional consumers missed in the 2026-05-31 pass: `ReconciliationReviewPage` (local `const formatDate` definition removed; call sites `data.date_reconciled` and `data.date_reviewed`) and `CascadePreviewModal` (local `function formatDate` using `split('-').map(Number)` constructor removed; verified byte-identical output before replacing). Also migrated three inline `new Date(... + 'T00:00:00').toLocaleDateString(...)` expressions inside `handleExportPdf` closures — one in `IssueProductReportsPage`, two in `TransferRequestReportsPage`, and two in `ReceiveOrderReportsPage` — all of which had already imported the utility but were not using it in the PDF path. Import count now 8. Two pre-existing local `formatDate` definitions remain in `TemporaryWarehouseDetailPage` and `CloseTemporaryWarehousePage` — out of scope for this pass; noted in backlog below.
 
+#### 2026-06-01 — Cleanup pass (epsilon + TWH formatDate)
+- Migrated local `function formatDate(iso)` definitions in `TemporaryWarehouseDetailPage.jsx` and `CloseTemporaryWarehousePage.jsx` to the shared `src/utils/formatDate.js` utility. Import added, local definitions removed. `formatDate` consumer count now 10.
+- Migrated all 3 raw `0.0005` epsilon literals in `src/utils/planBatchCascade.js` to import and use `EPSILON` from `src/utils/reconciliationFormat.js`. Zero raw literals remain in frontend source. (PHP backend files also contain `0.0005` in their own scope — out of scope for this frontend-only pass; unchanged.)
+
 #### Deferred / Backlog
-- **epsilon literal duplication**: the raw literal `0.0005` (DISCREPANCY_EPSILON) appears in 7 places across the codebase instead of importing the named constant from `src/utils/reconciliationFormat.js`. Not harmful but inconsistent — migrate in a future cleanup pass.
 - **batch-sequence-generation trait**: sequence number generation for RO, TRF, IP, and Recon transactions is duplicated inline per controller; candidate for extraction into a shared Laravel trait.
 - **PIN-verification middleware**: PIN check logic is duplicated per transaction type; candidate for extraction into a shared trait or middleware.
-- **TemporaryWarehouse `formatDate` locals**: `TemporaryWarehouseDetailPage.jsx` and `CloseTemporaryWarehousePage.jsx` each define their own local `function formatDate(iso)` — not yet migrated to the shared utility.
 
 ---
 

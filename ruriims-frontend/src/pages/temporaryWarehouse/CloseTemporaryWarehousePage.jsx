@@ -4,17 +4,11 @@ import PinVerificationModal from '../../components/shared/PinVerificationModal';
 import { useAuth } from '../../context/AuthContext';
 import { useUI } from '../../context/UIContext';
 import { useWarehouse } from '../../context/WarehouseContext';
+import { formatDate } from '../../utils/formatDate';
 
 const readonlyClass =
   'w-full bg-gray-100 border border-transparent rounded-lg px-4 py-2.5 text-sm text-gray-500 cursor-not-allowed';
 const todayISO = new Date().toISOString().split('T')[0];
-
-function formatDate(iso) {
-  if (!iso) return '—';
-  const [y, m, d] = iso.split('-');
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return `${months[parseInt(m, 10) - 1]} ${parseInt(d, 10)}, ${y}`;
-}
 
 export default function CloseTemporaryWarehousePage() {
   const { user } = useAuth();
