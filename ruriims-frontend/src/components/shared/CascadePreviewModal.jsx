@@ -1,8 +1,4 @@
-const formatDate = (dateStr) => {
-  if (!dateStr) return '—';
-  const [y, m, d] = dateStr.split('-').map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-};
+import { formatDate } from '../../utils/formatDate';
 
 export default function CascadePreviewModal({ isOpen, skuCode, productName, qty, unit, plan, onClose }) {
   if (!isOpen || !plan) return null;
