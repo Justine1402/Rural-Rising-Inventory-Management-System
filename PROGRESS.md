@@ -748,6 +748,10 @@ Deferred:
 
 ## Known Issues / Flagged for Future Fix
 
+### ✅ ReconciliationController@store() — one-per-day guard race condition — FIXED (2026-06-02)
+
+Moved the `$alreadyExists` existence check inside `DB::transaction()` with `->lockForUpdate()`. The check now runs under the same lock as the insert, closing the TOCTOU window. Added `try/catch (\Exception $e)` wrapper around the transaction (consistent with `confirm()`) so the new `RuntimeException` thrown by the guard surfaces as a clean 422. The external `return 422` early-exit was removed; the external guards (manager-warehouse, validate, PIN) remain outside the transaction unchanged.
+
 ---
 
 ### ✅ Step 13.25 — Transaction Audit Pages — 2026-05-26
@@ -1067,6 +1071,77 @@ URL and no read-only mode built into it.
 #### Deferred / Backlog
 - **batch-sequence-generation trait**: sequence number generation for RO, TRF, IP, and Recon transactions is duplicated inline per controller; candidate for extraction into a shared Laravel trait.
 - **PIN-verification middleware**: PIN check logic is duplicated per transaction type; candidate for extraction into a shared trait or middleware.
+
+---
+
+### First Polishing Session — 2026-06-02
+
+#### ReconciliationListPage — Filter bar redesign + working status filter
+
+- Removed the three stub controls from the old filter bar: "Inventory Reconciliation" dropdown, "All Warehouses" dropdown, "Reports History" button. These were presentational placeholders with no logic.
+- Redesigned top bar as a two-sided flex row:
+  - **Left:** `Selected: <RC code>` (text + `font-bold` code span) rendered only when `hasSelection === true`; blank otherwise.
+  - **Right:** `All Status` dropdown + `+ New Reconciliation` / `+ Review & Confirm` button.
+- `statusFilter` state (`'all' | 'pending_review' | 'reviewed'`) added. Switching a filter option clears `selectedId`.
+- `statusDropdownOpen` boolean state with transparent `fixed inset-0 z-10` backdrop div for click-outside-to-close.
+- `filteredReconciliations` derived from `statusFilter`; table renders this, not the raw `reconciliations` array.
+
+#### ReconciliationReviewPage — Converted to overlay
+
+- Removed `Navbar`, full-page shell, and standalone routing pattern.
+- Rewritten as overlay (same visual shell as `ReceiveOrderAuditPage` and `TransferRequestAuditPage`):
+  - Backdrop: `fixed inset-0 bg-black/20 backdrop-blur-sm z-40` — clicks navigate to `/reconciliation`.
+  - Card: `fixed top-[105px] left-1/2 -translate-x-1/2 w-[1040px] max-h-[calc(100vh-130px)] overflow-y-auto bg-white rounded-lg shadow-xl z-50`
+  - Sticky dark green header: `← RETURN` left + RC code right.
+- `App.jsx` updated: `/reconciliation/:id/review` now renders `<><ReconciliationListPage /><ReconciliationReviewPage /></>` together.
+- STRUCTURE.md and TECHSTACK.md updated to document the overlay pattern.
+
+#### ReconciliationController — Four backend fixes
+
+- **`index()`**: Manager warehouse scoping added. Managers get `->where('warehouse_id', $user->warehouse_id)` unconditionally; admins get the optional `?warehouse_id` param filter.
+- **`store()`**: Two new guards added at the top of the method (before warehouse lookup):
+  - Manager-warehouse guard: 422 if `$user->role === 'manager' && $user->warehouse_id !== (int) warehouse_id`.
+  - One-per-day guard: 422 if a reconciliation already exists for that warehouse on today's date (`whereDate('created_at', today())->exists()`).
+- **`confirm()`**: Complete replacement of the PIN verification model. The old cross-PIN approach (querying another user's hashed PIN) was replaced by self-authentication — the verifier enters their own PIN. Three sequential guards: (1) already-reviewed 422; (2) self-exclusion — verifier ≠ reconciler for all roles; (3) warehouse guard — non-admin verifier must belong to the reconciliation's warehouse. The `DB::transaction` block (lockForUpdate + refresh + FIFO deduction + surplus creation) was unchanged. Removed the unused `use App\Models\User` import.
+- **`show()`**: Added `Request $request` to the method signature and a 403 warehouse guard: managers who call `GET /reconciliations/{id}` for a reconciliation outside their warehouse now receive a 403 instead of the full record.
+
+#### DashboardPage — FIFO/LIFO/FEFO sort accuracy fix (Branch A and Branch C)
+
+- The `.sort()` comparator on `displayedProducts` now uses a `getSortDate(product)` local function that branches on `activeWarehouse`:
+  - When `activeWarehouse` is set (Branch A or C): sort key = `product.harvest_date_per_warehouse?.[activeWarehouse.id]` — the same value displayed in the Harvest Date cell.
+  - When `activeWarehouse === null` (Branch B, admin all-warehouses): sort key = `getOldestActiveHarvestDate(product)` (FIFO/FEFO) or `getNewestActiveHarvestDate(product)` (LIFO) — cross-warehouse helpers, unchanged.
+- Previously, Branch A/C used the cross-warehouse helpers for sorting while displaying the per-warehouse date, causing mismatches on products with stock in multiple warehouses.
+
+#### Backend Fix — ReconciliationController@store() race condition (2026-06-02)
+
+- Removed the external `$alreadyExists` check (was TOCTOU — ran before `DB::transaction()` began).
+- Added the check inside `DB::transaction()` using `->lockForUpdate()->exists()` so it runs under the same gap lock as the insert. Two concurrent submissions now serialize correctly — the second sees the first's committed row and throws.
+- Added `try { ... } catch (\Exception $e) { return 422 }` wrapper around the transaction (consistent with `confirm()`). The `RuntimeException` thrown by the guard routes through this catch.
+- External guards (manager-warehouse, validate, PIN check) remain outside the transaction unchanged.
+
+#### Backend Fix — ReportController manager warehouse scoping (2026-06-02)
+
+- Added `$user = $request->user()` and manager override (`if ($user->role === 'manager') { $warehouseId = $user->warehouse_id; }`) to 6 methods: `allReports()`, `receiveOrders()`, `transferRequests()`, `issueProducts()`, `reconciliation()`, `inventorySummary()`.
+- `products()` and `temporaryWarehouses()` are unchanged — product master data and TWH records have no meaningful per-warehouse parent to scope by.
+- For `allReports()`, the `$warehouseId` variable was already in use; only `$user` fetch and the override were added.
+- For the other 5 methods, `$request->filled('warehouse_id')` / `$request->input('warehouse_id')` calls were replaced with the single `$warehouseId` variable (resolves to manager's warehouse unconditionally, or request param for admins).
+
+#### Documentation gap resolved — ProductDetailOverlay
+
+- `src/components/overlays/ProductDetailOverlay.jsx` — fully working overlay (dashboard product row click → batch detail view) that was not documented in STRUCTURE.md or TECHSTACK.md.
+- `productDetailOverlayProductId` / `setProductDetailOverlayProductId` UIContext state pair was also undocumented.
+- `GET /api/products/{product}/batches` endpoint (`ProductController@batches`) was undocumented in both TECHSTACK.md API table and STRUCTURE.md controllers list.
+- All three now documented in both files. The feature was built correctly; only the docs lagged.
+
+#### Reports — WarehouseTabs removed from 6 pages
+
+- Removed `import WarehouseTabs` and `<WarehouseTabs />` from: `ReportsHistoryPage`, `ProductReportsPage`, `ReceiveOrderReportsPage`, `TransferRequestReportsPage`, `IssueProductReportsPage`, `ReconciliationReportsPage`. These imports were incorrect — WarehouseTabs is a dashboard/list-page component, not a reports component.
+- `TempWarehouseReportsPage` and `InventorySummaryPage` had no WarehouseTabs and were untouched.
+
+#### ReportsFilterBar — Admin-only warehouse dropdown
+
+- Added `import { useAuth } from '../../context/AuthContext'` and `const { user } = useAuth()` inside the component.
+- Wrapped the warehouse `<select>` element with `{user?.role === 'admin' && (...)}`. Non-admin users (managers) no longer see the warehouse filter dropdown. The `warehouseId` prop and state are unchanged — only the UI element is conditionally hidden.
 
 ---
 

@@ -114,6 +114,13 @@ ruriims-frontend/
     │   ├── modals/
     │   │   └── ProfileModal.jsx         ← Profile overlay (avatar click)
     │   │
+    │   ├── overlays/
+    │   │   └── ProductDetailOverlay.jsx ← Product batch detail overlay; triggered by clicking any
+    │   │                                    product row on DashboardPage; reads productDetailOverlayProductId
+    │   │                                    from UIContext; calls GET /api/products/{id}/batches;
+    │   │                                    shows product info + active batches table; manager-scoped
+    │   │                                    by backend (only sees batches at their warehouse)
+    │   │
     │   ├── shared/
     │   │   ├── PinVerificationModal.jsx     ← 6-digit PIN modal (all transactions)
     │   │   ├── AddProductsModal.jsx         ← Master product picker (Receive, Transfer, Issue)
@@ -205,7 +212,7 @@ ruriims-frontend/
 /transfer-requests/:id              → TransferRequestListPage + TransferRequestFormPage overlay (accomplish) (protected)
 /reconciliation                     → ReconciliationListPage           (protected)
 /reconciliation/new                 → ReconciliationFormPage           (protected)
-/reconciliation/:id/review          → ReconciliationReviewPage         (protected)
+/reconciliation/:id/review          → ReconciliationListPage + ReconciliationReviewPage overlay (protected)
 /issue-products/:id/audit           → IssueProductAuditPage            (protected)
 /reports                            → ReportsHistoryPage               (protected)
 /reports/products                   → ProductReportsPage               (protected)
@@ -284,6 +291,8 @@ a product is created — without navigating away.
   refreshReceiveOrders: function,         // call this to trigger an RO list re-fetch
   transferRequestRefreshKey: number,      // increments on each successful TRF create/accomplish
   refreshTransferRequests: function,      // call this to trigger a TRF list re-fetch
+  productDetailOverlayProductId: number | null, // null = closed; number = product id to view batches
+  setProductDetailOverlayProductId: function,   // set to product.id to open; null to close
   reconciliationFormOpen: boolean,
   setReconciliationFormOpen: function,
   reconciliationRefreshKey: number,       // increments on each successful RC create/confirm
@@ -306,6 +315,7 @@ a product is created — without navigating away.
 - `CloseTemporaryWarehousePage` — always mounted; self-guards on `closeTemporaryWarehouseOverlayTwhId !== null`
 - `TemporaryWarehouseDetailPage` — always mounted; self-guards on `temporaryWarehouseDetailOverlayTwhId !== null`
 - `ReconciliationFormPage` — when `reconciliationFormOpen` is true
+- `ProductDetailOverlay` — always mounted; self-guards on `productDetailOverlayProductId !== null`; triggered by clicking any product row on DashboardPage
 
 The Navbar buttons set boolean flags for the first five. `CloseTemporaryWarehousePage` and
 `TemporaryWarehouseDetailPage` open by setting the ID-carrying state to the TWH id to view.
@@ -705,6 +715,12 @@ rendered inside `DashboardPage` — they are not separate full pages.
 transactions are visible as part of the dashboard's transaction record area.
 There is no separate `IssueProductListPage` — issue history is surfaced here and
 in the Reports section.
+
+**Product row click:** Clicking any product row in all three dashboard branches sets
+`productDetailOverlayProductId = product.id` in UIContext, opening `ProductDetailOverlay`.
+The overlay shows product master data (Name, Category, Unit, Shelf Life) and a table
+of active batches (Stock-In-Use Code | Warehouse | Quantity | Harvest Date). The backend
+scopes batches to `user.warehouse_id` for managers; admins see batches across all warehouses.
 
 ---
 
@@ -1176,22 +1192,19 @@ All fields are read-only. No action buttons other than RETURN.
 Rendered inside the dashboard area when the `Inventory` dropdown →
 "Inventory Reconciliation" is selected.
 
-Filter bar (within the content area, above the table):
-Inventory Reconciliation dropdown | All Warehouses | All Status | Reports History
+**Top bar (two-sided layout, within the content card, not the Navbar):**
+- **Left:** `Selected: <RC code>` (plain text, code in `font-bold`) when a Pending Review row is selected; blank otherwise.
+- **Right:** `All Status` dropdown filter + `+ New Reconciliation` / `+ Review & Confirm` button.
 
-A `+ New Reconciliation` button appears in the top-left of this content area
-(not in the main Navbar).
+The `All Status` dropdown is a working filter (not a stub). Options: All Status | Pending Review | Reviewed. Selecting a filter option clears `selectedId`. The dropdown closes on outside click via a transparent `fixed inset-0 z-10` backdrop div. The filtered result drives `filteredReconciliations` — the table renders this array, not the raw `reconciliations` array.
 
 **Columns:**
 Reconciliation Code | Warehouse | Date Reconciled | Products with Discrepancy |
 Reconciled By | Reviewed By | Status
 
-Status: `Pending Review` (orange) / `Reviewed` (green)
+Status: `Pending Review` (amber) / `Reviewed` (green)
 
-**Single-row select behavior:** Clicking a row selects it (highlights light green).
-With exactly one Pending Review row selected, the `+ New Reconciliation` button
-changes to `+ Review & Confirm` → navigates to `/reconciliation/:id/review`.
-Clicking a selected row again deselects it. Only one row can be selected at a time.
+**Single-row select behavior:** Clicking a Pending Review row selects it (highlights `#f0fdf4` + 4px `#409645` left border). With a row selected, the right-side button label changes to `+ Review & Confirm` → navigates to `/reconciliation/:id/review`. Clicking the selected row again deselects it. Only one row can be selected at a time. Clicking a Reviewed row navigates directly to the review overlay — no selection state.
 
 ---
 
@@ -1223,29 +1236,35 @@ SUBMIT button → `PinVerificationModal` (same manager) → on verified →
 
 ### `ReconciliationReviewPage` (proto p.49-51, SRS §3.8 Reviewing)
 
-Accessed via `+ Review & Confirm` → `/reconciliation/:id/review`.
+Route: `/reconciliation/:id/review` — **overlay** rendered over `ReconciliationListPage` (same pattern as `ReceiveOrderAuditPage` and `TransferRequestAuditPage`).
 
-Header: RETURN button + "Inventory Reconciliation" title + RC code top-right
-(e.g., "RC-QC-000-003")
+Overlay structure:
+- **Backdrop:** `fixed inset-0 bg-black/20 backdrop-blur-sm z-40` — clicking the backdrop navigates to `/reconciliation`.
+- **Card:** `fixed top-[105px] left-1/2 -translate-x-1/2 w-[1040px] max-h-[calc(100vh-130px)] overflow-y-auto bg-white rounded-lg shadow-xl z-50`
+- **Sticky dark green header:** `style={{ backgroundColor: '#1A381E' }}`, `sticky top-0 z-10` — `← RETURN` on the left, RC code on the right.
 
-Read-only fields: Reconciled By, Date, Reviewed By (blank until confirmed),
-Warehouse.
+On mount: fetches `GET /api/reconciliations/{id}`. RETURN navigates to `/reconciliation`.
 
-Product table (all read-only): Product SKU | Product Name | Expected Stock |
-Actual Count | Discrepancy | Remarks
+Metadata grid (2-column): Reconciled By | Date Reconciled | Reviewed By | Date Reviewed | Warehouse.
 
-**Inventory Adjustment Upon Confirmation** section (green banner, below table):
-Shows only products with discrepancies. Columns:
-Product Name | Adjustment (old value → new value, e.g., "25 KG → 23 KG") |
-Variance (e.g., "−2 KG")
+Read-only product table (6 columns): Product SKU | Product Name | Expected Stock | Actual Count | Discrepancy | Remarks
 
-CONFIRM button → `PinVerificationModal` — PIN verification on CONFIRM uses one of two rules depending on the caller's role:
-- **Manager:** PIN must belong to a different user assigned to the same warehouse as the reconciliation (different-manager-same-branch rule, per SRS §3.7). Self-exclusion is enforced by excluding the auth user from the candidate pool.
-- **Admin:** PIN must be the admin's own PIN. Admin bypass exists because the master admin account has organization-wide authority over all warehouses (per client agreement) and is not assigned to any single branch (`warehouse_id = null`). Self-exclusion is enforced explicitly — the admin cannot confirm a reconciliation they themselves created.
+**Inventory Adjustment Upon Confirmation** sub-table (below main table):
+Filtered to items where `|discrepancy| >= EPSILON`. Empty-state row "No adjustments — all counts matched." when all matched.
+Columns: Product Name | Adjustment (Expected → Actual arrow via `formatAdjustmentArrow`) | Variance (signed, color-coded via `formatDiscrepancy`)
 
-→ on verified → "Accomplished RC-QC-000-003" label appears → Reviewed By is filled
-in → status changes to Reviewed → inventory quantities adjusted to reflect
-actual counts (FIFO deduction applied by backend).
+**Status-based action row:**
+- `pending_review`: CONFIRM button (btn-brand) rendered right-aligned; error paragraph above buttons after a failed PIN attempt; `successCode` label replaces button row on success.
+- `reviewed`: No CONFIRM, no PIN modal — review page is fully read-only.
+
+CONFIRM button → `PinVerificationModal` — PIN verification uses **self-authentication**: the verifier enters their own PIN. The backend enforces three sequential guards:
+1. **Already reviewed guard** — 422 if `status === 'reviewed'`.
+2. **Self-exclusion (all roles)** — 422 if `user.id === reconciliation.reconciled_by`.
+3. **Warehouse guard (managers only)** — 422 if the verifier's `warehouse_id !== reconciliation.warehouse_id`. Admins (`warehouse_id = null`) bypass this check.
+
+The previous cross-PIN model (querying another manager's hashed PIN from the DB) was replaced by self-authentication to fix a bug where the confirm always failed when only one manager existed at a warehouse.
+
+→ on verified → "Accomplished RC-QC-000-003" label appears → `reviewed_by` filled in → status changes to Reviewed → inventory quantities adjusted per FIFO deduction or RCB surplus batch (backend `confirm()`).
 
 ---
 
@@ -1255,11 +1274,13 @@ All reports pages are reached from the `Reports History` Navbar button → `/rep
 
 **Shared filter bar (top of every reports page):**
 - Report type dropdown (leftmost) — changes both the URL and the table columns
-- All Warehouses dropdown — filter by specific warehouse
+- All Warehouses dropdown — **admin only** (`user?.role === 'admin'`); hidden for managers; filter by specific warehouse
 - Date From / Date To — date range filters
 - Inventory Summary Report button — navigates to `/reports/inventory-summary`
 - Export as PDF button (appears on specific type views, not All Reports)
 - Search bar (magnifier icon, top-right)
+
+Reports pages do **not** include `WarehouseTabs` — warehouse-scoping on reports is handled by the filter bar's warehouse dropdown (admin only; hidden from managers). `ReportController` does not server-side scope by manager warehouse — the frontend omitting the `warehouse_id` param is the only current guard. `WarehouseTabs` appears only on the dashboard and list pages (Receive Orders, Transfer Requests, Reconciliation).
 
 **Report type dropdown options:**
 
@@ -1463,7 +1484,7 @@ One controller per feature in `ruriims-backend/app/Http/Controllers/`:
 ```
 AuthController.php                  login, logout, user
 UserController.php                  index, store, show, update, destroy, restore, resetPassword, resetPin
-ProductController.php               index, store, show
+ProductController.php               index, store, show, batches
 ReceiveOrderController.php          index, store, show, complete
 TransferRequestController.php       index, store, show, accomplish
 IssueProductController.php          index, store, show

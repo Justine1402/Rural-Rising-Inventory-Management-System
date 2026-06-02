@@ -154,6 +154,7 @@ Routes defined in `ruriims-backend/routes/api.php`:
 | `GET` | `/api/products` | `auth:sanctum` | `{ "products": [...], "warehouses": [...] }` — includes real stock per warehouse |
 | `POST` | `/api/products` | `auth:sanctum` | `{ "product": {...} }` — validates + PIN check + generates SKU |
 | `GET` | `/api/products/{product}` | `auth:sanctum` | `{ "product": {...} }` |
+| `GET` | `/api/products/{product}/batches` | `auth:sanctum` | `{ "product": {...}, "batches": [...] }` — returns active StockInUse records; scoped to manager's warehouse; admin sees all |
 | `POST` | `/api/pin/verify` | `auth:sanctum` | `{ "verified": true }` or 422 |
 | `GET` | `/api/stock-in-use` | `auth:sanctum` | `{ "batches": [...] }` — filters by `sku_code` + `warehouse_id`, quantity > 0, FEFO order |
 | `GET` | `/api/receive-orders` | `auth:sanctum` | `{ "orders": [...] }` |
@@ -197,6 +198,8 @@ Rural Rising Inventory Management System/   ← project root
 │   │   │   │   └── WarehouseTabs.jsx      ← warehouse tab switcher; wired to WarehouseContext
 │   │   │   ├── modals/
 │   │   │   │   └── ProfileModal.jsx       ← profile overlay (change password + change PIN)
+│   │   │   ├── overlays/
+│   │   │   │   └── ProductDetailOverlay.jsx ← product batch detail overlay; triggered by DashboardPage row click; reads productDetailOverlayProductId from UIContext; calls GET /api/products/{id}/batches; manager-scoped by backend
 │   │   │   ├── shared/
 │   │   │   │   ├── PinVerificationModal.jsx ← 6-digit PIN entry modal (z-[60])
 │   │   │   │   ├── AddProductsModal.jsx   ← multi-select master SKU picker (z-[70])
@@ -208,7 +211,7 @@ Rural Rising Inventory Management System/   ← project root
 │   │   ├── context/
 │   │   │   ├── AuthContext.jsx            ← user session state (user, login, logout)
 │   │   │   ├── WarehouseContext.jsx       ← active warehouse; fetches /api/warehouses on user change (auth-safe)
-│   │   │   └── UIContext.jsx              ← overlay flags (createProduct/receiveOrder/transferRequest/issueProduct/temporaryWarehouse/reconciliation/userForm); ID-carrying overlay state (closeTemporaryWarehouseOverlayTwhId, temporaryWarehouseDetailOverlayTwhId, userDetailOverlayUserId — null=closed, number=open); productRefreshKey, receiveOrderRefreshKey, transferRequestRefreshKey, reconciliationRefreshKey, userRefreshKey + matching refresh() functions
+│   │   │   └── UIContext.jsx              ← overlay flags (createProduct/receiveOrder/transferRequest/issueProduct/temporaryWarehouse/reconciliation/userForm); ID-carrying overlay state (closeTemporaryWarehouseOverlayTwhId, temporaryWarehouseDetailOverlayTwhId, userDetailOverlayUserId, productDetailOverlayProductId — null=closed, number=open); productRefreshKey, receiveOrderRefreshKey, transferRequestRefreshKey, reconciliationRefreshKey, userRefreshKey + matching refresh() functions
 │   │   ├── pages/
 │   │   │   ├── admin/
 │   │   │   │   ├── UserManagementPage.jsx ← admin-only; 7-column user list; client-side search; filter stubs; row click → userDetailOverlayUserId; + New User → userFormOpen
@@ -228,9 +231,9 @@ Rural Rising Inventory Management System/   ← project root
 │   │   │       ├── TransferRequestFormPage.jsx ← dual-mode: create (UIContext overlay) + accomplish (/transfer-requests/:id); two-step product flow
 │   │   │       └── TransferRequestAuditPage.jsx ← read-only audit overlay; /transfer-requests/:id/audit
 │   │   │   ├── reconciliation/
-│   │   │       ├── ReconciliationListPage.jsx ← standalone page; re-fetches on location.key + reconciliationRefreshKey; selectedId toggle; label-swap button (+ New Reconciliation / + Review & Confirm)
+│   │   │       ├── ReconciliationListPage.jsx ← standalone page; re-fetches on location.key + reconciliationRefreshKey; working statusFilter dropdown (All Status / Pending Review / Reviewed); two-sided top bar (left: Selected: {code}; right: dropdown + action button); selectedId toggle; label-swap button (+ New Reconciliation / + Review & Confirm)
 │   │   │       ├── ReconciliationFormPage.jsx ← UIContext overlay (no route); create flow; auto-populates from expectedStock endpoint; three-state discrepancy encoding; same-manager PIN
-│   │   │       └── ReconciliationReviewPage.jsx ← standalone full page (/reconciliation/:id/review); read-only review + confirm; status-branched (pending_review shows CONFIRM + PIN modal; reviewed is fully read-only); post-confirm refreshes reconciliations + products, navigates to list after 1.5s
+│   │   │       └── ReconciliationReviewPage.jsx ← overlay over ReconciliationListPage (/reconciliation/:id/review); backdrop + card with sticky dark-green header; read-only review + confirm; status-branched (pending_review shows CONFIRM + PIN modal; reviewed is fully read-only); post-confirm refreshes reconciliations + products, navigates to list after 1.5s
 │   │   │   ├── issueProduct/
 │   │   │   │   ├── IssueProductFormPage.jsx   ← UIContext overlay (no route); single-stage issue + StockInUse deduction; same-manager PIN
 │   │   │   │   └── IssueProductAuditPage.jsx  ← read-only audit overlay; /issue-products/:id/audit
@@ -245,7 +248,8 @@ Rural Rising Inventory Management System/   ← project root
 │   │   │       ├── TransferRequestReportsPage.jsx  ← /reports/transfer-requests; PDF export
 │   │   │       ├── IssueProductReportsPage.jsx     ← /reports/issue-products; PDF export
 │   │   │       ├── TempWarehouseReportsPage.jsx    ← /reports/temporary-warehouses; row click → detail overlay
-│   │   │       └── ReconciliationReportsPage.jsx   ← /reports/reconciliation
+│   │   │       ├── ReconciliationReportsPage.jsx   ← /reports/reconciliation
+│   │   │       └── InventorySummaryPage.jsx        ← /reports/inventory-summary; per-warehouse + grand total; PDF export
 │   │   ├── utils/
 │   │   │   ├── planBatchCascade.js        ← frontend mirror of PlansBatchCascade trait; nearest-harvest-date cascade planner with FIFO tiebreak
 │   │   │   ├── reconciliationFormat.js    ← shared discrepancy formatter (formatDiscrepancy, formatAdjustmentArrow, EPSILON); used by ReconciliationFormPage and ReconciliationReviewPage
@@ -267,14 +271,14 @@ Rural Rising Inventory Management System/   ← project root
     │   │       ├── AuthController.php          ← login, logout, user
     │   │       ├── UserController.php          ← index, store, show, update, destroy, restore, resetPassword, resetPin (admin-only; SoftDeletes; role-conditional warehouse_id validation)
     │   │       ├── WarehouseController.php     ← index (returns all warehouses including TWH; is_temporary serialized via model cast)
-    │   │       ├── ProductController.php       ← index (with warehouse_stock + harvest_date), store (PIN-verified), show
+    │   │       ├── ProductController.php       ← index (with warehouse_stock + harvest_date), store (PIN-verified), show, batches (active StockInUse per product; manager-scoped to own warehouse)
     │   │       ├── PinController.php           ← verify (standalone PIN check endpoint)
     │   │       ├── StockInUseController.php    ← index (batches by sku_code + warehouse_id, FEFO; includes id in response)
     │   │       ├── ReceiveOrderController.php  ← index, store (per-warehouse RO code via trait), show, complete
     │   │       ├── TransferRequestController.php ← index, store (per-source-warehouse TRF code via trait), show, accomplish
     │   │       ├── IssueProductController.php  ← index, store (same-manager PIN + ISS code via trait + StockInUse decrement), show
     │   │       ├── TemporaryWarehouseController.php ← index (?status filter), store (same-manager PIN + inline TWH code gen + creates warehouses row + TWH row), show (products_transferred_in/issued/returned), close (same-manager PIN + lockForUpdate+refresh+re-check + per-batch deduction + dest StockInUse creation)
-    │   │       └── ReconciliationController.php    ← index (?warehouse_id+?status filters, products_with_discrepancy count), expectedStock (per-product totals at warehouse), store (same-manager PIN + RC code + snapshot items), show (with items+adjustments), confirm (different-manager-same-branch PIN + lockForUpdate+refresh+re-check + FIFO deduction + RCB surplus batch creation)
+    │   │       └── ReconciliationController.php    ← index (warehouse-scoped for managers; ?status filter; products_with_discrepancy count), expectedStock, store (same-manager PIN + RC code + one-per-day guard + manager-warehouse guard + snapshot items), show (403 guard for managers accessing other warehouses), confirm (self-auth PIN + self-exclusion + warehouse guard + lockForUpdate+refresh+re-check + FIFO deduction + RCB surplus batch creation)
     │   ├── Traits/
     │   │   ├── GeneratesTransactionCode.php    ← per-warehouse scoped code generator; used by RO, TRF, ISS controllers
     │   │   └── PlansBatchCascade.php           ← nearest-harvest-date batch cascade planner with FIFO tiebreak and fallback; used by TRF and ISS controllers

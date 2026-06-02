@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import api from '../../api/axios';
 import Navbar from '../../components/layout/Navbar';
-import WarehouseTabs from '../../components/layout/WarehouseTabs';
 import ReportsFilterBar from '../../components/shared/ReportsFilterBar';
 import StatusBadge from '../../components/ui/StatusBadge';
 import { useWarehouse } from '../../context/WarehouseContext';
@@ -48,7 +47,6 @@ export default function ReportsHistoryPage() {
   return (
     <div className="min-h-screen bg-gray-100">
       <Navbar />
-      <WarehouseTabs />
 
       <div className="p-6">
         <div className="bg-white rounded shadow">

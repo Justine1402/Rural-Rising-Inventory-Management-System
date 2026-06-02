@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../api/axios';
 import Navbar from '../../components/layout/Navbar';
-import WarehouseTabs from '../../components/layout/WarehouseTabs';
 
 const fmtIssueType = (t) => t === 'internal_use' ? 'Internal Use' : 'Sale';
 
@@ -23,7 +22,6 @@ export default function IssueProductAuditPage() {
   return (
     <div className="min-h-screen bg-gray-100">
       <Navbar />
-      <WarehouseTabs />
 
       <div className="p-6">
         <div className="bg-white rounded shadow overflow-hidden">

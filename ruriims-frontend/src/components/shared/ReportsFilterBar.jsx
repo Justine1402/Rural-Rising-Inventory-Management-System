@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 const TYPE_OPTIONS = [
   { label: 'All Reports',                      value: 'all',                  path: '/reports' },
@@ -35,6 +36,7 @@ export default function ReportsFilterBar({
   onExportPdf,
 }) {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const handleTypeChange = (e) => {
     const newValue = e.target.value;
@@ -59,17 +61,19 @@ export default function ReportsFilterBar({
         ))}
       </select>
 
-      {/* Warehouse */}
-      <select
-        value={warehouseId}
-        onChange={(e) => onWarehouseChange(e.target.value)}
-        className={`${inputClass} w-48`}
-      >
-        <option value="">All Warehouses</option>
-        {permanentWarehouses.map((w) => (
-          <option key={w.id} value={String(w.id)}>{w.name}</option>
-        ))}
-      </select>
+      {/* Warehouse — admin only */}
+      {user?.role === 'admin' && (
+        <select
+          value={warehouseId}
+          onChange={(e) => onWarehouseChange(e.target.value)}
+          className={`${inputClass} w-48`}
+        >
+          <option value="">All Warehouses</option>
+          {permanentWarehouses.map((w) => (
+            <option key={w.id} value={String(w.id)}>{w.name}</option>
+          ))}
+        </select>
+      )}
 
       {/* Date From */}
       <div className="flex items-center">

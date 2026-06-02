@@ -20,10 +20,15 @@ class ReportController extends Controller
 
     public function allReports(Request $request)
     {
+        $user        = $request->user();
         $warehouseId = $request->input('warehouse_id');
         $dateFrom    = $request->input('date_from');
         $dateTo      = $request->input('date_to');
         $search      = $request->input('search');
+
+        if ($user->role === 'manager') {
+            $warehouseId = $user->warehouse_id;
+        }
 
         $rows = collect();
 
@@ -191,10 +196,17 @@ class ReportController extends Controller
 
     public function receiveOrders(Request $request)
     {
+        $user        = $request->user();
+        $warehouseId = $request->input('warehouse_id');
+
+        if ($user->role === 'manager') {
+            $warehouseId = $user->warehouse_id;
+        }
+
         $query = ReceiveOrder::with(['warehouse', 'creator', 'verifier', 'items']);
 
-        if ($request->filled('warehouse_id')) {
-            $query->where('warehouse_id', $request->input('warehouse_id'));
+        if ($warehouseId) {
+            $query->where('warehouse_id', $warehouseId);
         }
         if ($request->filled('date_from')) {
             $query->whereDate('date_ordered', '>=', $request->input('date_from'));
@@ -231,10 +243,17 @@ class ReportController extends Controller
 
     public function transferRequests(Request $request)
     {
+        $user        = $request->user();
+        $warehouseId = $request->input('warehouse_id');
+
+        if ($user->role === 'manager') {
+            $warehouseId = $user->warehouse_id;
+        }
+
         $query = TransferRequest::with(['sourceWarehouse', 'destinationWarehouse', 'requester', 'verifier', 'items']);
 
-        if ($request->filled('warehouse_id')) {
-            $query->where('source_warehouse_id', $request->input('warehouse_id'));
+        if ($warehouseId) {
+            $query->where('source_warehouse_id', $warehouseId);
         }
         if ($request->filled('date_from')) {
             $query->whereDate('date_requested', '>=', $request->input('date_from'));
@@ -266,10 +285,17 @@ class ReportController extends Controller
 
     public function issueProducts(Request $request)
     {
+        $user        = $request->user();
+        $warehouseId = $request->input('warehouse_id');
+
+        if ($user->role === 'manager') {
+            $warehouseId = $user->warehouse_id;
+        }
+
         $query = IssueProduct::with(['warehouse', 'issuedBy', 'items.product']);
 
-        if ($request->filled('warehouse_id')) {
-            $query->where('warehouse_id', $request->input('warehouse_id'));
+        if ($warehouseId) {
+            $query->where('warehouse_id', $warehouseId);
         }
         if ($request->filled('date_from')) {
             $query->whereDate('date_issued', '>=', $request->input('date_from'));
@@ -335,10 +361,17 @@ class ReportController extends Controller
 
     public function reconciliation(Request $request)
     {
+        $user        = $request->user();
+        $warehouseId = $request->input('warehouse_id');
+
+        if ($user->role === 'manager') {
+            $warehouseId = $user->warehouse_id;
+        }
+
         $query = Reconciliation::with(['warehouse', 'reconciledBy', 'reviewedBy', 'items']);
 
-        if ($request->filled('warehouse_id')) {
-            $query->where('warehouse_id', $request->input('warehouse_id'));
+        if ($warehouseId) {
+            $query->where('warehouse_id', $warehouseId);
         }
         if ($request->filled('date_from')) {
             $query->whereDate('date_reconciled', '>=', $request->input('date_from'));
@@ -370,10 +403,17 @@ class ReportController extends Controller
 
     public function inventorySummary(Request $request)
     {
+        $user        = $request->user();
+        $warehouseId = $request->input('warehouse_id');
+
+        if ($user->role === 'manager') {
+            $warehouseId = $user->warehouse_id;
+        }
+
         $stockQuery = StockInUse::with(['product', 'warehouse'])->where('quantity', '>', 0);
 
-        if ($request->filled('warehouse_id')) {
-            $stockQuery->where('warehouse_id', $request->input('warehouse_id'));
+        if ($warehouseId) {
+            $stockQuery->where('warehouse_id', $warehouseId);
         }
 
         $allStock = $stockQuery->get();

@@ -92,17 +92,6 @@ class ReconciliationController extends Controller
             ], 422);
         }
 
-        // Guard: one reconciliation per warehouse per calendar day (any status)
-        $alreadyExists = Reconciliation::where('warehouse_id', $request->input('warehouse_id'))
-            ->whereDate('created_at', today())
-            ->exists();
-
-        if ($alreadyExists) {
-            return response()->json([
-                'message' => 'A reconciliation has already been submitted for this warehouse today. Only one reconciliation per warehouse per day is allowed.',
-            ], 422);
-        }
-
         $warehouseId = $request->input('warehouse_id');
         $warehouse   = Warehouse::find($warehouseId);
 
@@ -139,7 +128,21 @@ class ReconciliationController extends Controller
             return response()->json(['message' => 'Incorrect PIN.'], 422);
         }
 
+        try {
         $reconciliation = DB::transaction(function () use ($request, $warehouse, $user) {
+            // One-per-day guard inside transaction — prevents TOCTOU race with concurrent submissions
+            $alreadyExists = Reconciliation::where('warehouse_id', $warehouse->id)
+                ->whereDate('created_at', today())
+                ->lockForUpdate()
+                ->exists();
+
+            if ($alreadyExists) {
+                throw new \RuntimeException(
+                    'A reconciliation has already been submitted for this warehouse today. ' .
+                    'Only one reconciliation per warehouse per day is allowed.'
+                );
+            }
+
             $code = $this->generateTransactionCode('RC', $warehouse->id, $warehouse->code, Reconciliation::class);
 
             $reconciliation = Reconciliation::create([
@@ -173,11 +176,14 @@ class ReconciliationController extends Controller
 
             return $reconciliation;
         });
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         return response()->json(['reconciliation' => ['transaction_code' => $reconciliation->transaction_code]], 201);
     }
 
-    public function show($id)
+    public function show(Request $request, $id)
     {
         $reconciliation = Reconciliation::with([
             'warehouse',
@@ -186,6 +192,11 @@ class ReconciliationController extends Controller
             'items.product',
             'items.adjustments.stockInUse',
         ])->findOrFail($id);
+
+        $user = $request->user();
+        if ($user->role === 'manager' && $reconciliation->warehouse_id !== $user->warehouse_id) {
+            return response()->json(['message' => 'You are not authorized to view this reconciliation.'], 403);
+        }
 
         return response()->json(['reconciliation' => [
             'id'               => $reconciliation->id,
