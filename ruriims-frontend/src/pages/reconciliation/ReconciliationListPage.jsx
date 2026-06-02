@@ -22,6 +22,8 @@ export default function ReconciliationListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -45,6 +47,11 @@ export default function ReconciliationListPage() {
 
   const hasSelection = selectedId !== null;
 
+  const statusLabels = { all: 'All Status', pending_review: 'Pending Review', reviewed: 'Reviewed' };
+  const filteredReconciliations = statusFilter === 'all'
+    ? reconciliations
+    : reconciliations.filter((r) => r.status === statusFilter);
+
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       <Navbar />
@@ -54,36 +61,52 @@ export default function ReconciliationListPage() {
 
           {/* Top bar */}
           <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
-            <button
-              onClick={hasSelection
-                ? () => navigate(`/reconciliation/${selectedId}/review`)
-                : () => {
-                    if (activeWarehouse?.isTemporary) {
-                      alert('Reconciliation is not available for temporary warehouses.');
-                      return;
-                    }
-                    setReconciliationFormOpen(true);
-                  }}
-              className="btn-brand text-white text-xs font-bold px-4 py-1.5 rounded transition-colors"
-            >
-              {hasSelection ? '+ Review & Confirm' : '+ New Reconciliation'}
-            </button>
+            <div>
+              {hasSelection && (
+                <span className="text-sm text-gray-700">
+                  Selected: <span className="font-bold">{reconciliations.find((r) => r.id === selectedId)?.transaction_code}</span>
+                </span>
+              )}
+            </div>
 
             <div className="flex items-center gap-2">
-              <button className="flex items-center gap-1 border border-gray-300 text-gray-600 text-xs px-3 py-1.5 rounded">
-                Inventory Reconciliation <ChevronDown />
-              </button>
-              <button className="flex items-center gap-1 border border-gray-300 text-gray-600 text-xs px-3 py-1.5 rounded">
-                All Warehouses <ChevronDown />
-              </button>
-              <button className="flex items-center gap-1 border border-gray-300 text-gray-600 text-xs px-3 py-1.5 rounded">
-                All Status <ChevronDown />
-              </button>
+              <div className="relative">
+                <button
+                  onClick={() => setStatusDropdownOpen((o) => !o)}
+                  className="flex items-center gap-1 border border-gray-300 text-gray-600 text-xs px-3 py-1.5 rounded"
+                >
+                  {statusLabels[statusFilter]} <ChevronDown />
+                </button>
+                {statusDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setStatusDropdownOpen(false)} />
+                    <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded shadow-md z-20 min-w-[150px]">
+                      {Object.entries(statusLabels).map(([value, label]) => (
+                        <button
+                          key={value}
+                          onClick={() => { setStatusFilter(value); setStatusDropdownOpen(false); setSelectedId(null); }}
+                          className={`block w-full text-left px-4 py-2 text-xs hover:bg-gray-50 ${statusFilter === value ? 'font-semibold text-gray-900' : 'text-gray-600'}`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
               <button
-                onClick={() => navigate('/reports/temporary-warehouses')}
-                className="btn-brand text-white text-xs font-medium px-3 py-1.5 rounded transition-colors"
+                onClick={hasSelection
+                  ? () => navigate(`/reconciliation/${selectedId}/review`)
+                  : () => {
+                      if (activeWarehouse?.isTemporary) {
+                        alert('Reconciliation is not available for temporary warehouses.');
+                        return;
+                      }
+                      setReconciliationFormOpen(true);
+                    }}
+                className="btn-brand text-white text-xs font-bold px-4 py-1.5 rounded transition-colors"
               >
-                Reports History
+                {hasSelection ? '+ Review & Confirm' : '+ New Reconciliation'}
               </button>
             </div>
           </div>
@@ -108,10 +131,10 @@ export default function ReconciliationListPage() {
               {error && (
                 <tr><td colSpan={7} className="px-5 py-6 text-center text-red-500">{error}</td></tr>
               )}
-              {!loading && !error && reconciliations.length === 0 && (
+              {!loading && !error && filteredReconciliations.length === 0 && (
                 <tr><td colSpan={7} className="px-5 py-6 text-center text-gray-400">No reconciliations yet.</td></tr>
               )}
-              {!loading && !error && reconciliations.map((rec) => {
+              {!loading && !error && filteredReconciliations.map((rec) => {
                 const selected = selectedId === rec.id;
                 return (
                   <tr

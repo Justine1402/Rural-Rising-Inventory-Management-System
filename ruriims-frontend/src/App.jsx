@@ -108,7 +108,11 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
       <Route path="/reconciliation" element={<ProtectedRoute><ReconciliationListPage /></ProtectedRoute>} />
-      <Route path="/reconciliation/:id/review" element={<ProtectedRoute><ReconciliationReviewPage /></ProtectedRoute>} />
+      <Route path="/reconciliation/:id/review" element={
+        <ProtectedRoute>
+          <><ReconciliationListPage /><ReconciliationReviewPage /></>
+        </ProtectedRoute>
+      } />
       <Route path="/issue-products/:id/audit" element={<ProtectedRoute><IssueProductAuditPage /></ProtectedRoute>} />
       <Route path="/reports/products" element={<ProtectedRoute><ProductReportsPage /></ProtectedRoute>} />
       <Route path="/reports/receive-orders" element={<ProtectedRoute><ReceiveOrderReportsPage /></ProtectedRoute>} />
