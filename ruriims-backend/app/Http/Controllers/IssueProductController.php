@@ -18,19 +18,26 @@ class IssueProductController extends Controller
     use GeneratesTransactionCode;
     use PlansBatchCascade;
 
-    public function index()
+    public function index(Request $request)
     {
-        $issues = IssueProduct::with(['warehouse', 'issuedBy'])
-            ->orderByDesc('created_at')
-            ->get()
-            ->map(fn ($ip) => [
-                'id'          => $ip->id,
-                'code'        => $ip->code,
-                'warehouse'   => $ip->warehouse->name,
-                'issue_type'  => $ip->issue_type,
-                'date_issued' => $ip->date_issued->format('M d, Y'),
-                'issued_by'   => $ip->issuedBy?->name,
-            ]);
+        $user  = $request->user();
+        $query = IssueProduct::with(['warehouse', 'issuedBy'])
+            ->orderByDesc('created_at');
+
+        if ($user->role === 'manager') {
+            $query->where('warehouse_id', $user->warehouse_id);
+        } elseif ($request->filled('warehouse_id')) {
+            $query->where('warehouse_id', $request->input('warehouse_id'));
+        }
+
+        $issues = $query->get()->map(fn ($ip) => [
+            'id'          => $ip->id,
+            'code'        => $ip->code,
+            'warehouse'   => $ip->warehouse->name,
+            'issue_type'  => $ip->issue_type,
+            'date_issued' => $ip->date_issued->format('M d, Y'),
+            'issued_by'   => $ip->issuedBy?->name,
+        ]);
 
         return response()->json(['issues' => $issues]);
     }

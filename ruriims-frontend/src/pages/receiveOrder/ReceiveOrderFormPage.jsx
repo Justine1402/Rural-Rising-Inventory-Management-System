@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../api/axios';
 import AddProductsModal from '../../components/shared/AddProductsModal';
 import PinVerificationModal from '../../components/shared/PinVerificationModal';
+import { useAuth } from '../../context/AuthContext';
 import { useWarehouse } from '../../context/WarehouseContext';
 
 const fieldClass =
@@ -13,6 +14,7 @@ const readonlyClass =
 export default function ReceiveOrderFormPage({ onClose, onSuccess }) {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { activeWarehouse, warehouses } = useWarehouse();
   const isAccomplish = !!id;
 
@@ -26,6 +28,7 @@ export default function ReceiveOrderFormPage({ onClose, onSuccess }) {
   const [error, setError] = useState(null);
   const [successCode, setSuccessCode] = useState(null);
   const [orderData, setOrderData] = useState(null);
+  const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
     if (!isAccomplish) return;
@@ -72,6 +75,11 @@ export default function ReceiveOrderFormPage({ onClose, onSuccess }) {
       if (items.some((i) => !i.quantity_ordered || !i.product_cost)) { setError('Fill in Quantity Ordered and Product Cost for all items.'); return; }
     } else {
       if (!form.date_arrived) { setError('Date Arrived is required.'); return; }
+      const missingHarvestDate = items.some(item => !item.harvest_date);
+      if (missingHarvestDate) {
+        setError('Harvest date is required for all items before completing the order.');
+        return;
+      }
     }
     setPinOpen(true);
   };
@@ -91,6 +99,7 @@ export default function ReceiveOrderFormPage({ onClose, onSuccess }) {
           items: items.map((i) => ({ product_code: i.product_code, quantity_ordered: parseFloat(i.quantity_ordered), harvest_date: i.harvest_date || null, product_cost: parseFloat(i.product_cost) })),
         });
         setSuccessCode(res.data.order.code);
+        setSubmitted(true);
         onSuccess?.();
       } else {
         const res = await api.post(`/receive-orders/${id}/complete`, {
@@ -99,6 +108,7 @@ export default function ReceiveOrderFormPage({ onClose, onSuccess }) {
           items: items.map((i) => ({ id: i.id, quantity_arrived: parseFloat(i.quantity_arrived) || 0 })),
         });
         setSuccessCode(res.data.message);
+        setSubmitted(true);
       }
     } catch (err) {
       setError(err.response?.data?.message ?? 'Something went wrong. Please try again.');
@@ -141,12 +151,12 @@ export default function ReceiveOrderFormPage({ onClose, onSuccess }) {
                 <div>
                   <label className="block text-sm text-gray-500 mb-1.5">Supplier Name</label>
                   {isAccomplish ? <div className={readonlyClass}>{form.supplier_name}</div>
-                    : <input type="text" value={form.supplier_name} onChange={set('supplier_name')} className={fieldClass} />}
+                    : <input type="text" value={form.supplier_name} onChange={set('supplier_name')} disabled={submitted} className={fieldClass} />}
                 </div>
                 <div>
                   <label className="block text-sm text-gray-500 mb-1.5">Date Ordered</label>
                   {isAccomplish ? <div className={readonlyClass}>{form.date_ordered}</div>
-                    : <input type="date" value={form.date_ordered} onChange={set('date_ordered')} className={fieldClass} />}
+                    : <input type="date" value={form.date_ordered} onChange={set('date_ordered')} disabled={submitted} className={fieldClass} />}
                 </div>
                 <div>
                   <label className="block text-sm text-gray-500 mb-1.5">Order Cost (PHP)</label>
@@ -155,13 +165,13 @@ export default function ReceiveOrderFormPage({ onClose, onSuccess }) {
                 <div>
                   <label className="block text-sm text-gray-500 mb-1.5">Date Arrived</label>
                   {isAccomplish
-                    ? <input type="date" value={form.date_arrived} onChange={set('date_arrived')} className={fieldClass} />
+                    ? <input type="date" value={form.date_arrived} onChange={set('date_arrived')} disabled={submitted} className={fieldClass} />
                     : <input type="date" disabled className={readonlyClass} />}
                 </div>
                 <div>
                   <label className="block text-sm text-gray-500 mb-1.5">Delivery Fee (PHP)</label>
                   {isAccomplish ? <div className={readonlyClass}>₱ {parseFloat(form.delivery_fee).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>
-                    : <input type="number" min="0" value={form.delivery_fee} onChange={set('delivery_fee')} className={fieldClass} placeholder="0.00" />}
+                    : <input type="number" min="0" value={form.delivery_fee} onChange={set('delivery_fee')} disabled={submitted} className={fieldClass} placeholder="0.00" />}
                 </div>
                 <div>
                   <label className="block text-sm text-gray-500 mb-1.5">Total (PHP)</label>
@@ -175,19 +185,26 @@ export default function ReceiveOrderFormPage({ onClose, onSuccess }) {
                   <h2 className="text-sm font-semibold text-gray-700">Product Details</h2>
                   {!isAccomplish && (
                     <div className="flex items-center gap-2">
-                      <select
-                        value={selectedWarehouseId}
-                        onChange={(e) => setSelectedWarehouseId(e.target.value)}
-                        className="bg-gray-100 border border-transparent rounded-lg px-3 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-[#1A381E] focus:bg-white transition"
-                      >
-                        <option value="">Select Warehouse</option>
-                        {warehouses.map((w) => (
-                          <option key={w.id} value={w.id}>{w.name}</option>
-                        ))}
-                      </select>
+                      {user?.role === 'manager' ? (
+                        <div className="bg-gray-100 text-gray-700 border border-gray-300 rounded px-3 py-1.5 text-sm">
+                          {activeWarehouse?.name ?? ''}
+                        </div>
+                      ) : (
+                        <select
+                          value={selectedWarehouseId}
+                          onChange={(e) => setSelectedWarehouseId(e.target.value)}
+                          className="bg-gray-100 border border-transparent rounded-lg px-3 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-[#1A381E] focus:bg-white transition"
+                        >
+                          <option value="">Select Warehouse</option>
+                          {warehouses.map((w) => (
+                            <option key={w.id} value={w.id}>{w.name}</option>
+                          ))}
+                        </select>
+                      )}
                       <button
                         onClick={() => setAddModalOpen(true)}
-                        className="text-xs font-bold text-white px-4 py-1.5 rounded transition-colors"
+                        disabled={submitted}
+                        className="text-xs font-bold text-white px-4 py-1.5 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         style={{ backgroundColor: '#409645' }}
                       >
                         + Add Product
@@ -220,7 +237,8 @@ export default function ReceiveOrderFormPage({ onClose, onSuccess }) {
                             {isAccomplish ? <span className="text-gray-600">{parseFloat(item.quantity_ordered)} {item.unit}</span>
                               : <div className="flex items-center gap-1.5">
                                   <input type="number" min="0" step="1" value={item.quantity_ordered} onChange={(e) => setItemField(idx, 'quantity_ordered', e.target.value)}
-                                    className="w-24 bg-gray-100 border border-transparent rounded px-2 py-1 text-sm focus:outline-none focus:border-[#1A381E] focus:bg-white" />
+                                    disabled={submitted}
+                                    className="w-24 bg-gray-100 border border-transparent rounded px-2 py-1 text-sm focus:outline-none focus:border-[#1A381E] focus:bg-white disabled:opacity-50" />
                                   <span className="text-xs text-gray-500">{item.unit}</span>
                                 </div>}
                           </td>
@@ -228,7 +246,8 @@ export default function ReceiveOrderFormPage({ onClose, onSuccess }) {
                             {isAccomplish
                               ? <div className="flex items-center gap-1.5">
                                   <input type="number" min="0" step="1" value={item.quantity_arrived} onChange={(e) => setItemField(idx, 'quantity_arrived', e.target.value)}
-                                    className="w-24 bg-gray-100 border border-transparent rounded px-2 py-1 text-sm focus:outline-none focus:border-[#1A381E] focus:bg-white" />
+                                    disabled={submitted}
+                                    className="w-24 bg-gray-100 border border-transparent rounded px-2 py-1 text-sm focus:outline-none focus:border-[#1A381E] focus:bg-white disabled:opacity-50" />
                                   <span className="text-xs text-gray-500">{item.unit}</span>
                                 </div>
                               : <span className="text-gray-400">—</span>}
@@ -236,16 +255,20 @@ export default function ReceiveOrderFormPage({ onClose, onSuccess }) {
                           <td className="px-4 py-2">
                             {isAccomplish ? <span className="text-gray-600">{item.harvest_date ?? '—'}</span>
                               : <input type="date" value={item.harvest_date} onChange={(e) => setItemField(idx, 'harvest_date', e.target.value)}
-                                  className="bg-gray-100 border border-transparent rounded px-2 py-1 text-sm focus:outline-none focus:border-[#1A381E] focus:bg-white" />}
+                                  disabled={submitted}
+                                  className="bg-gray-100 border border-transparent rounded px-2 py-1 text-sm focus:outline-none focus:border-[#1A381E] focus:bg-white disabled:opacity-50" />}
                           </td>
                           <td className="px-4 py-2">
                             {isAccomplish ? <span className="text-gray-600">₱ {parseFloat(item.product_cost).toFixed(2)}</span>
                               : <input type="number" min="0" step="0.01" value={item.product_cost} onChange={(e) => setItemField(idx, 'product_cost', e.target.value)}
-                                  className="w-28 bg-gray-100 border border-transparent rounded px-2 py-1 text-sm focus:outline-none focus:border-[#1A381E] focus:bg-white" placeholder="0.00" />}
+                                  disabled={submitted}
+                                  className="w-28 bg-gray-100 border border-transparent rounded px-2 py-1 text-sm focus:outline-none focus:border-[#1A381E] focus:bg-white disabled:opacity-50" placeholder="0.00" />}
                           </td>
                           {!isAccomplish && (
                             <td className="px-4 py-2">
-                              <button onClick={() => removeItem(idx)} className="text-red-400 hover:text-red-600 text-xs font-medium">Remove</button>
+                              {!submitted && (
+                                <button onClick={() => removeItem(idx)} className="text-red-400 hover:text-red-600 text-xs font-medium">Remove</button>
+                              )}
                             </td>
                           )}
                         </tr>

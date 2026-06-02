@@ -1143,6 +1143,26 @@ URL and no read-only mode built into it.
 - Added `import { useAuth } from '../../context/AuthContext'` and `const { user } = useAuth()` inside the component.
 - Wrapped the warehouse `<select>` element with `{user?.role === 'admin' && (...)}`. Non-admin users (managers) no longer see the warehouse filter dropdown. The `warehouseId` prop and state are unchanged — only the UI element is conditionally hidden.
 
+#### Backend Fix — Manager warehouse scoping on transaction list controllers (2026-06-02)
+
+- Applied manager warehouse override to `ReceiveOrderController@index()`, `TransferRequestController@index()`, and `IssueProductController@index()` — the same pattern already present in `ReconciliationController@index()` and `ReportController`.
+- `ReceiveOrderController@index()`: managers now see only orders where `warehouse_id = user->warehouse_id`. Admins retain optional `?warehouse_id` param filter.
+- `TransferRequestController@index()`: managers now see only requests where `source_warehouse_id = user->warehouse_id`. Admins retain optional `?warehouse_id` param filter.
+- `IssueProductController@index()`: managers now see only issue records where `warehouse_id = user->warehouse_id`. Admins retain optional `?warehouse_id` param filter.
+- No frontend changes. No changes to store/show/complete/accomplish methods.
+
+#### Polish — ReceiveOrderFormPage three fixes (2026-06-02)
+
+- Warehouse selector replaced with read-only label for managers in `ReceiveOrderFormPage`, `TransferRequestFormPage`, and `IssueProductFormPage`. Admins retain the dropdown. Uses `user?.role === 'manager'` gate with `useAuth`. (`IssueProductFormPage` warehouse was already read-only for all users — no change needed there.)
+- Harvest date no longer pre-fills to today on new item rows in Stage 1 create mode. Initializes to empty string. Accomplish mode loading from API is unchanged.
+- Form locks completely after successful create or accomplish: `submitted` state added to `ReceiveOrderFormPage`; all inputs (Supplier Name, Date Ordered, Delivery Fee, Date Arrived, per-row Qty Ordered/Arrived/Harvest Date/Product Cost), `+ Add Product` button, and Remove links are disabled on `submitted = true`. For TRF Source Warehouse, `sourceWarehouseId` initial state pre-fills from `activeWarehouse.id` when user is a manager (create mode), ensuring the correct warehouse_id is sent even though the field renders as read-only.
+
+#### Bug Fix — Harvest date required on RO accomplish (2026-06-02)
+
+- Added backend guard in `ReceiveOrderController@complete()`: iterates items before the DB transaction; returns 422 if any item has a null or empty `harvest_date`.
+- Added frontend pre-submit check in `ReceiveOrderFormPage.jsx`: blocks `PinVerificationModal` from opening if any item is missing a harvest date; displays inline error via existing `error` state.
+- `quantity_arrived < quantity_ordered` is intentional and unchanged — partial arrivals are a normal agricultural supply chain scenario.
+
 ---
 
 ## Not Started

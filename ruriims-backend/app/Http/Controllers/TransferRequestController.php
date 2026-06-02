@@ -19,22 +19,29 @@ class TransferRequestController extends Controller
     use GeneratesTransactionCode;
     use PlansBatchCascade;
 
-    public function index()
+    public function index(Request $request)
     {
-        $transfers = TransferRequest::with(['sourceWarehouse', 'destinationWarehouse', 'requester', 'verifier'])
-            ->orderByDesc('created_at')
-            ->get()
-            ->map(fn ($t) => [
-                'id'                    => $t->id,
-                'code'                  => $t->code,
-                'source_warehouse'      => $t->sourceWarehouse->name,
-                'destination_warehouse' => $t->destinationWarehouse->name,
-                'date_requested'        => $t->date_requested->format('M d, Y'),
-                'date_accomplished'     => $t->date_received?->format('M d, Y') ?? '—',
-                'requested_by'          => $t->requester?->name,
-                'verified_by'           => $t->verifier?->name ?? '—',
-                'status'                => $t->status,
-            ]);
+        $user  = $request->user();
+        $query = TransferRequest::with(['sourceWarehouse', 'destinationWarehouse', 'requester', 'verifier'])
+            ->orderByDesc('created_at');
+
+        if ($user->role === 'manager') {
+            $query->where('source_warehouse_id', $user->warehouse_id);
+        } elseif ($request->filled('warehouse_id')) {
+            $query->where('source_warehouse_id', $request->input('warehouse_id'));
+        }
+
+        $transfers = $query->get()->map(fn ($t) => [
+            'id'                    => $t->id,
+            'code'                  => $t->code,
+            'source_warehouse'      => $t->sourceWarehouse->name,
+            'destination_warehouse' => $t->destinationWarehouse->name,
+            'date_requested'        => $t->date_requested->format('M d, Y'),
+            'date_accomplished'     => $t->date_received?->format('M d, Y') ?? '—',
+            'requested_by'          => $t->requester?->name,
+            'verified_by'           => $t->verifier?->name ?? '—',
+            'status'                => $t->status,
+        ]);
 
         return response()->json(['transfers' => $transfers]);
     }

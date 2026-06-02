@@ -23,7 +23,9 @@ export default function TransferRequestFormPage({ onClose, onSuccess }) {
   const { refreshProducts, refreshTransferRequests } = useUI();
   const isAccomplish = !!id;
 
-  const [sourceWarehouseId, setSourceWarehouseId] = useState('');
+  const [sourceWarehouseId, setSourceWarehouseId] = useState(
+    !isAccomplish && user?.role === 'manager' ? (activeWarehouse?.id ?? '') : '',
+  );
   const [destinationWarehouseId, setDestinationWarehouseId] = useState(
     !isAccomplish && activeWarehouse?.isTemporary ? activeWarehouse.id : '',
   );
@@ -264,6 +266,8 @@ export default function TransferRequestFormPage({ onClose, onSuccess }) {
                   <label className="block text-sm text-gray-500 mb-1.5">Source Warehouse</label>
                   {isAccomplish ? (
                     <div className={readonlyClass}>{transferData?.source_warehouse}</div>
+                  ) : user?.role === 'manager' ? (
+                    <div className={readonlyClass}>{activeWarehouse?.name ?? ''}</div>
                   ) : (
                     <div className="relative">
                       <select

@@ -15,21 +15,28 @@ use Illuminate\Support\Facades\Hash;
 class ReceiveOrderController extends Controller
 {
     use GeneratesTransactionCode;
-    public function index()
+    public function index(Request $request)
     {
-        $orders = ReceiveOrder::with(['warehouse', 'creator', 'verifier'])
-            ->orderByDesc('created_at')
-            ->get()
-            ->map(fn ($o) => [
-                'id'                => $o->id,
-                'code'              => $o->code,
-                'warehouse'         => $o->warehouse->name,
-                'date_created'      => $o->created_at->format('M d, Y'),
-                'date_accomplished' => $o->date_arrived?->format('M d, Y') ?? '—',
-                'created_by'        => $o->creator?->name,
-                'verified_by'       => $o->verifier?->name ?? '—',
-                'status'            => $o->status,
-            ]);
+        $user  = $request->user();
+        $query = ReceiveOrder::with(['warehouse', 'creator', 'verifier'])
+            ->orderByDesc('created_at');
+
+        if ($user->role === 'manager') {
+            $query->where('warehouse_id', $user->warehouse_id);
+        } elseif ($request->filled('warehouse_id')) {
+            $query->where('warehouse_id', $request->input('warehouse_id'));
+        }
+
+        $orders = $query->get()->map(fn ($o) => [
+            'id'                => $o->id,
+            'code'              => $o->code,
+            'warehouse'         => $o->warehouse->name,
+            'date_created'      => $o->created_at->format('M d, Y'),
+            'date_accomplished' => $o->date_arrived?->format('M d, Y') ?? '—',
+            'created_by'        => $o->creator?->name,
+            'verified_by'       => $o->verifier?->name ?? '—',
+            'status'            => $o->status,
+        ]);
 
         return response()->json(['orders' => $orders]);
     }
@@ -148,6 +155,14 @@ class ReceiveOrderController extends Controller
 
         if (!$user->pin || !Hash::check($request->pin, $user->pin)) {
             return response()->json(['message' => 'Incorrect PIN.'], 422);
+        }
+
+        foreach ($request->input('items', []) as $item) {
+            if (empty($item['harvest_date'])) {
+                return response()->json([
+                    'message' => 'Harvest date is required for all items.',
+                ], 422);
+            }
         }
 
         try {
