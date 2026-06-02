@@ -40,6 +40,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/products', [ProductController::class, 'index']);
     Route::post('/products', [ProductController::class, 'store']);
     Route::get('/products/{product}', [ProductController::class, 'show']);
+    Route::get('/products/{product}/batches', [ProductController::class, 'batches']);
 
     Route::post('/pin/verify', [PinController::class, 'verify']);
 

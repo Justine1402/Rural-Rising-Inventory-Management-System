@@ -97,4 +97,42 @@ class ProductController extends Controller
     {
         return response()->json(['product' => $product]);
     }
+
+    public function batches(Product $product)
+    {
+        $user = request()->user();
+
+        $product->load('creator');
+
+        $query = StockInUse::with('warehouse')
+            ->where('product_id', $product->id)
+            ->where('quantity', '>', 0)
+            ->orderBy('harvest_date', 'asc');
+
+        if ($user->role === 'manager') {
+            $query->where('warehouse_id', $user->warehouse_id);
+        }
+
+        $batches = $query->get()->map(fn($b) => [
+            'code'         => $b->code,
+            'warehouse_id' => $b->warehouse_id,
+            'warehouse'    => $b->warehouse->name,
+            'quantity'     => $b->quantity,
+            'harvest_date' => $b->harvest_date
+                ? \Carbon\Carbon::parse($b->harvest_date)->format('M j, Y')
+                : null,
+        ]);
+
+        return response()->json([
+            'product' => [
+                'id'         => $product->id,
+                'sku_code'   => $product->sku_code,
+                'name'       => $product->name,
+                'category'   => $product->category,
+                'unit'       => $product->unit,
+                'shelf_life' => $product->shelf_life,
+            ],
+            'batches' => $batches,
+        ]);
+    }
 }

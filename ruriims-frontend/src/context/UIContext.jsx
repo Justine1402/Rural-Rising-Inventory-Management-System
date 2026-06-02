@@ -10,6 +10,7 @@ export function UIProvider({ children }) {
   const [temporaryWarehouseFormOpen, setTemporaryWarehouseFormOpen] = useState(false);
   const [closeTemporaryWarehouseOverlayTwhId, setCloseTemporaryWarehouseOverlayTwhId] = useState(null);
   const [temporaryWarehouseDetailOverlayTwhId, setTemporaryWarehouseDetailOverlayTwhId] = useState(null);
+  const [productDetailOverlayProductId, setProductDetailOverlayProductId] = useState(null);
   const [productRefreshKey, setProductRefreshKey] = useState(0);
   const [receiveOrderRefreshKey, setReceiveOrderRefreshKey] = useState(0);
   const [transferRequestRefreshKey, setTransferRequestRefreshKey] = useState(0);
@@ -34,6 +35,7 @@ export function UIProvider({ children }) {
       temporaryWarehouseFormOpen, setTemporaryWarehouseFormOpen,
       closeTemporaryWarehouseOverlayTwhId, setCloseTemporaryWarehouseOverlayTwhId,
       temporaryWarehouseDetailOverlayTwhId, setTemporaryWarehouseDetailOverlayTwhId,
+      productDetailOverlayProductId, setProductDetailOverlayProductId,
       productRefreshKey, refreshProducts,
       receiveOrderRefreshKey, refreshReceiveOrders,
       transferRequestRefreshKey, refreshTransferRequests,

@@ -10,7 +10,7 @@ import { formatDate } from '../../utils/formatDate';
 
 export default function DashboardPage() {
   const location = useLocation();
-  const { productRefreshKey } = useUI();
+  const { productRefreshKey, setProductDetailOverlayProductId } = useUI();
   const { activeWarehouse, warehouses } = useWarehouse();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -174,7 +174,7 @@ export default function DashboardPage() {
                   }
 
                   return (
-                    <tr key={product.sku_code} className="border-b border-gray-100 odd:bg-white even:bg-gray-50 hover:bg-gray-100 cursor-pointer">
+                    <tr key={product.sku_code} className="border-b border-gray-100 odd:bg-white even:bg-gray-50 hover:bg-gray-100 cursor-pointer" onClick={() => setProductDetailOverlayProductId(product.id)}>
                       <td className="px-5 py-3 text-gray-800">{product.name}</td>
                       <td className="px-5 py-3 text-gray-600">
                         {qty.toLocaleString('en-PH', { maximumFractionDigits: 3 })} {product.unit}
@@ -282,7 +282,7 @@ export default function DashboardPage() {
                   }
 
                   return (
-                    <tr key={product.sku_code} className="border-b border-gray-100 odd:bg-white even:bg-gray-50 hover:bg-gray-100 cursor-pointer">
+                    <tr key={product.sku_code} className="border-b border-gray-100 odd:bg-white even:bg-gray-50 hover:bg-gray-100 cursor-pointer" onClick={() => setProductDetailOverlayProductId(product.id)}>
                       <td className="px-5 py-3 text-gray-800">{product.name}</td>
                       {permanentWarehouses.map((w) => (
                         <td key={w.id} className="px-5 py-3 text-gray-600">
@@ -358,7 +358,7 @@ export default function DashboardPage() {
                   }
 
                   return (
-                    <tr key={product.sku_code} className="border-b border-gray-100 odd:bg-white even:bg-gray-50 hover:bg-gray-100 cursor-pointer">
+                    <tr key={product.sku_code} className="border-b border-gray-100 odd:bg-white even:bg-gray-50 hover:bg-gray-100 cursor-pointer" onClick={() => setProductDetailOverlayProductId(product.id)}>
                       <td className="px-5 py-3 text-gray-800">{product.name}</td>
                       <td className="px-5 py-3 text-gray-600">
                         {qty.toLocaleString('en-PH', { maximumFractionDigits: 3 })} {product.unit}

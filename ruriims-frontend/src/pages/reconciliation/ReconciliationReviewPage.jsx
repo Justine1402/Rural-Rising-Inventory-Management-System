@@ -11,9 +11,6 @@ import {
 } from '../../utils/reconciliationFormat';
 import { formatDate } from '../../utils/formatDate';
 
-const readonlyClass =
-  'w-full bg-gray-100 border border-transparent rounded-lg px-4 py-2.5 text-sm text-gray-500';
-
 export default function ReconciliationReviewPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -42,10 +39,6 @@ export default function ReconciliationReviewPage() {
       });
     return () => { cancelled = true; };
   }, [id]);
-
-  const handleConfirmClick = () => {
-    setPinModalOpen(true);
-  };
 
   const handleVerify = async (pin) => {
     setPinModalOpen(false);
@@ -102,170 +95,165 @@ export default function ReconciliationReviewPage() {
       <Navbar />
 
       <main className="flex-1 p-5">
-        <div className="bg-white rounded-xl shadow p-8 max-w-[1040px] mx-auto">
+        <div className="bg-white rounded-xl shadow max-w-[1040px] mx-auto overflow-hidden">
 
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">Reconciliation Review</h1>
-            <span className="font-mono text-lg font-semibold text-gray-700">
+          {/* Dark green header */}
+          <div
+            className="flex items-center justify-between px-8 py-4"
+            style={{ backgroundColor: '#1A381E' }}
+          >
+            <button
+              onClick={() => navigate('/reconciliation')}
+              className="flex items-center gap-2 text-sm font-semibold text-white hover:opacity-80"
+            >
+              ← RETURN
+            </button>
+            <span className="text-sm font-semibold text-white font-mono">
               {data.transaction_code}
             </span>
           </div>
 
-          {/* Metadata grid */}
-          <div className="grid grid-cols-2 gap-x-12 gap-y-4 mb-6">
-            <div>
-              <label className="block text-sm text-gray-500 mb-1.5">Reconciled By</label>
-              <div className={readonlyClass}>{data.reconciled_by}</div>
-            </div>
-            <div>
-              <label className="block text-sm text-gray-500 mb-1.5">Date Reconciled</label>
-              <div className={readonlyClass}>{formatDate(data.date_reconciled)}</div>
-            </div>
-            <div>
-              <label className="block text-sm text-gray-500 mb-1.5">Reviewed By</label>
-              <div className={readonlyClass}>{data.reviewed_by ?? '—'}</div>
-            </div>
-            <div>
-              <label className="block text-sm text-gray-500 mb-1.5">Date Reviewed</label>
-              <div className={readonlyClass}>{formatDate(data.date_reviewed)}</div>
-            </div>
-            <div>
-              <label className="block text-sm text-gray-500 mb-1.5">Warehouse</label>
-              <div className={readonlyClass}>{data.warehouse}</div>
-            </div>
-          </div>
+          {/* Body */}
+          <div className="px-8 py-6">
 
-          {/* Counted Items table */}
-          <h2 className="text-sm font-semibold text-gray-700 mb-3">Counted Items</h2>
-          <div className="rounded-lg overflow-hidden border border-gray-200 mb-6">
-            <table className="w-full text-sm">
-              <thead>
-                <tr style={{ backgroundColor: '#F3F4F6' }}>
-                  <th className="text-left font-semibold px-4 py-2.5 text-gray-700">Product SKU</th>
-                  <th className="text-left font-semibold px-4 py-2.5 text-gray-700">Product Name</th>
-                  <th className="text-left font-semibold px-4 py-2.5 text-gray-700">Expected Stock</th>
-                  <th className="text-left font-semibold px-4 py-2.5 text-gray-700">Actual Count</th>
-                  <th className="text-left font-semibold px-4 py-2.5 text-gray-700">Discrepancy</th>
-                  <th className="text-left font-semibold px-4 py-2.5 text-gray-700">Remarks</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(data.items ?? []).length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-5 text-center text-gray-400">
-                      No items recorded for this reconciliation.
-                    </td>
-                  </tr>
-                )}
-                {(data.items ?? []).map((item) => {
-                  const disc = formatDiscrepancy(item.discrepancy, item.unit);
-                  return (
-                    <tr key={item.id} className="border-t border-gray-100">
-                      <td className="px-4 py-2 font-mono text-xs text-gray-700">{item.product_code}</td>
-                      <td className="px-4 py-2 text-gray-800">{item.product_name}</td>
-                      <td className="px-4 py-2 text-gray-600">
-                        {parseFloat(item.expected_stock)} {item.unit}
-                      </td>
-                      <td className="px-4 py-2 text-gray-600">
-                        {parseFloat(item.actual_count)} {item.unit}
-                      </td>
-                      <td className="px-4 py-2">
-                        {disc && <span style={{ color: disc.color }}>{disc.label}</span>}
-                      </td>
-                      <td className="px-4 py-2 text-gray-600">{item.remarks || '—'}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+            {/* Section 1 — Metadata */}
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
+              Reconciliation Details
+            </p>
+            <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-8">
+              <div>
+                <p className="text-sm text-gray-500 mb-0.5">Reconciled By</p>
+                <p className="text-sm font-medium text-gray-800">{data.reconciled_by}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 mb-0.5">Date Reconciled</p>
+                <p className="text-sm font-medium text-gray-800">{formatDate(data.date_reconciled)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 mb-0.5">Reviewed By</p>
+                <p className="text-sm font-medium text-gray-800">{data.reviewed_by ?? '—'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 mb-0.5">Date Reviewed</p>
+                <p className="text-sm font-medium text-gray-800">{formatDate(data.date_reviewed)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 mb-0.5">Warehouse</p>
+                <p className="text-sm font-medium text-gray-800">{data.warehouse}</p>
+              </div>
+            </div>
 
-          {/* Inventory Adjustment sub-table */}
-          <h2 className="text-sm font-semibold text-gray-700 mb-3">
-            Inventory Adjustment Upon Confirmation
-          </h2>
-          <div className="rounded-lg overflow-hidden border border-gray-200 mb-6">
-            <table className="w-full text-sm">
-              <thead>
-                <tr style={{ backgroundColor: '#F3F4F6' }}>
-                  <th className="text-left font-semibold px-4 py-2.5 text-gray-700">Product Name</th>
-                  <th className="text-left font-semibold px-4 py-2.5 text-gray-700">Adjustment</th>
-                  <th className="text-left font-semibold px-4 py-2.5 text-gray-700">Variance</th>
-                </tr>
-              </thead>
-              <tbody>
-                {adjustedItems.length === 0 && (
-                  <tr>
-                    <td colSpan={3} className="px-4 py-5 text-center" style={{ color: '#6B7280' }}>
-                      No adjustments — all counts matched.
-                    </td>
+            {/* Section 2 — Counted Items table */}
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
+              Counted Items
+            </p>
+            <div className="rounded-lg overflow-hidden border border-gray-200 mb-8">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-white" style={{ backgroundColor: '#1A381E' }}>
+                    <th className="text-left font-semibold px-4 py-2.5">Product SKU</th>
+                    <th className="text-left font-semibold px-4 py-2.5">Product Name</th>
+                    <th className="text-left font-semibold px-4 py-2.5">Expected Stock</th>
+                    <th className="text-left font-semibold px-4 py-2.5">Actual Count</th>
+                    <th className="text-left font-semibold px-4 py-2.5">Discrepancy</th>
+                    <th className="text-left font-semibold px-4 py-2.5">Remarks</th>
                   </tr>
-                )}
-                {adjustedItems.map((item) => {
-                  const variance = formatDiscrepancy(item.discrepancy, item.unit);
-                  return (
-                    <tr key={item.id} className="border-t border-gray-100">
-                      <td className="px-4 py-2 text-gray-800">{item.product_name}</td>
-                      <td className="px-4 py-2 text-gray-600">
-                        {formatAdjustmentArrow(item.expected_stock, item.actual_count, item.unit)}
-                      </td>
-                      <td className="px-4 py-2">
-                        {variance && (
-                          <span style={{ color: variance.color }}>({variance.label})</span>
-                        )}
+                </thead>
+                <tbody>
+                  {(data.items ?? []).length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-5 text-center text-gray-400">
+                        No items recorded for this reconciliation.
                       </td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                  )}
+                  {(data.items ?? []).map((item) => {
+                    const disc = formatDiscrepancy(item.discrepancy, item.unit);
+                    return (
+                      <tr key={item.id} className="border-t border-gray-100 odd:bg-white even:bg-gray-50">
+                        <td className="px-4 py-2 font-mono text-xs text-gray-700">{item.product_code}</td>
+                        <td className="px-4 py-2 text-gray-800">{item.product_name}</td>
+                        <td className="px-4 py-2 text-gray-600">
+                          {parseFloat(item.expected_stock)} {item.unit}
+                        </td>
+                        <td className="px-4 py-2 text-gray-600">
+                          {parseFloat(item.actual_count)} {item.unit}
+                        </td>
+                        <td className="px-4 py-2">
+                          {disc && <span style={{ color: disc.color }}>{disc.label}</span>}
+                        </td>
+                        <td className="px-4 py-2 text-gray-600">{item.remarks || '—'}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
 
-          {/* Action row */}
-          {isPendingReview ? (
-            <div>
-              {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
-              <div className="flex items-center justify-end gap-3">
-                {successCode ? (
-                  <span
-                    className="px-4 py-2 text-sm font-bold rounded-lg"
-                    style={{ color: '#409645' }}
-                  >
-                    Accomplished {successCode}
-                  </span>
-                ) : (
-                  <>
+            {/* Section 3 — Inventory Adjustment table */}
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
+              Inventory Adjustment Upon Confirmation
+            </p>
+            <div className="rounded-lg overflow-hidden border border-gray-200 mb-6">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-white" style={{ backgroundColor: '#1A381E' }}>
+                    <th className="text-left font-semibold px-4 py-2.5">Product Name</th>
+                    <th className="text-left font-semibold px-4 py-2.5">Adjustment</th>
+                    <th className="text-left font-semibold px-4 py-2.5">Variance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {adjustedItems.length === 0 && (
+                    <tr>
+                      <td colSpan={3} className="px-4 py-5 text-center text-gray-400">
+                        No adjustments — all counts matched.
+                      </td>
+                    </tr>
+                  )}
+                  {adjustedItems.map((item) => {
+                    const variance = formatDiscrepancy(item.discrepancy, item.unit);
+                    return (
+                      <tr key={item.id} className="border-t border-gray-100 odd:bg-white even:bg-gray-50">
+                        <td className="px-4 py-2 text-gray-800">{item.product_name}</td>
+                        <td className="px-4 py-2 text-gray-600">
+                          {formatAdjustmentArrow(item.expected_stock, item.actual_count, item.unit)}
+                        </td>
+                        <td className="px-4 py-2">
+                          {variance && (
+                            <span style={{ color: variance.color }}>({variance.label})</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Action row — only shown for pending review */}
+            {isPendingReview && (
+              <div>
+                {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
+                <div className="flex items-center justify-end">
+                  {successCode ? (
+                    <span className="px-4 py-2 text-sm font-bold rounded-lg" style={{ color: '#409645' }}>
+                      Accomplished {successCode}
+                    </span>
+                  ) : (
                     <button
-                      onClick={() => navigate('/reconciliation')}
-                      className="btn-brand-outline px-6 py-2.5 text-sm font-semibold rounded-lg border transition-colors"
-                      style={{ color: '#409645', borderColor: '#409645' }}
-                    >
-                      RETURN
-                    </button>
-                    <button
-                      onClick={handleConfirmClick}
+                      onClick={() => setPinModalOpen(true)}
                       disabled={loading}
                       className="btn-brand px-8 py-2.5 text-sm font-bold text-white rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                       {loading ? 'Confirming…' : 'CONFIRM'}
                     </button>
-                  </>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
-          ) : (
-            <div className="flex items-center justify-end">
-              <button
-                onClick={() => navigate('/reconciliation')}
-                className="btn-brand-outline px-6 py-2.5 text-sm font-semibold rounded-lg border transition-colors"
-                style={{ color: '#409645', borderColor: '#409645' }}
-              >
-                RETURN
-              </button>
-            </div>
-          )}
+            )}
 
+          </div>
         </div>
       </main>
 

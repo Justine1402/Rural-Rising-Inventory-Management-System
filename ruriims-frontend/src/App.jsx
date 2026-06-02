@@ -31,6 +31,7 @@ import IssueProductAuditPage from './pages/issueProduct/IssueProductAuditPage';
 import IssueProductReportsPage from './pages/reports/IssueProductReportsPage';
 import ReconciliationReportsPage from './pages/reports/ReconciliationReportsPage';
 import InventorySummaryPage from './pages/reports/InventorySummaryPage';
+import ProductDetailOverlay from './components/overlays/ProductDetailOverlay';
 
 function GuestRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -74,6 +75,7 @@ function GlobalOverlays() {
       <CloseTemporaryWarehousePage />
       <TemporaryWarehouseDetailPage />
       <UserFormPage />
+      <ProductDetailOverlay />
     </>
   );
 }
