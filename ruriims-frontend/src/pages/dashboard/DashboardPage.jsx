@@ -66,25 +66,33 @@ export default function DashboardPage() {
   const displayedProducts = products
     .filter((p) => !selectedCategory || p.category === selectedCategory)
     .sort((a, b) => {
+      const getSortDate = (product) => {
+        if (activeWarehouse) {
+          return product.harvest_date_per_warehouse?.[activeWarehouse.id] ?? null;
+        }
+        if (sortMode === 'LIFO') return getNewestActiveHarvestDate(product);
+        return getOldestActiveHarvestDate(product);
+      };
+
       if (sortMode === 'FIFO') {
-        const dA = getOldestActiveHarvestDate(a);
-        const dB = getOldestActiveHarvestDate(b);
+        const dA = getSortDate(a);
+        const dB = getSortDate(b);
         if (!dA && !dB) return 0;
         if (!dA) return 1;
         if (!dB) return -1;
         return new Date(dA) - new Date(dB);
       }
       if (sortMode === 'LIFO') {
-        const dA = getNewestActiveHarvestDate(a);
-        const dB = getNewestActiveHarvestDate(b);
+        const dA = getSortDate(a);
+        const dB = getSortDate(b);
         if (!dA && !dB) return 0;
         if (!dA) return 1;
         if (!dB) return -1;
         return new Date(dB) - new Date(dA);
       }
       if (sortMode === 'FEFO') {
-        const expA = getDaysUntilExpiry(getOldestActiveHarvestDate(a), a.shelf_life);
-        const expB = getDaysUntilExpiry(getOldestActiveHarvestDate(b), b.shelf_life);
+        const expA = getDaysUntilExpiry(getSortDate(a), a.shelf_life);
+        const expB = getDaysUntilExpiry(getSortDate(b), b.shelf_life);
         if (expA === null && expB === null) return 0;
         if (expA === null) return 1;
         if (expB === null) return -1;

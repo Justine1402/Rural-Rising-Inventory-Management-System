@@ -6,7 +6,6 @@ use App\Models\Reconciliation;
 use App\Models\ReconciliationBatchAdjustment;
 use App\Models\ReconciliationItem;
 use App\Models\StockInUse;
-use App\Models\User;
 use App\Models\Warehouse;
 use App\Traits\GeneratesTransactionCode;
 use Illuminate\Http\Request;
@@ -19,13 +18,18 @@ class ReconciliationController extends Controller
 
     public function index(Request $request)
     {
+        $user = $request->user();
+
         $query = Reconciliation::with(['warehouse', 'reconciledBy', 'reviewedBy'])
             ->withCount(['items as products_with_discrepancy' => function ($q) {
                 $q->where('discrepancy', '!=', 0);
             }])
             ->orderByDesc('created_at');
 
-        if ($request->has('warehouse_id')) {
+        if ($user->role === 'manager') {
+            // Managers see only their own warehouse's reconciliations
+            $query->where('warehouse_id', $user->warehouse_id);
+        } elseif ($request->has('warehouse_id')) {
             $query->where('warehouse_id', $request->warehouse_id);
         }
 
@@ -79,6 +83,26 @@ class ReconciliationController extends Controller
 
     public function store(Request $request)
     {
+        $user = $request->user();
+
+        // Guard: manager can only reconcile their own warehouse
+        if ($user->role === 'manager' && $user->warehouse_id !== (int) $request->input('warehouse_id')) {
+            return response()->json([
+                'message' => 'You can only submit reconciliations for your assigned warehouse.',
+            ], 422);
+        }
+
+        // Guard: one reconciliation per warehouse per calendar day (any status)
+        $alreadyExists = Reconciliation::where('warehouse_id', $request->input('warehouse_id'))
+            ->whereDate('created_at', today())
+            ->exists();
+
+        if ($alreadyExists) {
+            return response()->json([
+                'message' => 'A reconciliation has already been submitted for this warehouse today. Only one reconciliation per warehouse per day is allowed.',
+            ], 422);
+        }
+
         $warehouseId = $request->input('warehouse_id');
         $warehouse   = Warehouse::find($warehouseId);
 
@@ -111,7 +135,6 @@ class ReconciliationController extends Controller
             }],
         ]);
 
-        $user = $request->user();
         if (!$user->pin || !Hash::check($request->pin, $user->pin)) {
             return response()->json(['message' => 'Incorrect PIN.'], 422);
         }
@@ -204,34 +227,29 @@ class ReconciliationController extends Controller
         $reconciliation = Reconciliation::findOrFail($id);
 
         if ($reconciliation->status === 'reviewed') {
-            return response()->json(['message' => 'Reconciliation already reviewed.'], 422);
+            return response()->json(['message' => 'This reconciliation has already been confirmed.'], 422);
         }
 
         $user = $request->user();
 
-        if ($user->role === 'admin') {
-            // Admin bypass: master admin verifies with their own PIN.
-            // Self-exclusion still applies — admin cannot confirm their own reconciliation.
-            if ($user->id === $reconciliation->reconciled_by) {
-                return response()->json(['message' => 'The verifier cannot be the reconciler.'], 422);
-            }
-            if (!$user->pin || !Hash::check($request->pin, $user->pin)) {
-                return response()->json(['message' => 'Invalid PIN.'], 422);
-            }
-            $verifierId = $user->id;
-        } else {
-            // Manager flow: different-manager-same-branch rule (SRS §3.7).
-            $candidates = User::where('warehouse_id', $reconciliation->warehouse_id)
-                ->where('id', '!=', auth()->id())
-                ->get();
-
-            $matched = $candidates->first(fn ($u) => $u->pin && Hash::check($request->pin, $u->pin));
-
-            if (!$matched) {
-                return response()->json(['message' => 'No other manager at this warehouse matched the PIN.'], 422);
-            }
-            $verifierId = $matched->id;
+        // Guard: verifier cannot be the reconciler (applies to all roles including admin)
+        if ($user->id === $reconciliation->reconciled_by) {
+            return response()->json(['message' => 'You cannot verify a reconciliation you submitted.'], 422);
         }
+
+        // Guard: non-admin verifier must be assigned to the same warehouse as the reconciliation
+        if ($user->role !== 'admin' && $user->warehouse_id !== $reconciliation->warehouse_id) {
+            return response()->json([
+                'message' => 'You can only verify reconciliations for your assigned warehouse.',
+            ], 422);
+        }
+
+        // Self-authentication: verifier enters their own PIN
+        if (!$user->pin || !Hash::check($request->pin, $user->pin)) {
+            return response()->json(['message' => 'Incorrect PIN. Please try again.'], 422);
+        }
+
+        $verifierId = $user->id;
 
         try {
             DB::transaction(function () use ($reconciliation, $id, $verifierId) {
