@@ -1163,6 +1163,37 @@ URL and no read-only mode built into it.
 - Added frontend pre-submit check in `ReceiveOrderFormPage.jsx`: blocks `PinVerificationModal` from opening if any item is missing a harvest date; displays inline error via existing `error` state.
 - `quantity_arrived < quantity_ordered` is intentional and unchanged — partial arrivals are a normal agricultural supply chain scenario.
 
+#### Bug Fix — TransferRequestController@index() OR scoping for destination warehouse (2026-06-03)
+
+- Manager scoping in `index()` changed from `WHERE source_warehouse_id = warehouse_id` to `WHERE source_warehouse_id = warehouse_id OR destination_warehouse_id = warehouse_id`.
+- Condition wrapped in a closure to prevent the `orWhere` from leaking to the top-level query.
+- Resolves the deadlock where a destination manager could not see incoming TRFs and therefore could not complete them.
+- `accomplish()` source-warehouse block and `store()` behavior are unchanged.
+- Database verified clean: QC manager = Myles Beatriz Gomez, MAN manager = Grant Jericho De Los Reyes, ALA manager = Chim Cabal, admin = Justine Brian C. Conanan.
+
+#### Bug Fix — TRF accomplish warehouse check bypassed for TWH destinations (2026-06-03)
+
+- `TransferRequestController@accomplish()`: the source-warehouse check (`verifier must be from a different warehouse than the source`) was unconditional, blocking the source warehouse manager from verifying any TRF — including those destined for a temporary warehouse.
+- For permanent → TWH TRFs, there is no destination warehouse manager, so the source warehouse manager is the correct verifier. The check now includes `&& !$destination->is_temporary`: the block only applies when the destination is a permanent warehouse. Self-exclusion (requester ≠ verifier) is unchanged and still applies to all TRFs.
+- `$destination` fetch moved above the warehouse check (was previously fetched after it) to make `is_temporary` available at validation time.
+- Permanent → permanent TRF behavior is completely unchanged.
+
+#### Bug Fix — Report pages no longer navigate away from reports context on row click (2026-06-03)
+
+- `ReceiveOrderReportsPage`, `TransferRequestReportsPage`, `IssueProductReportsPage`, `ReconciliationReportsPage`, and `ReportsHistoryPage` all previously called `navigate()` on row click, pulling users out of the `/reports` section into transaction-side list pages.
+- Fixed by converting all row clicks to local overlay state (`selectedId` + `selectedType` for `ReportsHistoryPage`). Audit components now mount inline within each report page.
+- `ReceiveOrderAuditPage`, `TransferRequestAuditPage`, `IssueProductAuditPage`, and `ReconciliationReviewPage` each received two optional props: `overrideId` (bypasses `useParams`) and `onReturn` (bypasses `navigate(-1)`). Existing route-based entry points are unchanged.
+- `IssueProductAuditPage` converted to dual-mode: renders as overlay when `overrideId` is provided, full page when accessed via route.
+- `ReportsHistoryPage` uses `handleRowClick` to branch on `transaction_type`: RO/TRF/ISS/RC open local overlays; TWH rows call `setTemporaryWarehouseDetailOverlayTwhId` via UIContext (existing pattern).
+- Minor required backend addition: `id` field added to all 5 row shapes in `ReportController@allReports()` — without it, `ReportsHistoryPage` cannot identify which record to open. The spec stated no backend changes but this field is structurally required.
+- `TempWarehouseReportsPage`, `ProductReportsPage`, and `InventorySummaryPage` were already correct and untouched.
+
+#### Polish — ProductReportsPage row click opens overlay (2026-06-03)
+
+- ProductReportsPage row click no longer navigates to `/products/:id`. Now opens an inline overlay within the reports page, consistent with `ReceiveOrderReportsPage`, `IssueProductReportsPage`, and `TempWarehouseReportsPage`.
+- Added `selectedProductId` local state. Overlay renders a dark green sticky header (← RETURN + product code) over a `ProductDetailInline` component that fetches and displays the product master data.
+- Backdrop click closes the overlay. `/products/:id` route and `ProductDetailPage` are unchanged.
+
 #### Polish — Navbar hides dashboard controls on Reports pages (2026-06-03)
 
 - Added `isReportsPage` boolean derived from `location.pathname.startsWith('/reports')` in `Navbar.jsx`.

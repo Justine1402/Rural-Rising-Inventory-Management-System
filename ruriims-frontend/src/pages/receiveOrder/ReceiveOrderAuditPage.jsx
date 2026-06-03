@@ -7,9 +7,10 @@ const formatPHP = (v) =>
     ? `₱ ${parseFloat(v).toLocaleString('en-PH', { minimumFractionDigits: 2 })}`
     : '—';
 
-export default function ReceiveOrderAuditPage() {
-  const { id } = useParams();
+export default function ReceiveOrderAuditPage({ overrideId = null, onReturn = null }) {
+  const { id: paramId } = useParams();
   const navigate = useNavigate();
+  const effectiveId = overrideId ?? paramId;
   const [data, setData] = useState(null);
   const [pageLoading, setPageLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -17,7 +18,7 @@ export default function ReceiveOrderAuditPage() {
   useEffect(() => {
     let cancelled = false;
     api
-      .get(`/receive-orders/${id}`)
+      .get(`/receive-orders/${effectiveId}`)
       .then((res) => {
         if (cancelled) return;
         setData(res.data.order);
@@ -29,9 +30,9 @@ export default function ReceiveOrderAuditPage() {
         setPageLoading(false);
       });
     return () => { cancelled = true; };
-  }, [id]);
+  }, [effectiveId]);
 
-  const handleClose = () => navigate('/receive-orders');
+  const handleClose = () => onReturn ? onReturn() : navigate('/receive-orders');
 
   return (
     <>

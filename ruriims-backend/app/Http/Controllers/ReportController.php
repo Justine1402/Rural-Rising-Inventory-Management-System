@@ -48,6 +48,7 @@ class ReportController extends Controller
         }
         $roQuery->get()->each(function ($o) use (&$rows) {
             $rows->push([
+                'id'                => $o->id,
                 'transaction_code'  => $o->code,
                 'transaction_type'  => 'Receive Order',
                 'warehouse'         => $o->warehouse->name,
@@ -73,6 +74,7 @@ class ReportController extends Controller
         }
         $trQuery->get()->each(function ($t) use (&$rows) {
             $rows->push([
+                'id'                => $t->id,
                 'transaction_code'  => $t->code,
                 'transaction_type'  => 'Transfer Request',
                 'warehouse'         => $t->sourceWarehouse->name,
@@ -98,6 +100,7 @@ class ReportController extends Controller
         }
         $ipQuery->get()->each(function ($i) use (&$rows) {
             $rows->push([
+                'id'                => $i->id,
                 'transaction_code'  => $i->code,
                 'transaction_type'  => 'Issue Product',
                 'warehouse'         => $i->warehouse->name,
@@ -120,6 +123,7 @@ class ReportController extends Controller
         }
         $twhQuery->get()->each(function ($w) use (&$rows) {
             $rows->push([
+                'id'                => $w->id,
                 'transaction_code'  => $w->transaction_code,
                 'transaction_type'  => 'Temporary Warehouse',
                 'warehouse'         => $w->warehouse->name,
@@ -145,6 +149,7 @@ class ReportController extends Controller
         }
         $rcQuery->get()->each(function ($r) use (&$rows) {
             $rows->push([
+                'id'                => $r->id,
                 'transaction_code'  => $r->transaction_code,
                 'transaction_type'  => 'Inventory Reconciliation',
                 'warehouse'         => $r->warehouse->name,

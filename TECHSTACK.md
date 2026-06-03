@@ -161,10 +161,10 @@ Routes defined in `ruriims-backend/routes/api.php`:
 | `POST` | `/api/receive-orders` | `auth:sanctum` | `{ "order": { "code": "RO-..." } }` — PIN (same manager) + generates per-warehouse scoped code inside DB transaction |
 | `GET` | `/api/receive-orders/{id}` | `auth:sanctum` | `{ "order": { ...with items } }` |
 | `POST` | `/api/receive-orders/{id}/complete` | `auth:sanctum` | `{ "message": "Accomplished RO-..." }` — PIN (different manager) + generates StockInUse codes |
-| `GET` | `/api/transfer-requests` | `auth:sanctum` | `{ "transfers": [...] }` |
+| `GET` | `/api/transfer-requests` | `auth:sanctum` | `{ "transfers": [...] }` — managers scoped to `source_warehouse_id = mine OR destination_warehouse_id = mine` (closure-wrapped); admins get optional `?warehouse_id` filter on source |
 | `POST` | `/api/transfer-requests` | `auth:sanctum` | `{ "transfer": { "code": "TRF-..." } }` — PIN (same manager) + generates per-source-warehouse code |
 | `GET` | `/api/transfer-requests/{id}` | `auth:sanctum` | `{ "transfer": { ...with items } }` |
-| `POST` | `/api/transfer-requests/{id}/accomplish` | `auth:sanctum` | `{ "message": "Accomplished TRF-..." }` — PIN (different warehouse manager) + moves stock |
+| `POST` | `/api/transfer-requests/{id}/accomplish` | `auth:sanctum` | `{ "message": "Accomplished TRF-..." }` — PIN (self-exclusion always; source-warehouse block applies only when destination is a permanent warehouse; any manager except creator may accomplish when destination is TWH) + moves stock |
 | `GET` | `/api/issue-products` | `auth:sanctum` | `{ "issues": [...] }` |
 | `POST` | `/api/issue-products` | `auth:sanctum` | `{ "issue": { "code": "ISS-..." } }` — PIN (same manager) + generates per-warehouse code + decrements StockInUse |
 | `GET` | `/api/issue-products/{id}` | `auth:sanctum` | `{ "issue": { ...with items } }` |
@@ -242,13 +242,13 @@ Rural Rising Inventory Management System/   ← project root
 │   │   │   │   ├── CloseTemporaryWarehousePage.jsx ← UIContext overlay (no route); reads id from closeTemporaryWarehouseOverlayTwhId; fetches remaining stock via stock-in-use API; per-row Return To dropdown; PIN-verified close; closes overlay on success
 │   │   │   │   └── TemporaryWarehouseDetailPage.jsx ← UIContext overlay (no route); reads id from temporaryWarehouseDetailOverlayTwhId; metadata block + three sub-tables with enriched columns
 │   │   │   └── reports/
-│   │   │       ├── ReportsHistoryPage.jsx          ← /reports; "All Reports" union view
-│   │   │       ├── ProductReportsPage.jsx          ← /reports/products
-│   │   │       ├── ReceiveOrderReportsPage.jsx     ← /reports/receive-orders; PDF export
-│   │   │       ├── TransferRequestReportsPage.jsx  ← /reports/transfer-requests; PDF export
-│   │   │       ├── IssueProductReportsPage.jsx     ← /reports/issue-products; PDF export
-│   │   │       ├── TempWarehouseReportsPage.jsx    ← /reports/temporary-warehouses; row click → detail overlay
-│   │   │       ├── ReconciliationReportsPage.jsx   ← /reports/reconciliation
+│   │   │       ├── ReportsHistoryPage.jsx          ← /reports; "All Reports" union view; row click → inline overlay by transaction_type
+│   │   │       ├── ProductReportsPage.jsx          ← /reports/products; row click → ProductDetailInline overlay
+│   │   │       ├── ReceiveOrderReportsPage.jsx     ← /reports/receive-orders; PDF export; row click → ReceiveOrderAuditPage overlay
+│   │   │       ├── TransferRequestReportsPage.jsx  ← /reports/transfer-requests; PDF export; row click → TransferRequestAuditPage overlay
+│   │   │       ├── IssueProductReportsPage.jsx     ← /reports/issue-products; PDF export; row click → IssueProductAuditPage overlay
+│   │   │       ├── TempWarehouseReportsPage.jsx    ← /reports/temporary-warehouses; row click → TemporaryWarehouseDetailPage overlay (UIContext)
+│   │   │       ├── ReconciliationReportsPage.jsx   ← /reports/reconciliation; row click → ReconciliationReviewPage overlay
 │   │   │       └── InventorySummaryPage.jsx        ← /reports/inventory-summary; per-warehouse + grand total; PDF export
 │   │   ├── utils/
 │   │   │   ├── planBatchCascade.js        ← frontend mirror of PlansBatchCascade trait; nearest-harvest-date cascade planner with FIFO tiebreak

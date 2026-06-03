@@ -10,9 +10,10 @@ import {
 } from '../../utils/reconciliationFormat';
 import { formatDate } from '../../utils/formatDate';
 
-export default function ReconciliationReviewPage() {
-  const { id } = useParams();
+export default function ReconciliationReviewPage({ overrideId = null, onReturn = null }) {
+  const { id: paramId } = useParams();
   const navigate = useNavigate();
+  const effectiveId = overrideId ?? paramId;
   const { refreshReconciliations, refreshProducts } = useUI();
 
   const [data, setData] = useState(null);
@@ -25,7 +26,7 @@ export default function ReconciliationReviewPage() {
 
   useEffect(() => {
     let cancelled = false;
-    api.get(`/reconciliations/${id}`)
+    api.get(`/reconciliations/${effectiveId}`)
       .then((res) => {
         if (cancelled) return;
         setData(res.data.reconciliation);
@@ -37,18 +38,18 @@ export default function ReconciliationReviewPage() {
         setPageLoading(false);
       });
     return () => { cancelled = true; };
-  }, [id]);
+  }, [effectiveId]);
 
   const handleVerify = async (pin) => {
     setPinModalOpen(false);
     setError(null);
     setLoading(true);
     try {
-      await api.post(`/reconciliations/${id}/confirm`, { pin });
+      await api.post(`/reconciliations/${effectiveId}/confirm`, { pin });
       setSuccessCode(data.transaction_code);
       refreshReconciliations?.();
       refreshProducts?.();
-      setTimeout(() => navigate('/reconciliation'), 1500);
+      setTimeout(() => onReturn ? onReturn() : navigate('/reconciliation'), 1500);
     } catch (err) {
       setError(err.response?.data?.message ?? 'Verification failed.');
     } finally {
@@ -56,7 +57,7 @@ export default function ReconciliationReviewPage() {
     }
   };
 
-  const handleClose = () => navigate('/reconciliation');
+  const handleClose = () => onReturn ? onReturn() : navigate('/reconciliation');
 
   const adjustedItems = (data?.items ?? []).filter(
     (item) => Math.abs(parseFloat(item.discrepancy)) >= EPSILON

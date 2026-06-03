@@ -5,11 +5,17 @@ import Navbar from '../../components/layout/Navbar';
 import ReportsFilterBar from '../../components/shared/ReportsFilterBar';
 import StatusBadge from '../../components/ui/StatusBadge';
 import { useWarehouse } from '../../context/WarehouseContext';
+import { useUI } from '../../context/UIContext';
 import { formatDate } from '../../utils/formatDate';
+import ReceiveOrderAuditPage from '../receiveOrder/ReceiveOrderAuditPage';
+import TransferRequestAuditPage from '../transferRequest/TransferRequestAuditPage';
+import IssueProductAuditPage from '../issueProduct/IssueProductAuditPage';
+import ReconciliationReviewPage from '../reconciliation/ReconciliationReviewPage';
 
 export default function ReportsHistoryPage() {
   const location = useLocation();
   const { warehouses } = useWarehouse();
+  const { setTemporaryWarehouseDetailOverlayTwhId } = useUI();
 
   const [reports, setReports]         = useState([]);
   const [loading, setLoading]         = useState(true);
@@ -18,6 +24,8 @@ export default function ReportsHistoryPage() {
   const [dateFrom, setDateFrom]       = useState('');
   const [dateTo, setDateTo]           = useState('');
   const [search, setSearch]           = useState('');
+  const [selectedId, setSelectedId]   = useState(null);
+  const [selectedType, setSelectedType] = useState(null);
 
   useEffect(() => {
     let isCancelled = false;
@@ -43,6 +51,17 @@ export default function ReportsHistoryPage() {
 
     return () => { isCancelled = true; };
   }, [warehouseId, dateFrom, dateTo, search, location.key]);
+
+  const handleRowClick = (r) => {
+    if (r.transaction_type === 'Temporary Warehouse') {
+      setTemporaryWarehouseDetailOverlayTwhId(r.id);
+    } else {
+      setSelectedId(r.id);
+      setSelectedType(r.transaction_type);
+    }
+  };
+
+  const closeOverlay = () => { setSelectedId(null); setSelectedType(null); };
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -93,7 +112,8 @@ export default function ReportsHistoryPage() {
                 {!loading && !error && reports.map((r, idx) => (
                   <tr
                     key={`${r.transaction_type}-${r.transaction_code}-${idx}`}
-                    className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
+                    onClick={() => handleRowClick(r)}
+                    className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 cursor-pointer`}
                   >
                     <td className="px-4 py-3 font-mono text-xs text-gray-700">{r.transaction_code}</td>
                     <td className="px-4 py-3 text-gray-800">{r.transaction_type}</td>
@@ -108,6 +128,19 @@ export default function ReportsHistoryPage() {
           </div>
         </div>
       </div>
+
+      {selectedId && selectedType === 'Receive Order' && (
+        <ReceiveOrderAuditPage overrideId={selectedId} onReturn={closeOverlay} />
+      )}
+      {selectedId && selectedType === 'Transfer Request' && (
+        <TransferRequestAuditPage overrideId={selectedId} onReturn={closeOverlay} />
+      )}
+      {selectedId && selectedType === 'Issue Product' && (
+        <IssueProductAuditPage overrideId={selectedId} onReturn={closeOverlay} />
+      )}
+      {selectedId && selectedType === 'Inventory Reconciliation' && (
+        <ReconciliationReviewPage overrideId={selectedId} onReturn={closeOverlay} />
+      )}
     </div>
   );
 }

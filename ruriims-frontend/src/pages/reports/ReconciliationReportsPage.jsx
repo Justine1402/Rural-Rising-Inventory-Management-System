@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import api from '../../api/axios';
 import Navbar from '../../components/layout/Navbar';
 import ReportsFilterBar from '../../components/shared/ReportsFilterBar';
 import StatusBadge from '../../components/ui/StatusBadge';
 import { useWarehouse } from '../../context/WarehouseContext';
 import { formatDate } from '../../utils/formatDate';
+import ReconciliationReviewPage from '../reconciliation/ReconciliationReviewPage';
 
 export default function ReconciliationReportsPage() {
   const location = useLocation();
-  const navigate = useNavigate();
   const { warehouses } = useWarehouse();
 
   const [reconciliations, setReconciliations] = useState([]);
@@ -19,6 +19,7 @@ export default function ReconciliationReportsPage() {
   const [dateFrom, setDateFrom]               = useState('');
   const [dateTo, setDateTo]                   = useState('');
   const [search, setSearch]                   = useState('');
+  const [selectedId, setSelectedId]           = useState(null);
 
   useEffect(() => {
     let isCancelled = false;
@@ -89,7 +90,7 @@ export default function ReconciliationReportsPage() {
                 {!loading && !error && reconciliations.map((row, idx) => (
                   <tr
                     key={row.id}
-                    onClick={() => navigate(`/reconciliation/${row.id}/review`)}
+                    onClick={() => setSelectedId(row.id)}
                     className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 cursor-pointer`}
                   >
                     <td className="px-4 py-3 font-mono text-xs text-gray-700">{row.transaction_code}</td>
@@ -108,6 +109,13 @@ export default function ReconciliationReportsPage() {
           </div>
         </div>
       </div>
+
+      {selectedId && (
+        <ReconciliationReviewPage
+          overrideId={selectedId}
+          onReturn={() => setSelectedId(null)}
+        />
+      )}
     </div>
   );
 }

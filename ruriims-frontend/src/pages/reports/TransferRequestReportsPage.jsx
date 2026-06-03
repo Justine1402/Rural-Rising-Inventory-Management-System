@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import api from '../../api/axios';
 import { exportTablePdf } from '../../utils/exportPdf';
 import { formatDate } from '../../utils/formatDate';
@@ -7,10 +7,10 @@ import Navbar from '../../components/layout/Navbar';
 import ReportsFilterBar from '../../components/shared/ReportsFilterBar';
 import StatusBadge from '../../components/ui/StatusBadge';
 import { useWarehouse } from '../../context/WarehouseContext';
+import TransferRequestAuditPage from '../transferRequest/TransferRequestAuditPage';
 
 export default function TransferRequestReportsPage() {
   const location = useLocation();
-  const navigate = useNavigate();
   const { warehouses } = useWarehouse();
 
   const [transfers, setTransfers]     = useState([]);
@@ -20,6 +20,7 @@ export default function TransferRequestReportsPage() {
   const [dateFrom, setDateFrom]       = useState('');
   const [dateTo, setDateTo]           = useState('');
   const [search, setSearch]           = useState('');
+  const [selectedId, setSelectedId]   = useState(null);
 
   useEffect(() => {
     let isCancelled = false;
@@ -117,7 +118,7 @@ export default function TransferRequestReportsPage() {
                 {!loading && !error && transfers.map((row, idx) => (
                   <tr
                     key={row.id}
-                    onClick={() => navigate(`/transfer-requests/${row.id}/audit`)}
+                    onClick={() => setSelectedId(row.id)}
                     className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 cursor-pointer`}
                   >
                     <td className="px-4 py-3 font-mono text-xs text-gray-700">{row.transaction_code}</td>
@@ -136,6 +137,13 @@ export default function TransferRequestReportsPage() {
           </div>
         </div>
       </div>
+
+      {selectedId && (
+        <TransferRequestAuditPage
+          overrideId={selectedId}
+          onReturn={() => setSelectedId(null)}
+        />
+      )}
     </div>
   );
 }

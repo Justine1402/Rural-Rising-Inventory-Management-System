@@ -26,7 +26,10 @@ class TransferRequestController extends Controller
             ->orderByDesc('created_at');
 
         if ($user->role === 'manager') {
-            $query->where('source_warehouse_id', $user->warehouse_id);
+            $query->where(function ($q) use ($user) {
+                $q->where('source_warehouse_id', $user->warehouse_id)
+                  ->orWhere('destination_warehouse_id', $user->warehouse_id);
+            });
         } elseif ($request->filled('warehouse_id')) {
             $query->where('source_warehouse_id', $request->input('warehouse_id'));
         }
@@ -199,15 +202,15 @@ class TransferRequestController extends Controller
             return response()->json(['message' => 'A different manager must verify this transfer.'], 422);
         }
 
-        if ($user->warehouse_id && $user->warehouse_id === $transferRequest->source_warehouse_id) {
+        $destination = Warehouse::findOrFail($transferRequest->destination_warehouse_id);
+
+        if ($user->warehouse_id && $user->warehouse_id === $transferRequest->source_warehouse_id && !$destination->is_temporary) {
             return response()->json(['message' => 'The verifying manager must be from a different warehouse than the source.'], 422);
         }
 
         if (!$user->pin || !Hash::check($request->pin, $user->pin)) {
             return response()->json(['message' => 'Incorrect PIN.'], 422);
         }
-
-        $destination = Warehouse::findOrFail($transferRequest->destination_warehouse_id);
 
         try {
             DB::transaction(function () use ($request, $transferRequest, $user, $destination) {

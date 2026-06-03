@@ -81,7 +81,7 @@ when the destination is a TWH the prefix switches to `TWH-` yielding
 | Create Receive Order (Stage 1) | **Same** manager who created the order |
 | Accomplish Receive Order (Stage 2) | **Another** manager from the **same branch** |
 | Create Transfer Request (Stage 1) | **Same** manager who created the request |
-| Accomplish Transfer Request (Stage 2) | **A manager from a different warehouse** — same warehouse PIN is rejected |
+| Accomplish Transfer Request (Stage 2) | **A manager from a different warehouse** (permanent→permanent); **source warehouse manager or any manager** (permanent→TWH, since TWH has no assigned manager) |
 | Issue Product | **Same** manager who is issuing |
 | Create Temporary Warehouse | **Same** manager (name auto-fills the form) |
 | Close Temporary Warehouse | **Any** authorized manager |
@@ -814,7 +814,7 @@ Read-only. The product's SKU is shown as the header title (e.g., "SKU-007").
 Fields shown: Name, Unit, Category, Shelf Life (plain text in a 2-column grid).
 RETURN button navigates back via `navigate(-1)`.
 
-Accessed from: `ProductReportsPage` row click → `/products/:id`
+Accessed from: direct URL navigation only. `ProductReportsPage` row click no longer navigates here — it opens an inline `ProductDetailInline` overlay within the reports page instead.
 
 ---
 
@@ -884,9 +884,11 @@ status changes to Accomplished → Stock-In-Use codes generated per product line
 ### `ReceiveOrderAuditPage`
 
 Route: `/receive-orders/:id/audit` — overlay (same visual shell as `ReceiveOrderFormPage`).
-Accessed by clicking an Accomplished row in `ReceiveOrderListPage`.
+Accessed from: Accomplished row in `ReceiveOrderListPage`; row click in `ReceiveOrderReportsPage`; row click in `ReportsHistoryPage` (Receive Order type).
 
-On mount: fetches `GET /api/receive-orders/{id}`. RETURN navigates back via `navigate(-1)`.
+Accepts optional props: `overrideId` (bypasses `useParams` — used when mounted inline by report pages) and `onReturn` (bypasses `navigate(-1)` — called by RETURN button when rendered as inline overlay). When neither prop is provided, route-based behavior is unchanged.
+
+On mount: fetches `GET /api/receive-orders/{effectiveId}`. RETURN calls `onReturn()` if provided, else `navigate('/receive-orders')`.
 
 Read-only header fields (2-column grid): Supplier Name, Order Cost, Delivery Fee,
 Date Ordered, Date Arrived, Total, Warehouse, Created By, Verified By.
@@ -908,6 +910,8 @@ Transfer Request Code | Source Warehouse | Destination Warehouse | Date Requeste
 Date Accomplished | Requested By | Verified By | Status
 
 Status: `Incomplete` (red-orange) / `Complete` (green)
+
+**Manager scoping:** Managers see TRFs where their warehouse is the **source OR destination** (`WHERE source_warehouse_id = mine OR destination_warehouse_id = mine`), wrapped in a closure. Admins see all TRFs (optional `?warehouse_id` filter on source only). This OR condition ensures destination managers can see incoming TRFs they need to complete.
 
 **Single-row select behavior:** Same pattern as Receive Orders. With exactly one
 Incomplete row selected, `+ Transfer Request` Navbar button becomes
@@ -1009,7 +1013,7 @@ planner falls back to FIFO across all remaining non-zero batches in the source w
 
 ACCOMPLISH button → `PinVerificationModal` — PIN verification on ACCOMPLISH enforces two guards:
 - **Same-user check (all roles):** The verifying user cannot be the user who created the request.
-- **Same-warehouse check (managers only):** The verifying manager must be from a different warehouse than the one that created the request. Admins (`warehouse_id = null`) are not subject to this check because they are not assigned to any branch.
+- **Same-warehouse check (managers only, permanent destinations only):** The verifying manager must be from a different warehouse than the source. Admins (`warehouse_id = null`) are not subject to this check. When the destination is a **temporary warehouse**, this check is skipped entirely — any manager (including the source warehouse manager) may verify, since TWH has no assigned manager of its own.
 
 → on verified → "Accomplished TRF-QC-000-003" label → status changes to Complete
 → stock deducted from source warehouse per recomputed cascade plan, new batches
@@ -1020,9 +1024,11 @@ added to destination warehouse (one per source batch deducted).
 ### `TransferRequestAuditPage`
 
 Route: `/transfer-requests/:id/audit` — overlay (same visual shell as `TransferRequestFormPage`).
-Accessed by clicking a Complete row in `TransferRequestListPage`.
+Accessed from: Complete row in `TransferRequestListPage`; row click in `TransferRequestReportsPage`; row click in `ReportsHistoryPage` (Transfer Request type).
 
-On mount: fetches `GET /api/transfer-requests/{id}`. RETURN navigates back via `navigate(-1)`.
+Accepts optional props: `overrideId` (bypasses `useParams`) and `onReturn` (bypasses `navigate('/transfer-requests')`). When neither prop is provided, route-based behavior is unchanged.
+
+On mount: fetches `GET /api/transfer-requests/{effectiveId}`. RETURN calls `onReturn()` if provided, else `navigate('/transfer-requests')`.
 
 Read-only header fields (2-column grid): Requested By, Date Requested, Source Warehouse,
 Destination Warehouse, Verified By, Date Received.
@@ -1097,12 +1103,14 @@ deducted immediately per cascade plan → dashboard quantities update.
 
 ### `IssueProductAuditPage`
 
-Route: `/issue-products/:id/audit` — standalone full page.
-Accessed by clicking a row in `IssueProductReportsPage`.
+Route: `/issue-products/:id/audit` — **dual-mode**: full page when accessed via route; overlay when `overrideId` prop is provided.
+Accessed from: route (`/issue-products/:id/audit`) from `IssueProductListPage`; inline overlay from `IssueProductReportsPage` and `ReportsHistoryPage` (Issue Product type).
 
-On mount: fetches `GET /api/issue-products/{id}`. RETURN navigates back via `navigate(-1)`.
+Accepts optional props: `overrideId` (bypasses `useParams` — triggers overlay mode) and `onReturn` (bypasses `navigate(-1)`). When `overrideId` is provided, renders as a fixed overlay (backdrop + card) without `Navbar`. When neither prop is provided, renders as a full page with `Navbar`.
 
-Header bar (dark green): RETURN button (left) + ISS code as title (`issue.code`).
+On mount: fetches `GET /api/issue-products/{effectiveId}`. RETURN calls `onReturn()` if provided, else `navigate(-1)`.
+
+Header bar (dark green): RETURN button (left) + ISS code as title (`issue.code`). In overlay mode the header is sticky (`sticky top-0 z-10`) with `justify-between` layout matching other audit overlays.
 
 Read-only header fields (2-column grid): Issued By, Date Issued, Warehouse, Issue Type.
 - Issue Type displayed as "Internal Use" or "Sale" (formatted from `issue_type` value).
@@ -1237,13 +1245,16 @@ SUBMIT button → `PinVerificationModal` (same manager) → on verified →
 ### `ReconciliationReviewPage` (proto p.49-51, SRS §3.8 Reviewing)
 
 Route: `/reconciliation/:id/review` — **overlay** rendered over `ReconciliationListPage` (same pattern as `ReceiveOrderAuditPage` and `TransferRequestAuditPage`).
+Also accessible as inline overlay from `ReconciliationReportsPage` and `ReportsHistoryPage` (Inventory Reconciliation type).
+
+Accepts optional props: `overrideId` (bypasses `useParams`) and `onReturn` (bypasses `navigate('/reconciliation')`). When neither prop is provided, route-based behavior is unchanged.
 
 Overlay structure:
-- **Backdrop:** `fixed inset-0 bg-black/20 backdrop-blur-sm z-40` — clicking the backdrop navigates to `/reconciliation`.
+- **Backdrop:** `fixed inset-0 bg-black/20 backdrop-blur-sm z-40` — clicking calls `handleClose` (navigates to `/reconciliation` or calls `onReturn()`).
 - **Card:** `fixed top-[105px] left-1/2 -translate-x-1/2 w-[1040px] max-h-[calc(100vh-130px)] overflow-y-auto bg-white rounded-lg shadow-xl z-50`
 - **Sticky dark green header:** `style={{ backgroundColor: '#1A381E' }}`, `sticky top-0 z-10` — `← RETURN` on the left, RC code on the right.
 
-On mount: fetches `GET /api/reconciliations/{id}`. RETURN navigates to `/reconciliation`.
+On mount: fetches `GET /api/reconciliations/{effectiveId}`. RETURN calls `onReturn()` if provided, else navigates to `/reconciliation`. After confirm success, `setTimeout` calls `onReturn()` or navigates to `/reconciliation` after 1.5 s.
 
 Metadata grid (2-column): Reconciled By | Date Reconciled | Reviewed By | Date Reviewed | Warehouse.
 
@@ -1280,7 +1291,7 @@ All reports pages are reached from the `Reports History` Navbar button → `/rep
 - Export as PDF button (appears on specific type views, not All Reports)
 - Search bar (magnifier icon, top-right)
 
-Reports pages do **not** include `WarehouseTabs` — warehouse-scoping on reports is handled by the filter bar's warehouse dropdown (admin only; hidden from managers). `ReportController` does not server-side scope by manager warehouse — the frontend omitting the `warehouse_id` param is the only current guard. `WarehouseTabs` appears only on the dashboard and list pages (Receive Orders, Transfer Requests, Reconciliation).
+Reports pages do **not** include `WarehouseTabs` — warehouse-scoping on reports is handled by the filter bar's warehouse dropdown (admin only; hidden from managers). `ReportController` **does** server-side scope by manager warehouse (`$warehouseId = $user->warehouse_id` override for 6 of 8 methods). `WarehouseTabs` appears only on the dashboard and list pages (Receive Orders, Transfer Requests, Reconciliation).
 
 **Report type dropdown options:**
 
@@ -1302,15 +1313,21 @@ appear as a standalone button in the filter bar.
 **`ReportsHistoryPage` columns (All Reports, proto p.53):**
 Transaction Code | Transaction Type | Warehouse | Date Accomplished | Accomplished By | Status
 
-Transaction Type values: Receive Order, Accomplish Order, Transfer Request,
-Accomplish Transfer, Issue Product, Create Temporary Warehouse, Close Temporary Warehouse
+All rows are clickable (`hover:bg-blue-50 cursor-pointer`). Row click behavior branches on `transaction_type`:
+- **Receive Order** → opens `ReceiveOrderAuditPage` inline overlay via `selectedId` + `selectedType` state
+- **Transfer Request** → opens `TransferRequestAuditPage` inline overlay
+- **Issue Product** → opens `IssueProductAuditPage` inline overlay
+- **Inventory Reconciliation** → opens `ReconciliationReviewPage` inline overlay
+- **Temporary Warehouse** → calls `setTemporaryWarehouseDetailOverlayTwhId(row.id)` via UIContext (same as `TempWarehouseReportsPage`)
+
+`ReportController@allReports()` now includes `id` in each normalized row — required so row clicks can identify the record to open.
 
 ---
 
 **`ProductReportsPage` columns (proto p.54-55):**
 Product Code | Product Name | Shelf Life | Date Created | Created By | Status
 
-Row click → `/products/:id` (ProductDetailPage)
+Row click → inline overlay (`ProductDetailInline` component defined inside `ProductReportsPage.jsx`); fetches `GET /api/products/{id}`; dark green sticky header with ← RETURN + product code; backdrop click closes. Does not navigate to `/products/:id`.
 
 ---
 
@@ -1318,7 +1335,7 @@ Row click → `/products/:id` (ProductDetailPage)
 Transaction Code | Supplier Name | Warehouse | Total Products | Total Cost |
 Date Ordered | Date Accomplished | Created By | Verified By | Status
 
-Export as PDF button visible. Row click → `/receive-orders/:id/audit` (ReceiveOrderAuditPage).
+Export as PDF button visible. Row click → opens `ReceiveOrderAuditPage` as local overlay via `selectedId` state (no navigation).
 
 ---
 
@@ -1326,7 +1343,7 @@ Export as PDF button visible. Row click → `/receive-orders/:id/audit` (Receive
 Transaction Code | Source Warehouse | Destination Warehouse | Total Products |
 Date Requested | Date Accomplished | Requested By | Verified By | Status
 
-Export as PDF button visible.
+Export as PDF button visible. Row click → opens `TransferRequestAuditPage` as local overlay via `selectedId` state (no navigation).
 
 ---
 
@@ -1334,7 +1351,7 @@ Export as PDF button visible.
 Transaction Code | Issue Type | Total Products (e.g., "2 Products | 45 KG") |
 Date Issued | Issued By | Status
 
-Export as PDF button visible. Row click → `/issue-products/:id/audit` (IssueProductAuditPage).
+Export as PDF button visible. Row click → opens `IssueProductAuditPage` as local overlay via `selectedId` state (no navigation).
 
 ---
 
@@ -1349,6 +1366,8 @@ Route: `/reports/temporary-warehouses`. Row click → `setTemporaryWarehouseDeta
 **`ReconciliationReportsPage` columns (proto p.61-62):**
 Reconciliation Code | Warehouse | Date Reconciled | Products with Discrepancy |
 Reconciled By | Reviewed By | Status
+
+Row click → opens `ReconciliationReviewPage` as local overlay via `selectedId` state (no navigation).
 
 ---
 

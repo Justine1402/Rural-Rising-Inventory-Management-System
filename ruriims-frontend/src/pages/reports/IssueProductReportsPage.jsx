@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import api from '../../api/axios';
 import { exportTablePdf } from '../../utils/exportPdf';
 import { formatDate } from '../../utils/formatDate';
@@ -7,10 +7,10 @@ import Navbar from '../../components/layout/Navbar';
 import ReportsFilterBar from '../../components/shared/ReportsFilterBar';
 import StatusBadge from '../../components/ui/StatusBadge';
 import { useWarehouse } from '../../context/WarehouseContext';
+import IssueProductAuditPage from '../issueProduct/IssueProductAuditPage';
 
 export default function IssueProductReportsPage() {
   const location = useLocation();
-  const navigate = useNavigate();
   const { warehouses } = useWarehouse();
 
   const [issues, setIssues]           = useState([]);
@@ -20,6 +20,7 @@ export default function IssueProductReportsPage() {
   const [dateFrom, setDateFrom]       = useState('');
   const [dateTo, setDateTo]           = useState('');
   const [search, setSearch]           = useState('');
+  const [selectedId, setSelectedId]   = useState(null);
 
   useEffect(() => {
     let isCancelled = false;
@@ -110,7 +111,7 @@ export default function IssueProductReportsPage() {
                 {!loading && !error && issues.map((row, idx) => (
                   <tr
                     key={row.id}
-                    onClick={() => navigate(`/issue-products/${row.id}/audit`)}
+                    onClick={() => setSelectedId(row.id)}
                     className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 cursor-pointer`}
                   >
                     <td className="px-4 py-3 font-mono text-xs text-gray-700">{row.transaction_code}</td>
@@ -126,6 +127,13 @@ export default function IssueProductReportsPage() {
           </div>
         </div>
       </div>
+
+      {selectedId && (
+        <IssueProductAuditPage
+          overrideId={selectedId}
+          onReturn={() => setSelectedId(null)}
+        />
+      )}
     </div>
   );
 }

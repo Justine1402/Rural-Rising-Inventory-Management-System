@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../api/axios';
 
-export default function TransferRequestAuditPage() {
-  const { id } = useParams();
+export default function TransferRequestAuditPage({ overrideId = null, onReturn = null }) {
+  const { id: paramId } = useParams();
   const navigate = useNavigate();
+  const effectiveId = overrideId ?? paramId;
   const [data, setData] = useState(null);
   const [pageLoading, setPageLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -12,7 +13,7 @@ export default function TransferRequestAuditPage() {
   useEffect(() => {
     let cancelled = false;
     api
-      .get(`/transfer-requests/${id}`)
+      .get(`/transfer-requests/${effectiveId}`)
       .then((res) => {
         if (cancelled) return;
         setData(res.data.transfer);
@@ -24,9 +25,9 @@ export default function TransferRequestAuditPage() {
         setPageLoading(false);
       });
     return () => { cancelled = true; };
-  }, [id]);
+  }, [effectiveId]);
 
-  const handleClose = () => navigate('/transfer-requests');
+  const handleClose = () => onReturn ? onReturn() : navigate('/transfer-requests');
 
   return (
     <>
