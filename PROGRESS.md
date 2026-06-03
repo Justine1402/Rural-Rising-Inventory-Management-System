@@ -1163,6 +1163,20 @@ URL and no read-only mode built into it.
 - Added frontend pre-submit check in `ReceiveOrderFormPage.jsx`: blocks `PinVerificationModal` from opening if any item is missing a harvest date; displays inline error via existing `error` state.
 - `quantity_arrived < quantity_ordered` is intentional and unchanged — partial arrivals are a normal agricultural supply chain scenario.
 
+#### Polish — Navbar hides dashboard controls on Reports pages (2026-06-03)
+
+- Added `isReportsPage` boolean derived from `location.pathname.startsWith('/reports')` in `Navbar.jsx`.
+- Transaction action buttons (Create Product, Receive Order, Transfer Request, Issue Product, Create Temporary Warehouse), All Products dropdown, and LIFO/FEFO/FIFO sort dropdown are hidden when `isReportsPage` is true.
+- Inventory dropdown remains visible on all pages (needed for navigation back to the dashboard). Reports History button, warehouse label, avatar, and settings icon also always visible.
+
+#### Bug Fix — ReceiveOrderFormPage harvest date validation and submitted lock (2026-06-03)
+
+- Harvest date pre-fill root cause fixed: item initializer and any post-push hooks confirmed to set `harvest_date` to empty string; input uses controlled `value={item.harvest_date || ''}` not `defaultValue`.
+- Pre-submit harvest date validation scoped to create mode only (`!isAccomplish`) — runs before `PinVerificationModal` opens in create mode; accomplish mode is not checked (harvest dates are read-only from the original RO and not sent in the accomplish request).
+- Backend `ReceiveOrderController@complete()`: removed the erroneous harvest date guard that checked `$request->input('items')` for `harvest_date` — accomplish payloads never include that field, so the guard always returned 422. Harvest date for StockInUse creation continues to read from `$item->harvest_date` (the stored DB value), defaulting to today if null.
+- Warehouse dropdown for admins now includes `disabled={submitted}` — locks correctly alongside all other form inputs after successful create or accomplish.
+- Added frontend guard in accomplish branch: blocks PIN modal if any item has a negative `quantity_arrived`. Zero is allowed (partial/no arrivals are valid). Backend `complete()` already enforces `min:0` via Laravel validation as a second line of defense.
+
 ---
 
 ## Not Started

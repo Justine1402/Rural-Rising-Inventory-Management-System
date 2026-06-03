@@ -27,6 +27,7 @@ export default function Navbar({ selectedCategory = '', onCategoryChange = () =>
   const { setReceiveOrderFormOpen, setCreateProductFormOpen, setTransferRequestFormOpen, setIssueProductFormOpen, setTemporaryWarehouseFormOpen, setCloseTemporaryWarehouseOverlayTwhId } = useUI();
   const navigate = useNavigate();
   const location = useLocation();
+  const isReportsPage = location.pathname.startsWith('/reports');
 
   const inventoryLabel = location.pathname.startsWith('/reconciliation')
     ? 'Inventory Reconciliation'
@@ -140,9 +141,9 @@ export default function Navbar({ selectedCategory = '', onCategoryChange = () =>
       </div>
 
       {/* Row 2 — Action buttons + Controls */}
-      <div className="flex items-center justify-between px-6 pb-3 gap-4">
+      <div className={`flex items-center ${isReportsPage ? 'justify-end' : 'justify-between'} px-6 pb-3 gap-4`}>
 
-        {/* Action buttons — TWH-active shows 3 buttons; permanent shows full set */}
+        {!isReportsPage && (
         <div className="flex items-center gap-2 flex-wrap">
           {activeWarehouse?.isTemporary ? (
             <>
@@ -206,9 +207,11 @@ export default function Navbar({ selectedCategory = '', onCategoryChange = () =>
             })
           )}
         </div>
+        )}
 
         {/* Center-right controls */}
         <div className="flex items-center gap-2 flex-shrink-0">
+          {!isReportsPage && (
           <div className="relative" ref={categoryRef}>
             <button
               onClick={() => setCategoryOpen((v) => !v)}
@@ -237,6 +240,7 @@ export default function Navbar({ selectedCategory = '', onCategoryChange = () =>
               </div>
             )}
           </div>
+          )}
           <div className="relative" ref={inventoryRef}>
             <button
               onClick={() => setInventoryOpen((v) => !v)}
@@ -273,6 +277,7 @@ export default function Navbar({ selectedCategory = '', onCategoryChange = () =>
               </div>
             )}
           </div>
+          {!isReportsPage && (
           <div className="relative" ref={sortRef}>
             <button
               onClick={() => setSortOpen((v) => !v)}
@@ -294,6 +299,7 @@ export default function Navbar({ selectedCategory = '', onCategoryChange = () =>
               </div>
             )}
           </div>
+          )}
           <button
             onClick={() => navigate('/reports')}
             className="btn-brand text-white text-xs font-medium px-3 py-1.5 rounded-full transition-colors"

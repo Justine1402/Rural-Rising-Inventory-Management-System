@@ -157,14 +157,6 @@ class ReceiveOrderController extends Controller
             return response()->json(['message' => 'Incorrect PIN.'], 422);
         }
 
-        foreach ($request->input('items', []) as $item) {
-            if (empty($item['harvest_date'])) {
-                return response()->json([
-                    'message' => 'Harvest date is required for all items.',
-                ], 422);
-            }
-        }
-
         try {
             DB::transaction(function () use ($request, $receiveOrder, $user) {
                 DB::table('receive_orders')->where('id', $receiveOrder->id)->lockForUpdate()->first();

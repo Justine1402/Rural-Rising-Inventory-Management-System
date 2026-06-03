@@ -67,6 +67,13 @@ export default function ReceiveOrderFormPage({ onClose, onSuccess }) {
   const removeItem = (index) => setItems((prev) => prev.filter((_, i) => i !== index));
 
   const handleSubmit = () => {
+    if (!isAccomplish) {
+      const missingHarvestDate = items.some(item => !item.harvest_date || item.harvest_date.trim() === '');
+      if (missingHarvestDate) {
+        setError('Harvest date is required for all items before proceeding.');
+        return;
+      }
+    }
     setError(null);
     if (!isAccomplish) {
       if (!selectedWarehouseId) { setError('Please select a warehouse.'); return; }
@@ -75,9 +82,8 @@ export default function ReceiveOrderFormPage({ onClose, onSuccess }) {
       if (items.some((i) => !i.quantity_ordered || !i.product_cost)) { setError('Fill in Quantity Ordered and Product Cost for all items.'); return; }
     } else {
       if (!form.date_arrived) { setError('Date Arrived is required.'); return; }
-      const missingHarvestDate = items.some(item => !item.harvest_date);
-      if (missingHarvestDate) {
-        setError('Harvest date is required for all items before completing the order.');
+      if (items.some((i) => parseFloat(i.quantity_arrived) < 0)) {
+        setError('Quantity Arrived cannot be negative.');
         return;
       }
     }
@@ -193,7 +199,8 @@ export default function ReceiveOrderFormPage({ onClose, onSuccess }) {
                         <select
                           value={selectedWarehouseId}
                           onChange={(e) => setSelectedWarehouseId(e.target.value)}
-                          className="bg-gray-100 border border-transparent rounded-lg px-3 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-[#1A381E] focus:bg-white transition"
+                          disabled={submitted}
+                          className="bg-gray-100 border border-transparent rounded-lg px-3 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-[#1A381E] focus:bg-white transition disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <option value="">Select Warehouse</option>
                           {warehouses.map((w) => (
@@ -254,7 +261,7 @@ export default function ReceiveOrderFormPage({ onClose, onSuccess }) {
                           </td>
                           <td className="px-4 py-2">
                             {isAccomplish ? <span className="text-gray-600">{item.harvest_date ?? '—'}</span>
-                              : <input type="date" value={item.harvest_date} onChange={(e) => setItemField(idx, 'harvest_date', e.target.value)}
+                              : <input type="date" value={item.harvest_date || ''} onChange={(e) => setItemField(idx, 'harvest_date', e.target.value)}
                                   disabled={submitted}
                                   className="bg-gray-100 border border-transparent rounded px-2 py-1 text-sm focus:outline-none focus:border-[#1A381E] focus:bg-white disabled:opacity-50" />}
                           </td>
