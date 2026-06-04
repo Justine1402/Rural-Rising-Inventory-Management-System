@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../api/axios';
+import { exportDetailPdf } from '../../utils/exportPdf';
 import Navbar from '../../components/layout/Navbar';
 
 const fmtIssueType = (t) => t === 'internal_use' ? 'Internal Use' : 'Sale';
@@ -25,6 +26,11 @@ export default function IssueProductAuditPage({ overrideId = null, onReturn = nu
   }, [effectiveId]);
 
   const handleReturn = () => onReturn ? onReturn() : navigate(-1);
+
+  const handleExportPdf = () => {
+    if (!issue) return;
+    exportDetailPdf({ type: 'iss', records: [issue] });
+  };
 
   const bodyContent = issue && (
     <>
@@ -100,7 +106,16 @@ export default function IssueProductAuditPage({ overrideId = null, onReturn = nu
             >
               ← RETURN
             </button>
-            <span className="text-sm font-semibold text-white">{issue?.code ?? ''}</span>
+            <div className="flex items-center gap-4">
+              <span className="text-sm font-semibold text-white">{issue?.code ?? ''}</span>
+              <button
+                onClick={handleExportPdf}
+                disabled={!issue}
+                className="text-xs font-semibold text-white border border-white rounded px-3 py-1.5 hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Export as PDF
+              </button>
+            </div>
           </div>
           <div>
             {loading && <p className="text-center text-gray-400 py-8">Loading...</p>}
@@ -119,7 +134,7 @@ export default function IssueProductAuditPage({ overrideId = null, onReturn = nu
       <div className="p-6">
         <div className="bg-white rounded shadow overflow-hidden">
           <div
-            className="flex items-center gap-4 px-6 py-4"
+            className="flex items-center justify-between px-6 py-4"
             style={{ backgroundColor: '#1A381E' }}
           >
             <button
@@ -128,9 +143,18 @@ export default function IssueProductAuditPage({ overrideId = null, onReturn = nu
             >
               ← RETURN
             </button>
-            {issue && (
-              <span className="text-white font-bold text-base tracking-wide">{issue.code}</span>
-            )}
+            <div className="flex items-center gap-4">
+              {issue && (
+                <span className="text-white font-bold text-base tracking-wide">{issue.code}</span>
+              )}
+              <button
+                onClick={handleExportPdf}
+                disabled={!issue}
+                className="text-xs font-semibold text-white border border-white rounded px-3 py-1.5 hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Export as PDF
+              </button>
+            </div>
           </div>
           {loading && <p className="text-center text-gray-400 py-8">Loading...</p>}
           {!loading && error && <p className="text-center text-red-500 py-8">{error}</p>}

@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import api from '../../api/axios';
+import { exportTablePdf, exportDetailPdf } from '../../utils/exportPdf';
+import { formatDate } from '../../utils/formatDate';
 import Navbar from '../../components/layout/Navbar';
 import ReportsFilterBar from '../../components/shared/ReportsFilterBar';
 import StatusBadge from '../../components/ui/StatusBadge';
 import { useWarehouse } from '../../context/WarehouseContext';
-import { formatDate } from '../../utils/formatDate';
 import ReconciliationReviewPage from '../reconciliation/ReconciliationReviewPage';
 
 export default function ReconciliationReportsPage() {
@@ -20,6 +21,7 @@ export default function ReconciliationReportsPage() {
   const [dateTo, setDateTo]                   = useState('');
   const [search, setSearch]                   = useState('');
   const [selectedId, setSelectedId]           = useState(null);
+  const [selectedIds, setSelectedIds]         = useState(new Set());
 
   useEffect(() => {
     let isCancelled = false;
@@ -33,12 +35,73 @@ export default function ReconciliationReportsPage() {
     if (search)      params.search       = search;
 
     api.get('/reports/reconciliation', { params })
-      .then((res) => { if (!isCancelled) setReconciliations(res.data.reconciliations); })
+      .then((res) => {
+        if (!isCancelled) {
+          setReconciliations(res.data.reconciliations);
+          setSelectedIds(new Set());
+        }
+      })
       .catch(() => { if (!isCancelled) setError('Failed to load. Please refresh.'); })
       .finally(() => { if (!isCancelled) setLoading(false); });
 
     return () => { isCancelled = true; };
   }, [warehouseId, dateFrom, dateTo, search, location.key]);
+
+  const allVisibleIds = reconciliations.map(r => r.id);
+  const allChecked = allVisibleIds.length > 0 && allVisibleIds.every(id => selectedIds.has(id));
+
+  const toggleAll = () => {
+    if (allChecked) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(allVisibleIds));
+    }
+  };
+
+  const toggleOne = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const exportLabel = selectedIds.size > 0
+    ? `Export Selected (${selectedIds.size})`
+    : 'Export as PDF';
+
+  const handleExportPdf = async () => {
+    if (selectedIds.size === 0) {
+      exportTablePdf({
+        title: 'Inventory Reconciliation Reports',
+        filename: 'reconciliation-reports.pdf',
+        orientation: 'landscape',
+        columnWidths: [3, 3, 2, 2, 3, 3, 2],
+        columns: [
+          'Reconciliation Code', 'Warehouse', 'Date Reconciled',
+          'Products with Discrepancy', 'Reconciled By', 'Reviewed By', 'Status',
+        ],
+        rows: reconciliations.map(r => [
+          r.transaction_code,
+          r.warehouse,
+          formatDate(r.date_reconciled),
+          r.products_with_discrepancy === 1
+            ? '1 Product'
+            : `${r.products_with_discrepancy} Products`,
+          r.reconciled_by,
+          r.reviewed_by ?? '—',
+          r.status,
+        ]),
+      });
+      return;
+    }
+    const selectedRows = reconciliations.filter(r => selectedIds.has(r.id));
+    const details = await Promise.all(
+      selectedRows.map(r => api.get(`/reconciliations/${r.id}`).then(res => res.data.reconciliation))
+    );
+    exportDetailPdf({ type: 'rc', records: details });
+  };
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -58,7 +121,9 @@ export default function ReconciliationReportsPage() {
             onDateToChange={setDateTo}
             search={search}
             onSearchChange={setSearch}
-            showPdfButton={false}
+            showPdfButton={true}
+            onExportPdf={handleExportPdf}
+            exportLabel={exportLabel}
           />
 
           {error && <p className="px-4 py-3 text-red-500 text-sm">{error}</p>}
@@ -67,6 +132,14 @@ export default function ReconciliationReportsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-white" style={{ backgroundColor: '#1A381E' }}>
+                  <th className="px-3 py-3 text-left w-10">
+                    <input
+                      type="checkbox"
+                      checked={allChecked}
+                      onChange={toggleAll}
+                      className="cursor-pointer"
+                    />
+                  </th>
                   <th className="text-left font-semibold px-4 py-3">Reconciliation Code</th>
                   <th className="text-left font-semibold px-4 py-3">Warehouse</th>
                   <th className="text-left font-semibold px-4 py-3">Date Reconciled</th>
@@ -79,12 +152,12 @@ export default function ReconciliationReportsPage() {
               <tbody>
                 {loading && (
                   <tr>
-                    <td colSpan={7} className="px-4 py-6 text-center text-gray-400">Loading...</td>
+                    <td colSpan={8} className="px-4 py-6 text-center text-gray-400">Loading...</td>
                   </tr>
                 )}
                 {!loading && !error && reconciliations.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-4 py-6 text-center text-gray-400">No reconciliation records found.</td>
+                    <td colSpan={8} className="px-4 py-6 text-center text-gray-400">No reconciliation records found.</td>
                   </tr>
                 )}
                 {!loading && !error && reconciliations.map((row, idx) => (
@@ -93,6 +166,14 @@ export default function ReconciliationReportsPage() {
                     onClick={() => setSelectedId(row.id)}
                     className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 cursor-pointer`}
                   >
+                    <td className="px-3 py-3 w-10" onClick={e => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(row.id)}
+                        onChange={() => toggleOne(row.id)}
+                        className="cursor-pointer"
+                      />
+                    </td>
                     <td className="px-4 py-3 font-mono text-xs text-gray-700">{row.transaction_code}</td>
                     <td className="px-4 py-3 text-gray-800">{row.warehouse}</td>
                     <td className="px-4 py-3 text-gray-600">{formatDate(row.date_reconciled)}</td>

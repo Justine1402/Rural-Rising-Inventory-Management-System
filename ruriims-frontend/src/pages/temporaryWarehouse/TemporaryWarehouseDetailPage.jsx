@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useUI } from '../../context/UIContext';
 import api from '../../api/axios';
+import { exportDetailPdf } from '../../utils/exportPdf';
 import { formatDate } from '../../utils/formatDate';
 
 function SubTable({ title, headers, rows, emptyMessage }) {
@@ -67,6 +68,11 @@ export default function TemporaryWarehouseDetailPage() {
 
   const handleClose = () => setTemporaryWarehouseDetailOverlayTwhId(null);
 
+  const handleExportPdf = () => {
+    if (!twh) return;
+    exportDetailPdf({ type: 'twh', records: [twh] });
+  };
+
   const transferredInRows = (twh?.products_transferred_in ?? []).map((p) => [
     <span key="sku" className="font-mono text-xs">{p.product_code}</span>,
     p.product_name,
@@ -124,6 +130,14 @@ export default function TemporaryWarehouseDetailPage() {
           <h1 className="text-2xl font-bold text-gray-900">
             {twh?.transaction_code ?? 'Temporary Warehouse'}
           </h1>
+          <button
+            onClick={handleExportPdf}
+            disabled={!twh}
+            className="text-xs font-semibold rounded-lg px-4 py-2.5 border disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{ color: '#409645', borderColor: '#409645' }}
+          >
+            Export as PDF
+          </button>
         </div>
 
         {/* Body */}

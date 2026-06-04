@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import api from '../../api/axios';
+import { exportTablePdf, exportDetailPdf } from '../../utils/exportPdf';
+import { formatDate } from '../../utils/formatDate';
 import Navbar from '../../components/layout/Navbar';
 import ReportsFilterBar from '../../components/shared/ReportsFilterBar';
 import StatusBadge from '../../components/ui/StatusBadge';
@@ -11,19 +13,24 @@ export default function TempWarehouseReportsPage() {
   const location = useLocation();
   const { setTemporaryWarehouseDetailOverlayTwhId } = useUI();
   const { warehouses } = useWarehouse();
-  const [twhs, setTwhs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+
+  const [twhs, setTwhs]               = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState(null);
   const [warehouseId, setWarehouseId] = useState('');
   const [dateFrom, setDateFrom]       = useState('');
   const [dateTo, setDateTo]           = useState('');
   const [search, setSearch]           = useState('');
+  const [selectedIds, setSelectedIds] = useState(new Set());
 
   useEffect(() => {
     setLoading(true);
     setError(null);
     api.get('/temporary-warehouses')
-      .then((res) => setTwhs(res.data.temporary_warehouses))
+      .then((res) => {
+        setTwhs(res.data.temporary_warehouses);
+        setSelectedIds(new Set());
+      })
       .catch(() => setError('Failed to load temporary warehouses. Please refresh.'))
       .finally(() => setLoading(false));
   }, [location.key]);
@@ -34,6 +41,62 @@ export default function TempWarehouseReportsPage() {
     .filter((r) => !search
       || r.transaction_code?.toLowerCase().includes(search.toLowerCase())
       || r.name?.toLowerCase().includes(search.toLowerCase()));
+
+  const allVisibleIds = filtered.map(r => r.id);
+  const allChecked = allVisibleIds.length > 0 && allVisibleIds.every(id => selectedIds.has(id));
+
+  const toggleAll = () => {
+    if (allChecked) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(allVisibleIds));
+    }
+  };
+
+  const toggleOne = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const exportLabel = selectedIds.size > 0
+    ? `Export Selected (${selectedIds.size})`
+    : 'Export as PDF';
+
+  const handleExportPdf = async () => {
+    if (selectedIds.size === 0) {
+      exportTablePdf({
+        title: 'Temporary Warehouse Reports',
+        filename: 'temporary-warehouse-reports.pdf',
+        orientation: 'landscape',
+        columnWidths: [3, 3, 2, 2, 2, 3, 3, 2, 2],
+        columns: [
+          'Transaction Code', 'Warehouse Name', 'Location', 'Event Date',
+          'Date Created', 'Created By', 'Closed By', 'Date Closed', 'Status',
+        ],
+        rows: filtered.map(t => [
+          t.transaction_code,
+          t.name,
+          t.location,
+          formatDate(t.event_date),
+          formatDate(t.created_at),
+          t.created_by,
+          t.closed_by ?? '—',
+          formatDate(t.date_closed),
+          t.status,
+        ]),
+      });
+      return;
+    }
+    const selectedRows = filtered.filter(r => selectedIds.has(r.id));
+    const details = await Promise.all(
+      selectedRows.map(r => api.get(`/temporary-warehouses/${r.id}`).then(res => res.data.temporary_warehouse))
+    );
+    exportDetailPdf({ type: 'twh', records: details });
+  };
 
   const statusLabel = (s) => s === 'active' ? 'Active' : 'Closed';
 
@@ -55,11 +118,21 @@ export default function TempWarehouseReportsPage() {
             onDateToChange={setDateTo}
             search={search}
             onSearchChange={setSearch}
-            showPdfButton={false}
+            showPdfButton={true}
+            onExportPdf={handleExportPdf}
+            exportLabel={exportLabel}
           />
           <table className="w-full text-sm">
             <thead>
               <tr className="text-white" style={{ backgroundColor: '#1A381E' }}>
+                <th className="px-3 py-3 text-left w-10">
+                  <input
+                    type="checkbox"
+                    checked={allChecked}
+                    onChange={toggleAll}
+                    className="cursor-pointer"
+                  />
+                </th>
                 <th className="text-left font-semibold px-5 py-3">Transaction Code</th>
                 <th className="text-left font-semibold px-5 py-3">Warehouse Name</th>
                 <th className="text-left font-semibold px-5 py-3">Location</th>
@@ -73,13 +146,13 @@ export default function TempWarehouseReportsPage() {
             </thead>
             <tbody>
               {loading && (
-                <tr><td colSpan={9} className="px-5 py-6 text-center text-gray-400">Loading…</td></tr>
+                <tr><td colSpan={10} className="px-5 py-6 text-center text-gray-400">Loading…</td></tr>
               )}
               {error && (
-                <tr><td colSpan={9} className="px-5 py-6 text-center text-red-500">{error}</td></tr>
+                <tr><td colSpan={10} className="px-5 py-6 text-center text-red-500">{error}</td></tr>
               )}
               {!loading && !error && filtered.length === 0 && (
-                <tr><td colSpan={9} className="px-5 py-6 text-center text-gray-400">No temporary warehouses yet.</td></tr>
+                <tr><td colSpan={10} className="px-5 py-6 text-center text-gray-400">No temporary warehouses yet.</td></tr>
               )}
               {!loading && !error && filtered.map((twh) => (
                 <tr
@@ -89,6 +162,14 @@ export default function TempWarehouseReportsPage() {
                   onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f3f4f6'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ''; }}
                 >
+                  <td className="px-3 py-3 w-10" onClick={e => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(twh.id)}
+                      onChange={() => toggleOne(twh.id)}
+                      className="cursor-pointer"
+                    />
+                  </td>
                   <td className="px-5 py-3 font-mono text-xs text-gray-700">{twh.transaction_code}</td>
                   <td className="px-5 py-3 text-gray-800">{twh.name}</td>
                   <td className="px-5 py-3 text-gray-600">{twh.location}</td>

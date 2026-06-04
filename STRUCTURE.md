@@ -112,14 +112,17 @@ ruriims-frontend/
     │   │   └── WarehouseTabs.jsx        ← Bottom warehouse switcher tabs
     │   │
     │   ├── modals/
-    │   │   └── ProfileModal.jsx         ← Profile overlay (avatar click)
+    │   │   ├── ProfileModal.jsx         ← Profile overlay (avatar click)
+    │   │   └── AvatarCropModal.jsx      ← Interactive 280×280 canvas crop tool for profile photo upload; drag-to-reposition + scroll/pinch-to-zoom; exports 400×400 JPEG via onConfirm
     │   │
     │   ├── overlays/
     │   │   └── ProductDetailOverlay.jsx ← Product batch detail overlay; triggered by clicking any
     │   │                                    product row on DashboardPage; reads productDetailOverlayProductId
-    │   │                                    from UIContext; calls GET /api/products/{id}/batches;
-    │   │                                    shows product info + active batches table; manager-scoped
-    │   │                                    by backend (only sees batches at their warehouse)
+    │   │                                    from UIContext; calls GET /api/products/{id}/batches with
+    │   │                                    optional ?warehouse_id when activeWarehouse is set (admin);
+    │   │                                    manager-scoped by backend unconditionally; expired batch codes
+    │   │                                    highlighted in red (#DC2626) via isExpired() helper
+    │   │                                    (harvest_date + shelf_life vs local midnight today)
     │   │
     │   ├── shared/
     │   │   ├── PinVerificationModal.jsx     ← 6-digit PIN modal (all transactions)
@@ -128,7 +131,7 @@ ruriims-frontend/
     │   │   │                                    Stock-In-Use Code cell per product row
     │   │   │                                    (Transfer and Issue flows)
     │   │   ├── CascadePreviewModal.jsx      ← Per-batch draw breakdown; opened via "preview" link in cascade hint rows (Transfer and Issue flows)
-    │   │   └── ReportsFilterBar.jsx         ← Shared report-type/warehouse/date-range filter bar (all reports pages)
+    │   │   └── ReportsFilterBar.jsx         ← Shared report-type/warehouse/date-range/search filter bar + PDF export button (all reports pages); props: warehouses, currentType, onTypeChange, warehouseId, onWarehouseChange, dateFrom, onDateFromChange, dateTo, onDateToChange, search, onSearchChange, showPdfButton, onExportPdf, exportLabel (default 'Export as PDF'); warehouse dropdown hidden for non-admin users; button renders {exportLabel} to support dynamic "Export Selected (N)" label
     │   │
     │   └── ui/
     │       └── StatusBadge.jsx          ← Colored pill badge for all statuses
@@ -185,8 +188,8 @@ ruriims-frontend/
     ├── utils/
     │   ├── planBatchCascade.js          ← Frontend mirror of PlansBatchCascade trait; cascade planner for Transfer and Issue validation
     │   ├── reconciliationFormat.js      ← Shared discrepancy formatter (formatDiscrepancy, formatAdjustmentArrow, EPSILON)
-    │   ├── formatDate.js                ← Shared date formatter (MMM D, YYYY en-US locale; '—' fallback for null/empty input); used by all report pages, ReconciliationReviewPage, and CascadePreviewModal
-    │   └── exportPdf.js                 ← Shared PDF export utility (jsPDF v4); used by report pages for client-side PDF generation
+    │   ├── formatDate.js                ← Shared date formatter (MMM D, YYYY en-US locale; '—' fallback for null/empty input); 10 consumers including all report pages, ReconciliationReviewPage, CascadePreviewModal, TemporaryWarehouseDetailPage, and CloseTemporaryWarehousePage
+    │   └── exportPdf.js                 ← Shared PDF export utility (jsPDF v4); exports exportTablePdf (summary table PDFs, optional columnWidths for proportional layout, splitTextToSize truncation) and exportDetailPdf (per-transaction detail PDFs for types ro/trf/iss/twh/rc, one page per record); fmtNum helper strips trailing decimal zeros; safeCell handles null→'—', ₱→PHP, and fmtNum
     │
     ├── routes/
     │   └── ProtectedRoute.jsx           ← Auth guard → redirects to /login
@@ -384,20 +387,23 @@ When a **Temporary Warehouse tab is active**, Navbar shows only:
 - `+ Close Temporary Warehouse` → opens `CloseTemporaryWarehousePage` overlay via `UIContext`
     (sets `closeTemporaryWarehouseOverlayTwhId`; no URL change)
 
-Contextual button changes on list pages:
-- Receive Orders list, one Incomplete row selected → `+ Receive Order` becomes `+ Accomplish Order` → `/receive-orders/:id`
-- Transfer Requests list, one Incomplete row selected → `+ Transfer Request` becomes `+ Accomplish Transfer` → `/transfer-requests/:id`
-
-Note: the Reconciliation contextual action (`+ New Reconciliation` / `+ Review & Confirm`) lives **in the content area** of `ReconciliationListPage`, not in the Navbar. It is not a Navbar button.
+Note: the Navbar buttons (`+ Receive Order`, `+ Transfer Request`) do **not** change label or target based on list page selection. Contextual accomplish actions appear in a green action bar **within the list page content area** (not the Navbar):
+- `ReceiveOrderListPage` — when one Incomplete row is selected, a contextual bar shows the order code + "ACCOMPLISH ORDER" button → `/receive-orders/:id`
+- `TransferRequestListPage` — same pattern, "ACCOMPLISH TRANSFER" → `/transfer-requests/:id`
+- `ReconciliationListPage` — contextual action (`+ New Reconciliation` / `+ Review & Confirm`) lives in the content area top bar (right side), not in the Navbar.
 
 **Center-right controls:**
 - `All Products` dropdown — filter dashboard by category: All Products, Fruits,
-  Vegetables, Poultry, Herbs & Spices, Processed Goods
+  Vegetables, Poultry, Herbs & Spices, Processed Goods; hidden when `isReportsPage` or `isListPage` is true
 - `Inventory` dropdown — sub-menu: Receive Orders | Transfer Requests |
-  Inventory Reconciliation (navigate to respective list pages which render inside
-  the dashboard area)
-- `LIFO / FEFO / FIFO` dropdown — changes dashboard sort mode
+  Inventory Reconciliation (navigate to respective list pages); "Receive Orders" and
+  "Inventory Reconciliation" items are hidden when `activeWarehouse?.isTemporary` (TWH view)
+- `LIFO / FEFO / FIFO` dropdown — changes dashboard sort mode; hidden when `isReportsPage` or `isListPage` is true
 - `Reports History` button → `/reports`
+
+**Path-based control visibility flags (derived from `location.pathname`):**
+- `isReportsPage = location.pathname.startsWith('/reports')` — when true: action buttons, All Products, Sort dropdowns hidden; Row 2 switches from `justify-between` to `justify-end`
+- `isListPage = location.pathname.startsWith('/receive-orders') || location.pathname.startsWith('/transfer-requests') || location.pathname.startsWith('/reconciliation')` — when true: All Products and Sort dropdowns hidden; action buttons remain visible
 
 **Right:** Settings icon (⚙) + circular user avatar → click opens `ProfileModal`.
 Active warehouse name displayed as text in the top-right area.
@@ -733,12 +739,16 @@ The dashboard renders one of three table branches based on `activeWarehouse`:
 When `WarehouseContext.activeWarehouse.isTemporary === true`, the dashboard
 switches to a simplified table:
 
-**Columns:** Name | Quantity | Harvest Date | Status
+**Columns (FIFO / LIFO mode):** Name | Quantity | Harvest Date | Status
+
+**Columns (FEFO mode):** Name | Quantity | Days Until Expiry | Status
+
+In FEFO mode, the 3rd column header changes to "Days Until Expiry". Cells show `N days` when stock is in date, or "Expired for N days" in red (`#DC2626`) when past expiry. The "—" fallback applies when quantity is zero or shelf life is not set.
 
 Stock quantities and harvest dates are read from `warehouse_stock[activeWarehouse.id]`
-and `harvest_date_per_warehouse[activeWarehouse.id]`. Harvest Date is hidden (shown as
-"—") when quantity is zero. All rows will initially show "Out of Stock" until stock is
-transferred in via Transfer Request.
+and `harvest_date_per_warehouse[activeWarehouse.id]` (MAX harvest date for that warehouse,
+as returned by `ProductController@index`). Harvest Date is hidden (shown as "—") when
+quantity is zero. All rows will initially show "Out of Stock" until stock is transferred in via Transfer Request.
 
 The `All Products` dropdown, sort mode dropdown, and `Inventory` dropdown remain in
 the Navbar. The Navbar action buttons change to only:
@@ -752,15 +762,15 @@ When `activeWarehouse` is `null` (admin has selected "All Warehouses" tab or jus
 logged in), the dashboard shows the multi-column permanent warehouse table:
 
 **Default columns (FIFO / LIFO mode):**
-Name | Main Warehouse | Alabang Warehouse | Mandaluyong Warehouse | Harvest Date | Status
+Name | [one column per permanent warehouse] | Total | Harvest Date | Status
 
 **FEFO mode columns:**
-Name | Main Warehouse | Alabang Warehouse | Mandaluyong Warehouse | Days Before Expiration | Status
+Name | [one column per permanent warehouse] | Total | Days Until Expiry | Status
 
-The 5th column header changes based on the active sort mode. Sorting behavior:
-- **FIFO** — ascending harvest date (oldest first)
-- **FEFO** — ascending days before expiration; can be negative for expired stock
-- **LIFO** — descending harvest date (newest first)
+The column before Status changes header based on sort mode. Sorting behavior:
+- **FIFO** — ascending harvest date; sort key = oldest MAX-harvest-date across in-stock warehouses (computed frontend-side from `harvest_date_per_warehouse`); Harvest Date cell shows this date with a small green warehouse code label beneath it
+- **FEFO** — ascending days before expiration; same sort key as FIFO but converted to days; can be negative for expired stock
+- **LIFO** — descending harvest date; sort key = newest MAX-harvest-date across in-stock warehouses; Harvest Date cell shows this date with a small green warehouse code label
 
 `All Products` dropdown filters rows by category. Table is read-only. Warehouse
 columns are driven by `permanentWarehouses` from `WarehouseContext` (filtered to
@@ -777,7 +787,7 @@ the dashboard shows a simplified single-warehouse table:
 
 - **Quantity:** `warehouse_stock[activeWarehouse.id]` formatted as `{qty} {unit}`;
   shows `"0 kg"` (or relevant unit) when zero — never blank.
-- **Harvest Date:** `harvest_date_per_warehouse[activeWarehouse.id] || '—'`
+- **Harvest Date:** `harvest_date_per_warehouse[activeWarehouse.id] || '—'` — this is `MAX(harvest_date)` for that warehouse from `ProductController@index`; most recent batch date, not oldest
 - **Status:** `"In Stock"` (green) when `qty > 0`; `"Out of Stock"` (red) when `qty === 0`.
 
 Empty state: "No products in stock at this warehouse." (when `products.length === 0`).
@@ -828,6 +838,10 @@ Receiving Order # | Warehouse | Date Created | Date Accomplished | Created By |
 Verified By | Status
 
 Status: `Incomplete` (red-orange) / `Accomplished` (green)
+
+**Sort order:** Incomplete rows first (then by `created_at` desc); Accomplished rows second (then by `date_arrived` desc). Controlled by two `orderByRaw` CASE WHEN expressions in `ReceiveOrderController@index()`.
+
+**WarehouseTabs integration:** Fetch includes `?warehouse_id={activeWarehouse.id}` when `activeWarehouse` is non-null. `activeWarehouse` is in the `useEffect` dependency array. A separate `useEffect` clears `selectedRow` when `activeWarehouse` changes.
 
 **Single-row select behavior:** Clicking a row selects it (highlights light green
 with left border). With exactly one Incomplete row selected, a contextual action bar
@@ -912,6 +926,8 @@ Date Accomplished | Requested By | Verified By | Status
 Status: `Incomplete` (red-orange) / `Complete` (green)
 
 **Manager scoping:** Managers see TRFs where their warehouse is the **source OR destination** (`WHERE source_warehouse_id = mine OR destination_warehouse_id = mine`), wrapped in a closure. Admins see all TRFs (optional `?warehouse_id` filter on source only). This OR condition ensures destination managers can see incoming TRFs they need to complete.
+
+**WarehouseTabs integration:** Fetch includes `?warehouse_id={activeWarehouse.id}` when `activeWarehouse` is non-null. A separate `useEffect` clears `selectedRow` when `activeWarehouse` changes.
 
 **Single-row select behavior:** Same pattern as Receive Orders. With exactly one
 Incomplete row selected, `+ Transfer Request` Navbar button becomes
@@ -1212,6 +1228,8 @@ Reconciled By | Reviewed By | Status
 
 Status: `Pending Review` (amber) / `Reviewed` (green)
 
+**WarehouseTabs integration:** Fetch includes `?warehouse_id={activeWarehouse.id}` when `activeWarehouse` is non-null (also sends `?status={statusFilter}` when filter is not `'all'`). `activeWarehouse` and `statusFilter` are in the `useEffect` dep array. A separate `useEffect` clears `selectedId` when `activeWarehouse` changes.
+
 **Single-row select behavior:** Clicking a Pending Review row selects it (highlights `#f0fdf4` + 4px `#409645` left border). With a row selected, the right-side button label changes to `+ Review & Confirm` → navigates to `/reconciliation/:id/review`. Clicking the selected row again deselects it. Only one row can be selected at a time. Clicking a Reviewed row navigates directly to the review overlay — no selection state.
 
 ---
@@ -1247,7 +1265,7 @@ SUBMIT button → `PinVerificationModal` (same manager) → on verified →
 Route: `/reconciliation/:id/review` — **overlay** rendered over `ReconciliationListPage` (same pattern as `ReceiveOrderAuditPage` and `TransferRequestAuditPage`).
 Also accessible as inline overlay from `ReconciliationReportsPage` and `ReportsHistoryPage` (Inventory Reconciliation type).
 
-Accepts optional props: `overrideId` (bypasses `useParams`) and `onReturn` (bypasses `navigate('/reconciliation')`). When neither prop is provided, route-based behavior is unchanged.
+Accepts optional props: `overrideId` (bypasses `useParams`), `onReturn` (bypasses `navigate('/reconciliation')`), and `readOnly = false` (suppresses CONFIRM button and PIN modal — used when opened from reports pages to prevent accidental confirmation). When neither prop is provided, route-based behavior is unchanged.
 
 Overlay structure:
 - **Backdrop:** `fixed inset-0 bg-black/20 backdrop-blur-sm z-40` — clicking calls `handleClose` (navigates to `/reconciliation` or calls `onReturn()`).
@@ -1332,42 +1350,42 @@ Row click → inline overlay (`ProductDetailInline` component defined inside `Pr
 ---
 
 **`ReceiveOrderReportsPage` columns (proto p.55-56):**
-Transaction Code | Supplier Name | Warehouse | Total Products | Total Cost |
+[checkbox] | Transaction Code | Supplier Name | Warehouse | Total Products | Total Cost |
 Date Ordered | Date Accomplished | Created By | Verified By | Status
 
-Export as PDF button visible. Row click → opens `ReceiveOrderAuditPage` as local overlay via `selectedId` state (no navigation).
+Export as PDF button visible. **Checkbox selection:** `selectedIds` Set state; header checkbox selects/deselects all; row checkbox `<td>` calls `e.stopPropagation()` to prevent overlay open. **Context-aware export:** when `selectedIds.size > 0`, button label shows `"Export Selected ({n})"` and clicking fetches `GET /api/receive-orders/{id}` for each selected row, then calls `exportDetailPdf({ type: 'ro', records })`. When `selectedIds.size === 0`, exports full summary table via `exportTablePdf`. Row click → opens `ReceiveOrderAuditPage` as local overlay via `selectedId` state (no navigation). Audit overlay header includes an "Export as PDF" button (white-bordered, dark green header).
 
 ---
 
 **`TransferRequestReportsPage` columns (proto p.56-57):**
-Transaction Code | Source Warehouse | Destination Warehouse | Total Products |
+[checkbox] | Transaction Code | Source Warehouse | Destination Warehouse | Total Products |
 Date Requested | Date Accomplished | Requested By | Verified By | Status
 
-Export as PDF button visible. Row click → opens `TransferRequestAuditPage` as local overlay via `selectedId` state (no navigation).
+Same checkbox + context-aware export pattern as ReceiveOrderReportsPage. Detail endpoint: `GET /api/transfer-requests/{id}`. Type: `'trf'`. Row click → opens `TransferRequestAuditPage` overlay.
 
 ---
 
 **`IssueProductReportsPage` columns (proto p.58-59):**
-Transaction Code | Issue Type | Total Products (e.g., "2 Products | 45 KG") |
+[checkbox] | Transaction Code | Issue Type | Total Products (e.g., "2 Products | 45 KG") |
 Date Issued | Issued By | Status
 
-Export as PDF button visible. Row click → opens `IssueProductAuditPage` as local overlay via `selectedId` state (no navigation).
+Same checkbox + context-aware export pattern. Detail endpoint: `GET /api/issue-products/{id}`. Type: `'iss'`. Row click → opens `IssueProductAuditPage` overlay.
 
 ---
 
 **`TempWarehouseReportsPage` columns (proto p.59, 61):**
-Transaction Code | Warehouse Name | Location | Event Date | Date Created |
+[checkbox] | Transaction Code | Warehouse Name | Location | Event Date | Date Created |
 Created By | Closed By | Date Closed | Status
 
-Route: `/reports/temporary-warehouses`. Row click → `setTemporaryWarehouseDetailOverlayTwhId(twh.id)` (UIContext overlay). Filter bar wired in Step 14 Stage 2 with client-side filtering; warehouse filter is a no-op since TWH records are themselves the warehouse.
+Route: `/reports/temporary-warehouses`. Client-side filtering (date range + search on `filtered` array). Checkbox + context-aware export: `allVisibleIds` derived from `filtered` (client-filtered subset); detail endpoint: `GET /api/temporary-warehouses/{id}`; type: `'twh'`. Summary export uses `exportTablePdf`. Row click → `setTemporaryWarehouseDetailOverlayTwhId(twh.id)` (UIContext overlay). Overlay header includes "Export as PDF" button (green outline, matches white-background header style).
 
 ---
 
 **`ReconciliationReportsPage` columns (proto p.61-62):**
-Reconciliation Code | Warehouse | Date Reconciled | Products with Discrepancy |
+[checkbox] | Reconciliation Code | Warehouse | Date Reconciled | Products with Discrepancy |
 Reconciled By | Reviewed By | Status
 
-Row click → opens `ReconciliationReviewPage` as local overlay via `selectedId` state (no navigation).
+Same checkbox + context-aware export pattern. Detail endpoint: `GET /api/reconciliations/{id}`. Type: `'rc'`. Row click → opens `ReconciliationReviewPage` with `readOnly={true}` as local overlay via `selectedId` state (no navigation).
 
 ---
 

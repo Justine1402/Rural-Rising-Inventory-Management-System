@@ -157,7 +157,7 @@ Routes defined in `ruriims-backend/routes/api.php`:
 | `GET` | `/api/products/{product}/batches` | `auth:sanctum` | `{ "product": {...}, "batches": [...] }` — returns active StockInUse records; scoped to manager's warehouse; admin sees all |
 | `POST` | `/api/pin/verify` | `auth:sanctum` | `{ "verified": true }` or 422 |
 | `GET` | `/api/stock-in-use` | `auth:sanctum` | `{ "batches": [...] }` — filters by `sku_code` + `warehouse_id`, quantity > 0, FEFO order |
-| `GET` | `/api/receive-orders` | `auth:sanctum` | `{ "orders": [...] }` |
+| `GET` | `/api/receive-orders` | `auth:sanctum` | `{ "orders": [...] }` — sorted by CASE WHEN: Incomplete rows first (by `created_at` DESC), Accomplished rows second (by `date_arrived` DESC); manager-scoped to own warehouse; admin gets optional `?warehouse_id` filter |
 | `POST` | `/api/receive-orders` | `auth:sanctum` | `{ "order": { "code": "RO-..." } }` — PIN (same manager) + generates per-warehouse scoped code inside DB transaction |
 | `GET` | `/api/receive-orders/{id}` | `auth:sanctum` | `{ "order": { ...with items } }` |
 | `POST` | `/api/receive-orders/{id}/complete` | `auth:sanctum` | `{ "message": "Accomplished RO-..." }` — PIN (different manager) + generates StockInUse codes |
@@ -197,15 +197,16 @@ Rural Rising Inventory Management System/   ← project root
 │   │   │   │   ├── Navbar.jsx             ← two-row nav; UIContext for overlay buttons; UIContext + WarehouseContext + AuthContext
 │   │   │   │   └── WarehouseTabs.jsx      ← warehouse tab switcher; wired to WarehouseContext
 │   │   │   ├── modals/
-│   │   │   │   └── ProfileModal.jsx       ← profile overlay (change password + change PIN)
+│   │   │   │   ├── ProfileModal.jsx       ← profile overlay (change password + change PIN)
+│   │   │   │   └── AvatarCropModal.jsx    ← interactive 280×280 canvas crop tool; drag-to-reposition + scroll/pinch-to-zoom; exports 400×400 JPEG via onConfirm
 │   │   │   ├── overlays/
-│   │   │   │   └── ProductDetailOverlay.jsx ← product batch detail overlay; triggered by DashboardPage row click; reads productDetailOverlayProductId from UIContext; calls GET /api/products/{id}/batches; manager-scoped by backend
+│   │   │   │   └── ProductDetailOverlay.jsx ← product batch detail overlay; triggered by DashboardPage row click; reads productDetailOverlayProductId from UIContext; calls GET /api/products/{id}/batches with optional ?warehouse_id for admin (elseif branch in ProductController@batches()); expired batch codes highlighted red via isExpired() helper; manager-scoped by backend unconditionally
 │   │   │   ├── shared/
 │   │   │   │   ├── PinVerificationModal.jsx ← 6-digit PIN entry modal (z-[60])
 │   │   │   │   ├── AddProductsModal.jsx   ← multi-select master SKU picker (z-[70])
 │   │   │   │   ├── StockInUseModal.jsx    ← single-select batch picker (z-[70])
 │   │   │   │   ├── CascadePreviewModal.jsx ← per-batch draw breakdown modal (z-[80]); mirrors planBatchCascade output
-│   │   │   │   └── ReportsFilterBar.jsx   ← shared filter bar (all reports pages); report-type, warehouse, date-range, search, PDF export
+│   │   │   │   └── ReportsFilterBar.jsx   ← shared filter bar (all reports pages); report-type, warehouse (admin-only), date-range, search, PDF export; exportLabel prop (default 'Export as PDF') enables dynamic "Export Selected (N)" label from report pages
 │   │   │   └── ui/
 │   │   │       └── StatusBadge.jsx        ← colored pill: green for In Stock/Accomplished/Complete/Active/Reviewed; amber for Pending Review; red for Out of Stock/Incomplete/Closed and fallback
 │   │   ├── context/
@@ -240,21 +241,21 @@ Rural Rising Inventory Management System/   ← project root
 │   │   │   ├── temporaryWarehouse/
 │   │   │   │   ├── TemporaryWarehouseFormPage.jsx ← UIContext overlay (no route); creates TWH + warehouses row; same-manager PIN; calls refreshWarehouses(warehouse_id) to auto-select new tab
 │   │   │   │   ├── CloseTemporaryWarehousePage.jsx ← UIContext overlay (no route); reads id from closeTemporaryWarehouseOverlayTwhId; fetches remaining stock via stock-in-use API; per-row Return To dropdown; PIN-verified close; closes overlay on success
-│   │   │   │   └── TemporaryWarehouseDetailPage.jsx ← UIContext overlay (no route); reads id from temporaryWarehouseDetailOverlayTwhId; metadata block + three sub-tables with enriched columns
+│   │   │   │   └── TemporaryWarehouseDetailPage.jsx ← UIContext overlay (no route); reads id from temporaryWarehouseDetailOverlayTwhId; metadata block + three sub-tables with enriched columns; header includes "Export as PDF" button (exportDetailPdf type 'twh')
 │   │   │   └── reports/
-│   │   │       ├── ReportsHistoryPage.jsx          ← /reports; "All Reports" union view; row click → inline overlay by transaction_type
+│   │   │       ├── ReportsHistoryPage.jsx          ← /reports; "All Reports" union view; row click → inline overlay by transaction_type (RO/TRF/ISS/RC) or UIContext (TWH)
 │   │   │       ├── ProductReportsPage.jsx          ← /reports/products; row click → ProductDetailInline overlay
-│   │   │       ├── ReceiveOrderReportsPage.jsx     ← /reports/receive-orders; PDF export; row click → ReceiveOrderAuditPage overlay
-│   │   │       ├── TransferRequestReportsPage.jsx  ← /reports/transfer-requests; PDF export; row click → TransferRequestAuditPage overlay
-│   │   │       ├── IssueProductReportsPage.jsx     ← /reports/issue-products; PDF export; row click → IssueProductAuditPage overlay
-│   │   │       ├── TempWarehouseReportsPage.jsx    ← /reports/temporary-warehouses; row click → TemporaryWarehouseDetailPage overlay (UIContext)
-│   │   │       ├── ReconciliationReportsPage.jsx   ← /reports/reconciliation; row click → ReconciliationReviewPage overlay
-│   │   │       └── InventorySummaryPage.jsx        ← /reports/inventory-summary; per-warehouse + grand total; PDF export
+│   │   │       ├── ReceiveOrderReportsPage.jsx     ← /reports/receive-orders; checkbox selectedIds + context-aware PDF export (detail via exportDetailPdf when rows selected, summary via exportTablePdf otherwise); dynamic exportLabel; row click → ReceiveOrderAuditPage overlay (with "Export as PDF" button in header)
+│   │   │       ├── TransferRequestReportsPage.jsx  ← /reports/transfer-requests; same checkbox + PDF pattern; type 'trf'; row click → TransferRequestAuditPage overlay
+│   │   │       ├── IssueProductReportsPage.jsx     ← /reports/issue-products; same checkbox + PDF pattern; type 'iss'; row click → IssueProductAuditPage overlay
+│   │   │       ├── TempWarehouseReportsPage.jsx    ← /reports/temporary-warehouses; same checkbox + PDF pattern (allVisibleIds from filtered array); type 'twh'; client-side filtering; row click → TemporaryWarehouseDetailPage overlay (UIContext, with "Export as PDF" button)
+│   │   │       ├── ReconciliationReportsPage.jsx   ← /reports/reconciliation; same checkbox + PDF pattern; type 'rc'; row click → ReconciliationReviewPage overlay with readOnly={true}
+│   │   │       └── InventorySummaryPage.jsx        ← /reports/inventory-summary; per-warehouse + grand total; PDF export via exportTablePdf (equal-width fallback — dynamic column count)
 │   │   ├── utils/
 │   │   │   ├── planBatchCascade.js        ← frontend mirror of PlansBatchCascade trait; nearest-harvest-date cascade planner with FIFO tiebreak
 │   │   │   ├── reconciliationFormat.js    ← shared discrepancy formatter (formatDiscrepancy, formatAdjustmentArrow, EPSILON); used by ReconciliationFormPage and ReconciliationReviewPage
 │   │   │   ├── formatDate.js              ← shared date formatter (MMM D, YYYY en-US locale; '—' fallback); used by all six report pages, ReconciliationReviewPage, CascadePreviewModal, TemporaryWarehouseDetailPage, and CloseTemporaryWarehousePage (10 consumers); not used by InventorySummaryPage (no date fields to display)
-│   │   │   └── exportPdf.js               ← shared PDF export utility (jsPDF v4 named import); used by ReceiveOrder, TransferRequest, IssueProduct, and InventorySummary report pages for client-side PDF generation
+│   │   │   └── exportPdf.js               ← shared PDF export utility (jsPDF v4); exports exportTablePdf (summary PDFs; optional columnWidths array for proportional column widths; splitTextToSize truncation; fmtNum strips trailing decimal zeros via safeCell) and exportDetailPdf (per-transaction detail PDFs for types ro/trf/iss/twh/rc; one page per record; private helpers: drawTitleBlock, drawSectionLabel, drawHeaderFields, drawTable with same columnWidths support)
 │   │   ├── routes/
 │   │   │   └── ProtectedRoute.jsx         ← auth + adminOnly route guard
 │   │   ├── App.jsx                        ← BrowserRouter + providers + AppRoutes + GlobalOverlays

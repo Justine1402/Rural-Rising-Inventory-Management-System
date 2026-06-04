@@ -1210,15 +1210,159 @@ URL and no read-only mode built into it.
 
 ---
 
-## Not Started
+---
+
+### Third Polishing Session — 2026-06-03 / 2026-06-04
+
+#### WarehouseTabs Filtering on List Pages (RO / TRF / Reconciliation)
+
+- `ReceiveOrderListPage.jsx` — imports `useWarehouse`; appends `?warehouse_id={activeWarehouse.id}` to the fetch URL when `activeWarehouse` is non-null; `activeWarehouse` added to `useEffect` dep array; separate `useEffect` clears `selectedRow` when `activeWarehouse` changes.
+- `TransferRequestListPage.jsx` — same pattern; uses `selectedRow` (not `selectedId`).
+- `ReconciliationListPage.jsx` — already imported `useWarehouse`; URLSearchParams now includes both `warehouse_id` and `status` params; dep array extended with `activeWarehouse` and `statusFilter`; separate `useEffect` clears `selectedId` when `activeWarehouse` changes.
+- Backend behavior: for managers, `activeWarehouse` is always their own permanent warehouse. Managers send their `warehouse_id`; all three controllers already ignore the param for managers (use `user->warehouse_id` unconditionally). No double-filter risk.
+
+#### Sort Receive Orders List by Status then Date
+
+- `ReceiveOrderController@index()` — two `orderByRaw` calls added after the existing filters:
+  1. `CASE WHEN status = 'incomplete' THEN 0 ELSE 1 END ASC` — Incomplete rows float to the top.
+  2. `CASE WHEN status = 'incomplete' THEN created_at ELSE date_arrived END DESC` — Within each status group, most recent first.
+- No frontend changes.
+
+#### Navbar: Hide All Products and Sort Dropdowns on List Pages
+
+- `Navbar.jsx` — `isListPage` boolean derived from `location.pathname.startsWith('/receive-orders') || location.pathname.startsWith('/transfer-requests') || location.pathname.startsWith('/reconciliation')`.
+- `All Products` dropdown: hidden when `isReportsPage || isListPage` (already hidden on reports; now also hidden on list pages).
+- Sort (`LIFO/FEFO/FIFO`) dropdown: same condition — hidden on both reports and list pages.
+- Inventory dropdown, action buttons, and Reports History button are unaffected.
+
+#### Navbar: Hide Receive Orders and Inventory Reconciliation from Inventory Dropdown on TWH View
+
+- `Navbar.jsx` — "Receive Orders" and "Inventory Reconciliation" items inside the Inventory dropdown are wrapped with `{!activeWarehouse?.isTemporary && (...)}`. When a TWH tab is active, only "Transfer Requests" remains visible in the dropdown (the relevant action for TWH stock movement).
+
+#### ReconciliationReviewPage — Force Read-Only from Reports Pages
+
+- `ReconciliationReviewPage.jsx` — added `readOnly = false` to props (alongside existing `overrideId` and `onReturn`).
+- CONFIRM button and PIN modal are suppressed when `readOnly` is true: the `{!readOnly && isPendingReview && ...}` guard wraps the action row.
+- `ReconciliationReportsPage.jsx` and `ReportsHistoryPage.jsx` pass `readOnly={true}` when rendering the overlay. `ReconciliationListPage.jsx` does not pass it — defaults to `false`, CONFIRM behavior unchanged.
+
+#### Expired Batch Code Highlighting in ProductDetailOverlay
+
+- `ProductDetailOverlay.jsx` — private `isExpired(harvestDate, shelfLifeDays)` helper compares the batch's harvest date + shelf life against local midnight today. Returns `true` when `today >= expiry` (same-day counts as expired).
+- Stock-In-Use Code `<td>` gets `style={{ color: '#DC2626' }}` when `isExpired` returns true. All other cells unchanged.
+- `harvest_date` format from the batches API is `"M j, Y"` (Carbon format, e.g., `"May 1, 2026"`); `new Date(harvestDate)` parses this correctly in modern browsers.
+
+#### Scope ProductDetailOverlay Batches to Active Warehouse for Admin
+
+- `ProductDetailOverlay.jsx` — imports `useWarehouse`; `activeWarehouse` destructured from context; batches fetch URL includes `?warehouse_id={activeWarehouse.id}` when `activeWarehouse` is non-null; dep array extended to `[id, activeWarehouse]`.
+- `ProductController@batches()` — added `elseif (request()->filled('warehouse_id'))` branch after the existing `if ($user->role === 'manager')` block. Manager branch fires first → `elseif` never reached for managers (no behavior change). Admin with `?warehouse_id` param now correctly scopes batches to that warehouse; admin with no param still sees all warehouses.
+
+---
+
+### Fourth Polishing Session — 2026-06-04
+
+#### AvatarCropModal — Profile Photo Cropping
+
+- `AvatarCropModal.jsx` (`src/components/modals/`) — new component providing an interactive 280×280 canvas crop tool. Supports drag-to-reposition and scroll/pinch-to-zoom; enforces a minimum fill scale so the canvas is never partially empty. Exports a 400×400 JPEG data URL via `onConfirm`. Integrated into `ProfileModal.jsx` for profile avatar upload flow.
+- Crop state: `{ scale, x, y }` stored in `useState`; a `clamp()` helper enforces boundary constraints (image must fully cover the 280×280 canvas at all zoom levels). Touch events supported alongside mouse events for pinch-to-zoom.
+
+---
+
+### PDF Export — Detail PDFs + Checkbox Selection — 2026-06-04
+
+#### exportDetailPdf — New Function in exportPdf.js
+
+- `src/utils/exportPdf.js` — `exportDetailPdf({ type, records })` exported. Produces a portrait A4 detail PDF with one full transaction per page:
+  - Supported types: `'ro'` (Receive Order), `'trf'` (Transfer Request), `'iss'` (Issue Product), `'twh'` (Temporary Warehouse), `'rc'` (Inventory Reconciliation).
+  - Each page: title block (dark green "Rural Rising Philippines" header + subtitle + transaction code + export date + rule line), header fields grid (two-column key/value layout), one or more section tables depending on type.
+  - TWH renders three section tables (Products Transferred In, Products Issued, Products Returned). RC renders two (Counted Items + Inventory Adjustment Upon Confirmation).
+  - Multi-record PDFs use `doc.addPage()` between records; filename switches to `{type}-details.pdf` when `records.length > 1`.
+  - Private helpers shared with `exportTablePdf`: `drawTitleBlock`, `drawSectionLabel`, `drawHeaderFields`, `drawTable`.
+
+#### exportTablePdf — columnWidths + splitTextToSize
+
+- `src/utils/exportPdf.js` — `exportTablePdf` signature extended with optional `columnWidths = null`.
+- When `columnWidths` is provided and matches `columns.length`, each column's pixel width is proportional to its weight relative to the total. Falls back to equal widths when `null` or mismatched length.
+- `x` position now accumulates per-column (`x += colWidths[i]`) instead of `i * colWidth`. Both header and data row loops use `doc.splitTextToSize(str, colWidths[i] - 2)[0]` for text to prevent overflow into adjacent columns.
+- All 5 report pages pass explicit `columnWidths` arrays to their `exportTablePdf` calls; `InventorySummaryPage` uses the equal-width fallback (dynamic column count).
+
+#### drawTable Helper — columnWidths + splitTextToSize
+
+- `drawTable(doc, columns, rows, startY, columnWidths = null)` — same proportional/fallback logic and per-cell `splitTextToSize` truncation applied to the private `drawTable` helper used by `exportDetailPdf`.
+- `drawTable` calls in the TWH branch now pass `[2, 2, 2, 2, 2, 2, 3]` (Transferred In) and `[2, 2, 2, 2, 2, 2, 2]` (Issued). Other type branches pass column-appropriate arrays to prevent overflow on narrow columns.
+
+#### safeCell + fmtNum — Strip Trailing Decimal Zeros
+
+- `fmtNum(val)` — private helper added at top of `exportPdf.js`. Strips trailing zeros from purely numeric strings (`"44.000"` → `"44"`, `"27.500"` → `"27.5"`) and from "number + space + unit" strings (`"200.000 kg"` → `"200 kg"`). Comma-formatted monetary values (`"14,000.00"`) do not match the pure-numeric regex and pass through unchanged.
+- `safeCell(val)` — updated to run `fmtNum` before the `₱ → PHP ` substitution. Both `exportTablePdf` and `drawTable` already use `safeCell` for every cell → both export paths benefit automatically.
+
+#### RC Adjustment Arrow Character Fix
+
+- RC adjustment rows were rendering the `→` arrow (U+2192) as `Γ` in Helvetica. The Adjustment cell now uses ` -> ` (ASCII hyphen + greater-than) instead of the Unicode arrow.
+
+#### ReportsFilterBar — exportLabel Prop
+
+- `ReportsFilterBar.jsx` — added `exportLabel = 'Export as PDF'` prop. The Export button renders `{exportLabel}` instead of the hardcoded string. When no `exportLabel` is passed, defaults to `'Export as PDF'` — fully backward-compatible.
+
+#### Report Pages — Checkbox Selection + Context-Aware PDF Export
+
+All 5 report pages (`ReceiveOrderReportsPage`, `TransferRequestReportsPage`, `IssueProductReportsPage`, `TempWarehouseReportsPage`, `ReconciliationReportsPage`) received the same pattern:
+
+- **`selectedIds` state** — `useState(new Set())`. Cleared on every data re-fetch (inside the `useEffect` `.then()` callback). Prevents stale selections across filter changes.
+- **`toggleAll` / `toggleOne` / `allChecked` / `allVisibleIds`** — standard checkbox helpers. `allVisibleIds` derived from the displayed array (for TWH: `filtered`; for others: the full fetched array since filtering is server-side).
+- **Checkbox `<th>` in header row** — "select all / deselect all" toggle. First column, before Transaction Code.
+- **Checkbox `<td>` in each body row** — `onClick={e => e.stopPropagation()}` prevents row click from opening the audit overlay when the checkbox is clicked.
+- **`handleExportPdf` (async)** — branches on `selectedIds.size`:
+  - `=== 0`: calls `exportTablePdf` with existing summary columns/rows (unchanged behavior).
+  - `> 0`: parallel-fetches the full detail record for each selected row via the show endpoint (`/receive-orders/{id}`, `/transfer-requests/{id}`, etc.), then calls `exportDetailPdf({ type, records })`.
+- **`exportLabel`** — `'Export Selected ({n})'` when `selectedIds.size > 0`, else `'Export as PDF'`. Passed to `ReportsFilterBar`.
+- `TempWarehouseReportsPage` and `ReconciliationReportsPage` gained PDF wiring from scratch (were `showPdfButton={false}` before). Both now have `showPdfButton={true}`, `handleExportPdf`, and `exportLabel`.
+
+#### Audit Pages — Export as PDF Button
+
+All 4 audit pages and `TemporaryWarehouseDetailPage` received an "Export as PDF" button in their dark green sticky header:
+
+- **`ReceiveOrderAuditPage`** — imports `exportDetailPdf`; `handleExportPdf` calls `exportDetailPdf({ type: 'ro', records: [data] })`; button disabled while `data` is null (not yet loaded).
+- **`TransferRequestAuditPage`** — same pattern, `type: 'trf'`, `records: [data]`.
+- **`IssueProductAuditPage`** — `type: 'iss'`, `records: [issue]`; button added to both the overlay-mode header (dark green, white-border style) and the full-page-mode header (green background matching existing RETURN button).
+- **`ReconciliationReviewPage`** — `type: 'rc'`, `records: [data]`; button always visible regardless of `readOnly` state (pending and reviewed reconciliations can both be printed).
+- **`TemporaryWarehouseDetailPage`** — `type: 'twh'`, `records: [twh]`; button styled with green outline matching the white-background header (different from the dark green headers on the other audit pages).
+
+---
+
+## Completion Tracker
 
 - [x] Step 13 — `UserManagementPage` + `UserController` — COMPLETE (see ✅ Step 13 COMPLETE above)
-- [x] Step 13.25 — RO + TRF Transaction Audit Pages — COMPLETE (see ✅ Step 13.25 above)
-- [x] Step 13.5 — `ProfileModal` live wiring — COMPLETE (see ✅ Step 13.5 above)
-- [x] Step 13.75 — Manager warehouse-scoping cross-cutting pass — COMPLETE (see ✅ Step 13.75 above)
-- [x] Step 14, Stage 1 — `ReportController` backend — COMPLETE (see above)
-- [x] Step 14, Stage 2 — ReportsFilterBar + ReportsHistoryPage + Navbar fix — COMPLETE (see above)
-- [x] Step 14, Stage 3 — ProductDetailPage + 3 Report Pages — COMPLETE (see above)
-- [x] Step 14, Stage 4 — IssueProductAuditPage + 2 Report Pages — COMPLETE (see above)
-- [x] Step 14, Stage 5 — PDF export (jsPDF) — COMPLETE (see above)
-- [x] Step 15 — `InventorySummaryPage` + PDF export (jsPDF) — COMPLETE (see ✅ Step 15 below)
+- [x] Step 13.25 — RO + TRF Transaction Audit Pages — COMPLETE
+- [x] Step 13.5 — `ProfileModal` live wiring — COMPLETE
+- [x] Step 13.75 — Manager warehouse-scoping cross-cutting pass — COMPLETE
+- [x] Step 14, Stage 1 — `ReportController` backend — COMPLETE
+- [x] Step 14, Stage 2 — ReportsFilterBar + ReportsHistoryPage + Navbar fix — COMPLETE
+- [x] Step 14, Stage 3 — ProductDetailPage + 3 Report Pages — COMPLETE
+- [x] Step 14, Stage 4 — IssueProductAuditPage + 2 Report Pages — COMPLETE
+- [x] Step 14, Stage 5 — PDF export (jsPDF) — COMPLETE
+- [x] Step 15 — `InventorySummaryPage` + PDF export (jsPDF) — COMPLETE
+- [x] First Polishing Session — Reconciliation fixes, report scoping, audit pages, report overlay navigation — COMPLETE
+- [x] Second Polishing Session — Backend manager scoping, RO form polish, Reconciliation PIN model, ProductDetailOverlay docs, WarehouseTabs removal from report pages — COMPLETE
+- [x] Third Polishing Session — WarehouseTabs list filtering, RO sort order, Navbar isListPage/isReportsPage flags, ReconciliationReviewPage readOnly prop, expired batch highlighting, ProductDetailOverlay warehouse scoping, TRF OR scoping + TWH destination bypass — COMPLETE
+- [x] Fourth Polishing Session — AvatarCropModal, UI/UX improvements — COMPLETE
+- [x] PDF Export Enhancement — exportDetailPdf (5 types), exportTablePdf columnWidths + splitTextToSize, drawTable upgrade, fmtNum/safeCell decimal stripping, checkbox selection + context-aware export on 5 report pages, "Export as PDF" button on all audit overlays — COMPLETE
+
+---
+
+#### Full Codebase Audit — 2026-06-04
+
+Discrepancies found and resolved during documentation sync pass:
+
+1. **STRUCTURE.md — Navbar contextual accomplish buttons**: Spec incorrectly stated that `+ Receive Order` / `+ Transfer Request` in the Navbar swap to accomplish labels when a row is selected. **Corrected**: accomplish actions ("ACCOMPLISH ORDER" / "ACCOMPLISH TRANSFER") appear in a green contextual action bar **within the list page content area** (not the Navbar). The Navbar buttons remain `+ Receive Order` and `+ Transfer Request` at all times.
+
+2. **STRUCTURE.md — DashboardPage Branch A (TWH) FEFO mode**: Spec only documented FIFO/LIFO columns. **Added**: In FEFO mode, the 3rd column header changes to "Days Until Expiry"; cells show `N days` or "Expired for N days" in red for expired products.
+
+3. **STRUCTURE.md — DashboardPage Branch B columns**: "Total" column was missing from the documented column list (appears between warehouse columns and Harvest Date). FEFO header text was wrong ("Days Before Expiration" vs actual "Days Until Expiry"). Sort key documentation clarified: FIFO sorts by oldest MAX-harvest-date across in-stock warehouses (frontend-computed); LIFO by newest; Harvest Date cell shows the date with a small green warehouse-code label beneath.
+
+4. **STRUCTURE.md — DashboardPage Branch C harvest date note**: Added explicit note that `harvest_date_per_warehouse[activeWarehouse.id]` is `MAX(harvest_date)` from `ProductController@index` — most recent batch date for that warehouse, not oldest.
+
+5. **STRUCTURE.md — ReconciliationListPage WarehouseTabs integration**: WarehouseTabs note was added for ReceiveOrderListPage and TransferRequestListPage but missing for ReconciliationListPage. **Added** — fetch includes `?warehouse_id` and `?status` params; `activeWarehouse` and `statusFilter` in dep array; separate `useEffect` clears `selectedId` on warehouse change.
+
+6. **TECHSTACK.md — GET /api/receive-orders**: Missing CASE WHEN sort order. **Added**: sorted Incomplete-first (by `created_at` DESC), Accomplished-second (by `date_arrived` DESC).
+
+Non-issue confirmed: `ProductController@index` correctly uses `MAX(harvest_date)` for both `harvest_date` (global) and `harvest_date_per_warehouse` (per-warehouse). No "MIN fix" was made or needed — audit prompt listed this as a question, not a bug.

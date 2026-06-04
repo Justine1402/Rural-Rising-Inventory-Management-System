@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../api/axios';
+import { exportDetailPdf } from '../../utils/exportPdf';
 
 export default function TransferRequestAuditPage({ overrideId = null, onReturn = null }) {
   const { id: paramId } = useParams();
@@ -29,6 +30,11 @@ export default function TransferRequestAuditPage({ overrideId = null, onReturn =
 
   const handleClose = () => onReturn ? onReturn() : navigate('/transfer-requests');
 
+  const handleExportPdf = () => {
+    if (!data) return;
+    exportDetailPdf({ type: 'trf', records: [data] });
+  };
+
   return (
     <>
       {/* Backdrop */}
@@ -50,9 +56,18 @@ export default function TransferRequestAuditPage({ overrideId = null, onReturn =
           >
             ← RETURN
           </button>
-          <span className="text-sm font-semibold text-white">
-            {data?.code ?? ''}
-          </span>
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-semibold text-white">
+              {data?.code ?? ''}
+            </span>
+            <button
+              onClick={handleExportPdf}
+              disabled={!data}
+              className="text-xs font-semibold text-white border border-white rounded px-3 py-1.5 hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Export as PDF
+            </button>
+          </div>
         </div>
 
         {/* Body */}

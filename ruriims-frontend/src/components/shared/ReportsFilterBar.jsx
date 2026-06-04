@@ -34,6 +34,7 @@ export default function ReportsFilterBar({
   onSearchChange,
   showPdfButton = false,
   onExportPdf,
+  exportLabel = 'Export as PDF',
 }) {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -112,7 +113,7 @@ export default function ReportsFilterBar({
           className="btn-brand-outline text-sm px-3 py-1.5 rounded border transition-colors"
           style={{ color: '#409645', borderColor: '#409645' }}
         >
-          Export as PDF
+          {exportLabel}
         </button>
       )}
 

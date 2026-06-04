@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../api/axios';
+import { exportDetailPdf } from '../../utils/exportPdf';
 
 const formatPHP = (v) =>
   v != null
@@ -34,6 +35,11 @@ export default function ReceiveOrderAuditPage({ overrideId = null, onReturn = nu
 
   const handleClose = () => onReturn ? onReturn() : navigate('/receive-orders');
 
+  const handleExportPdf = () => {
+    if (!data) return;
+    exportDetailPdf({ type: 'ro', records: [data] });
+  };
+
   return (
     <>
       {/* Backdrop */}
@@ -55,9 +61,18 @@ export default function ReceiveOrderAuditPage({ overrideId = null, onReturn = nu
           >
             ← RETURN
           </button>
-          <span className="text-sm font-semibold text-white">
-            {data?.code ?? ''}
-          </span>
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-semibold text-white">
+              {data?.code ?? ''}
+            </span>
+            <button
+              onClick={handleExportPdf}
+              disabled={!data}
+              className="text-xs font-semibold text-white border border-white rounded px-3 py-1.5 hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Export as PDF
+            </button>
+          </div>
         </div>
 
         {/* Body */}

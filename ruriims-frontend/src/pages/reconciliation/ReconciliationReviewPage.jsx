@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../api/axios';
+import { exportDetailPdf } from '../../utils/exportPdf';
 import PinVerificationModal from '../../components/shared/PinVerificationModal';
 import { useUI } from '../../context/UIContext';
 import {
@@ -59,6 +60,11 @@ export default function ReconciliationReviewPage({ overrideId = null, onReturn =
 
   const handleClose = () => onReturn ? onReturn() : navigate('/reconciliation');
 
+  const handleExportPdf = () => {
+    if (!data) return;
+    exportDetailPdf({ type: 'rc', records: [data] });
+  };
+
   const adjustedItems = (data?.items ?? []).filter(
     (item) => Math.abs(parseFloat(item.discrepancy)) >= EPSILON
   );
@@ -85,9 +91,18 @@ export default function ReconciliationReviewPage({ overrideId = null, onReturn =
           >
             ← RETURN
           </button>
-          <span className="text-sm font-semibold text-white font-mono">
-            {data?.transaction_code ?? ''}
-          </span>
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-semibold text-white font-mono">
+              {data?.transaction_code ?? ''}
+            </span>
+            <button
+              onClick={handleExportPdf}
+              disabled={!data}
+              className="text-xs font-semibold text-white border border-white rounded px-3 py-1.5 hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Export as PDF
+            </button>
+          </div>
         </div>
 
         {/* Body */}

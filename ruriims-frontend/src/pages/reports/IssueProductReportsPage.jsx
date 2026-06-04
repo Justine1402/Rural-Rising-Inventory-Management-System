@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import api from '../../api/axios';
-import { exportTablePdf } from '../../utils/exportPdf';
+import { exportTablePdf, exportDetailPdf } from '../../utils/exportPdf';
 import { formatDate } from '../../utils/formatDate';
 import Navbar from '../../components/layout/Navbar';
 import ReportsFilterBar from '../../components/shared/ReportsFilterBar';
@@ -21,6 +21,7 @@ export default function IssueProductReportsPage() {
   const [dateTo, setDateTo]           = useState('');
   const [search, setSearch]           = useState('');
   const [selectedId, setSelectedId]   = useState(null);
+  const [selectedIds, setSelectedIds] = useState(new Set());
 
   useEffect(() => {
     let isCancelled = false;
@@ -34,31 +35,69 @@ export default function IssueProductReportsPage() {
     if (search)      params.search       = search;
 
     api.get('/reports/issue-products', { params })
-      .then((res) => { if (!isCancelled) setIssues(res.data.issues); })
+      .then((res) => {
+        if (!isCancelled) {
+          setIssues(res.data.issues);
+          setSelectedIds(new Set());
+        }
+      })
       .catch(() => { if (!isCancelled) setError('Failed to load. Please refresh.'); })
       .finally(() => { if (!isCancelled) setLoading(false); });
 
     return () => { isCancelled = true; };
   }, [warehouseId, dateFrom, dateTo, search, location.key]);
 
-  const handleExportPdf = () => {
-    exportTablePdf({
-      title: 'Issue Product Reports',
-      filename: 'issue-product-reports.pdf',
-      orientation: 'portrait',
-      columns: [
-        'Transaction Code', 'Issue Type', 'Total Products',
-        'Date Issued', 'Issued By', 'Status',
-      ],
-      rows: issues.map(r => [
-        r.transaction_code,
-        r.issue_type,
-        r.total_quantity_summary,
-        formatDate(r.date_issued),
-        r.issued_by,
-        r.status,
-      ]),
+  const allVisibleIds = issues.map(r => r.id);
+  const allChecked = allVisibleIds.length > 0 && allVisibleIds.every(id => selectedIds.has(id));
+
+  const toggleAll = () => {
+    if (allChecked) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(allVisibleIds));
+    }
+  };
+
+  const toggleOne = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
     });
+  };
+
+  const exportLabel = selectedIds.size > 0
+    ? `Export Selected (${selectedIds.size})`
+    : 'Export as PDF';
+
+  const handleExportPdf = async () => {
+    if (selectedIds.size === 0) {
+      exportTablePdf({
+        title: 'Issue Product Reports',
+        filename: 'issue-product-reports.pdf',
+        orientation: 'portrait',
+        columnWidths: [3, 2, 2, 2, 3, 2],
+        columns: [
+          'Transaction Code', 'Issue Type', 'Total Products',
+          'Date Issued', 'Issued By', 'Status',
+        ],
+        rows: issues.map(r => [
+          r.transaction_code,
+          r.issue_type,
+          r.total_quantity_summary,
+          formatDate(r.date_issued),
+          r.issued_by,
+          r.status,
+        ]),
+      });
+      return;
+    }
+    const selectedRows = issues.filter(r => selectedIds.has(r.id));
+    const details = await Promise.all(
+      selectedRows.map(r => api.get(`/issue-products/${r.id}`).then(res => res.data.issue))
+    );
+    exportDetailPdf({ type: 'iss', records: details });
   };
 
   return (
@@ -81,6 +120,7 @@ export default function IssueProductReportsPage() {
             onSearchChange={setSearch}
             showPdfButton={true}
             onExportPdf={handleExportPdf}
+            exportLabel={exportLabel}
           />
 
           {error && <p className="px-4 py-3 text-red-500 text-sm">{error}</p>}
@@ -89,6 +129,14 @@ export default function IssueProductReportsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-white" style={{ backgroundColor: '#1A381E' }}>
+                  <th className="px-3 py-3 text-left w-10">
+                    <input
+                      type="checkbox"
+                      checked={allChecked}
+                      onChange={toggleAll}
+                      className="cursor-pointer"
+                    />
+                  </th>
                   <th className="text-left font-semibold px-4 py-3">Transaction Code</th>
                   <th className="text-left font-semibold px-4 py-3">Issue Type</th>
                   <th className="text-left font-semibold px-4 py-3">Total Products</th>
@@ -100,12 +148,12 @@ export default function IssueProductReportsPage() {
               <tbody>
                 {loading && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-6 text-center text-gray-400">Loading...</td>
+                    <td colSpan={7} className="px-4 py-6 text-center text-gray-400">Loading...</td>
                   </tr>
                 )}
                 {!loading && !error && issues.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-6 text-center text-gray-400">No issue product records found.</td>
+                    <td colSpan={7} className="px-4 py-6 text-center text-gray-400">No issue product records found.</td>
                   </tr>
                 )}
                 {!loading && !error && issues.map((row, idx) => (
@@ -114,6 +162,14 @@ export default function IssueProductReportsPage() {
                     onClick={() => setSelectedId(row.id)}
                     className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 cursor-pointer`}
                   >
+                    <td className="px-3 py-3 w-10" onClick={e => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(row.id)}
+                        onChange={() => toggleOne(row.id)}
+                        className="cursor-pointer"
+                      />
+                    </td>
                     <td className="px-4 py-3 font-mono text-xs text-gray-700">{row.transaction_code}</td>
                     <td className="px-4 py-3 text-gray-800">{row.issue_type}</td>
                     <td className="px-4 py-3 text-gray-600">{row.total_quantity_summary}</td>

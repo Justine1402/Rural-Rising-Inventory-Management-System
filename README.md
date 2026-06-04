@@ -12,7 +12,7 @@ A full-stack inventory management system built for Rural Rising Philippines. Tra
 - **Issue Products** — Decrement stock for field distribution; FEFO (First Expired, First Out) batch selection
 - **Temporary Warehouses** — Create, track, and close short-term field warehouses; closing returns remaining stock to a selected destination warehouse
 - **Inventory Reconciliation** — Snapshot-based physical count with discrepancy detection; two-manager PIN confirmation applies adjustments to live stock
-- **Reports** — Per-module report pages with PDF export (receive orders, transfer requests, issue products, inventory summary, reconciliation)
+- **Reports** — Per-module report pages with two PDF export modes: (1) full summary table export via "Export as PDF"; (2) per-transaction detail PDF via checkbox row selection + "Export Selected (N)" — exports one full-page detail record per selected transaction. All 5 transaction report pages (Receive Orders, Transfer Requests, Issue Products, Temporary Warehouses, Reconciliation) support both modes. Each audit overlay also has a standalone "Export as PDF" button to print the currently-viewed record.
 - **User Management** — Admin-only CRUD with role assignment, soft deletes, password and PIN reset
 - **Role-based access** — Admin, Manager (warehouse-scoped), and Staff roles; PIN verification gates all stock-mutating actions
 
@@ -26,7 +26,7 @@ A full-stack inventory management system built for Rural Rising Philippines. Tra
 | Styling | Tailwind CSS 3.4 |
 | Routing | React Router DOM 7 |
 | HTTP client | Axios 1.15 |
-| PDF generation (client) | jsPDF 4.2 |
+| PDF generation (client) | jsPDF 4.2 (summary table PDFs + per-transaction detail PDFs) |
 | Backend framework | Laravel 13 (PHP 8.3+) |
 | Authentication | Laravel Sanctum 4 (SPA cookie-based) |
 | Database | MySQL 9 |
