@@ -111,6 +111,8 @@ class ProductController extends Controller
 
         if ($user->role === 'manager') {
             $query->where('warehouse_id', $user->warehouse_id);
+        } elseif (request()->filled('warehouse_id')) {
+            $query->where('warehouse_id', request()->input('warehouse_id'));
         }
 
         $batches = $query->get()->map(fn($b) => [

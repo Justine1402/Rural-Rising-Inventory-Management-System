@@ -19,7 +19,8 @@ class ReceiveOrderController extends Controller
     {
         $user  = $request->user();
         $query = ReceiveOrder::with(['warehouse', 'creator', 'verifier'])
-            ->orderByDesc('created_at');
+            ->orderByRaw("CASE WHEN status = 'incomplete' THEN 0 ELSE 1 END ASC")
+            ->orderByRaw("CASE WHEN status = 'incomplete' THEN created_at ELSE date_arrived END DESC");
 
         if ($user->role === 'manager') {
             $query->where('warehouse_id', $user->warehouse_id);

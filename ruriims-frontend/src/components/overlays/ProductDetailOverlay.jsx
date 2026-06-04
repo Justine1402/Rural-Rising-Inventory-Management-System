@@ -1,9 +1,21 @@
 import { useEffect, useState } from 'react';
 import { useUI } from '../../context/UIContext';
+import { useWarehouse } from '../../context/WarehouseContext';
 import api from '../../api/axios';
+
+const isExpired = (harvestDate, shelfLifeDays) => {
+  if (!harvestDate || !shelfLifeDays) return false;
+  const expiry = new Date(harvestDate);
+  expiry.setDate(expiry.getDate() + Number(shelfLifeDays));
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  expiry.setHours(0, 0, 0, 0);
+  return today >= expiry;
+};
 
 export default function ProductDetailOverlay() {
   const { productDetailOverlayProductId, setProductDetailOverlayProductId } = useUI();
+  const { activeWarehouse } = useWarehouse();
 
   const id = productDetailOverlayProductId;
 
@@ -23,7 +35,8 @@ export default function ProductDetailOverlay() {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    api.get(`/products/${id}/batches`)
+    const warehouseParam = activeWarehouse ? `?warehouse_id=${activeWarehouse.id}` : '';
+    api.get(`/products/${id}/batches${warehouseParam}`)
       .then((res) => {
         if (cancelled) return;
         setProduct(res.data.product);
@@ -37,7 +50,7 @@ export default function ProductDetailOverlay() {
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
-  }, [id]);
+  }, [id, activeWarehouse]);
 
   if (id === null) return null;
 
@@ -125,7 +138,12 @@ export default function ProductDetailOverlay() {
                     <tbody>
                       {batches.map((b, i) => (
                         <tr key={i} className="border-t border-gray-100 odd:bg-white even:bg-gray-50">
-                          <td className="px-4 py-2.5 font-mono text-xs text-gray-700">{b.code}</td>
+                          <td
+                            className="px-4 py-2.5 font-mono text-xs"
+                            style={isExpired(b.harvest_date, product.shelf_life) ? { color: '#DC2626' } : undefined}
+                          >
+                            {b.code}
+                          </td>
                           <td className="px-4 py-2.5 text-gray-700">{b.warehouse}</td>
                           <td className="px-4 py-2.5 text-gray-700">
                             {parseFloat(b.quantity)} {product.unit}

@@ -139,7 +139,7 @@ export default function ReportsHistoryPage() {
         <IssueProductAuditPage overrideId={selectedId} onReturn={closeOverlay} />
       )}
       {selectedId && selectedType === 'Inventory Reconciliation' && (
-        <ReconciliationReviewPage overrideId={selectedId} onReturn={closeOverlay} />
+        <ReconciliationReviewPage overrideId={selectedId} onReturn={closeOverlay} readOnly={true} />
       )}
     </div>
   );

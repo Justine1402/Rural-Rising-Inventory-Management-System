@@ -28,11 +28,19 @@ export default function ReconciliationListPage() {
   useEffect(() => {
     setLoading(true);
     setSelectedId(null);
-    api.get('/reconciliations')
+    const params = new URLSearchParams();
+    if (activeWarehouse) params.set('warehouse_id', activeWarehouse.id);
+    if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter);
+    const url = `/reconciliations${params.toString() ? '?' + params.toString() : ''}`;
+    api.get(url)
       .then((res) => setReconciliations(res.data.reconciliations))
       .catch(() => setError('Failed to load reconciliations. Please refresh.'))
       .finally(() => setLoading(false));
-  }, [location.key, reconciliationRefreshKey]);
+  }, [location.key, reconciliationRefreshKey, activeWarehouse, statusFilter]);
+
+  useEffect(() => {
+    setSelectedId(null);
+  }, [activeWarehouse]);
 
   const handleRowClick = (rec) => {
     if (rec.status === 'pending_review') {

@@ -114,6 +114,7 @@ export default function ReconciliationReportsPage() {
         <ReconciliationReviewPage
           overrideId={selectedId}
           onReturn={() => setSelectedId(null)}
+          readOnly={true}
         />
       )}
     </div>

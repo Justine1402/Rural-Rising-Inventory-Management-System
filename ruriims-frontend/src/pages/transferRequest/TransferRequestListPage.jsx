@@ -5,11 +5,13 @@ import Navbar from '../../components/layout/Navbar';
 import WarehouseTabs from '../../components/layout/WarehouseTabs';
 import StatusBadge from '../../components/ui/StatusBadge';
 import { useUI } from '../../context/UIContext';
+import { useWarehouse } from '../../context/WarehouseContext';
 
 export default function TransferRequestListPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { transferRequestRefreshKey } = useUI();
+  const { activeWarehouse } = useWarehouse();
   const [transfers, setTransfers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -18,11 +20,18 @@ export default function TransferRequestListPage() {
   useEffect(() => {
     setLoading(true);
     setSelectedRow(null);
-    api.get('/transfer-requests')
+    const params = new URLSearchParams();
+    if (activeWarehouse) params.set('warehouse_id', activeWarehouse.id);
+    const url = `/transfer-requests${params.toString() ? '?' + params.toString() : ''}`;
+    api.get(url)
       .then((res) => setTransfers(res.data.transfers))
       .catch(() => setError('Failed to load transfer requests. Please refresh.'))
       .finally(() => setLoading(false));
-  }, [location.key, transferRequestRefreshKey]);
+  }, [location.key, transferRequestRefreshKey, activeWarehouse]);
+
+  useEffect(() => {
+    setSelectedRow(null);
+  }, [activeWarehouse]);
 
   const handleRowClick = (transfer) => {
     if (transfer.status === 'complete') {

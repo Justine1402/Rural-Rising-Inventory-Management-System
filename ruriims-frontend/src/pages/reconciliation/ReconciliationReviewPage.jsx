@@ -10,7 +10,7 @@ import {
 } from '../../utils/reconciliationFormat';
 import { formatDate } from '../../utils/formatDate';
 
-export default function ReconciliationReviewPage({ overrideId = null, onReturn = null }) {
+export default function ReconciliationReviewPage({ overrideId = null, onReturn = null, readOnly = false }) {
   const { id: paramId } = useParams();
   const navigate = useNavigate();
   const effectiveId = overrideId ?? paramId;
@@ -218,7 +218,7 @@ export default function ReconciliationReviewPage({ overrideId = null, onReturn =
               </div>
 
               {/* Action row — only shown for pending review */}
-              {isPendingReview && (
+              {!readOnly && isPendingReview && (
                 <div>
                   {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
                   <div className="flex items-center justify-end">

@@ -5,11 +5,13 @@ import Navbar from '../../components/layout/Navbar';
 import WarehouseTabs from '../../components/layout/WarehouseTabs';
 import StatusBadge from '../../components/ui/StatusBadge';
 import { useUI } from '../../context/UIContext';
+import { useWarehouse } from '../../context/WarehouseContext';
 
 export default function ReceiveOrderListPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { receiveOrderRefreshKey } = useUI();
+  const { activeWarehouse } = useWarehouse();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -18,11 +20,18 @@ export default function ReceiveOrderListPage() {
   useEffect(() => {
     setLoading(true);
     setSelectedRow(null);
-    api.get('/receive-orders')
+    const params = new URLSearchParams();
+    if (activeWarehouse) params.set('warehouse_id', activeWarehouse.id);
+    const url = `/receive-orders${params.toString() ? '?' + params.toString() : ''}`;
+    api.get(url)
       .then((res) => setOrders(res.data.orders))
       .catch(() => setError('Failed to load receive orders. Please refresh.'))
       .finally(() => setLoading(false));
-  }, [location.key, receiveOrderRefreshKey]);
+  }, [location.key, receiveOrderRefreshKey, activeWarehouse]);
+
+  useEffect(() => {
+    setSelectedRow(null);
+  }, [activeWarehouse]);
 
   const handleRowClick = (order) => {
     if (order.status === 'accomplished') {

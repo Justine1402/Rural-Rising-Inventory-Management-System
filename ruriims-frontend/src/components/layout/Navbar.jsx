@@ -28,6 +28,10 @@ export default function Navbar({ selectedCategory = '', onCategoryChange = () =>
   const navigate = useNavigate();
   const location = useLocation();
   const isReportsPage = location.pathname.startsWith('/reports');
+  const isListPage =
+    location.pathname.startsWith('/receive-orders') ||
+    location.pathname.startsWith('/transfer-requests') ||
+    location.pathname.startsWith('/reconciliation');
 
   const inventoryLabel = location.pathname.startsWith('/reconciliation')
     ? 'Inventory Reconciliation'
@@ -211,7 +215,7 @@ export default function Navbar({ selectedCategory = '', onCategoryChange = () =>
 
         {/* Center-right controls */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          {!isReportsPage && (
+          {!isReportsPage && !isListPage && (
           <div className="relative" ref={categoryRef}>
             <button
               onClick={() => setCategoryOpen((v) => !v)}
@@ -256,28 +260,32 @@ export default function Navbar({ selectedCategory = '', onCategoryChange = () =>
                 >
                   Inventory
                 </button>
+                {!activeWarehouse?.isTemporary && (
                 <button
                   onClick={() => { setInventoryOpen(false); navigate('/receive-orders'); }}
                   className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                   Receive Orders
                 </button>
+                )}
                 <button
                   onClick={() => { setInventoryOpen(false); navigate('/transfer-requests'); }}
                   className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                   Transfer Requests
                 </button>
+                {!activeWarehouse?.isTemporary && (
                 <button
                   onClick={() => { setInventoryOpen(false); navigate('/reconciliation'); }}
                   className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                   Inventory Reconciliation
                 </button>
+                )}
               </div>
             )}
           </div>
-          {!isReportsPage && (
+          {!isReportsPage && !isListPage && (
           <div className="relative" ref={sortRef}>
             <button
               onClick={() => setSortOpen((v) => !v)}
