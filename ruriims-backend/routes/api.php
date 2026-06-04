@@ -14,9 +14,7 @@ use App\Http\Controllers\ReconciliationController;
 use App\Http\Controllers\TemporaryWarehouseController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/test', fn () => response()->json(['message' => 'Laravel is connected!']));
-
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'user']);
