@@ -5,9 +5,6 @@ import { useAuth } from '../../context/AuthContext';
 import { useWarehouse } from '../../context/WarehouseContext';
 import { formatDiscrepancy, EPSILON } from '../../utils/reconciliationFormat';
 
-const readonlyClass =
-  'w-full bg-gray-100 border border-transparent rounded-lg px-4 py-2.5 text-sm text-gray-500 cursor-not-allowed';
-
 export default function ReconciliationFormPage({ onClose, onSuccess }) {
   const { user } = useAuth();
   const { activeWarehouse } = useWarehouse();
@@ -88,129 +85,150 @@ export default function ReconciliationFormPage({ onClose, onSuccess }) {
   return (
     <>
       <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40" />
-      <div className="fixed top-[105px] left-1/2 -translate-x-1/2 w-[1040px] max-h-[85vh] bg-white rounded-lg shadow-xl overflow-y-auto z-50 p-8">
 
-        <div className="flex items-center justify-between mb-6">
+      {/* Card */}
+      <div className="fixed top-[105px] left-1/2 -translate-x-1/2 w-[1040px] max-h-[85vh] bg-white rounded-lg shadow-xl overflow-y-auto z-50">
+
+        {/* Dark green sticky header */}
+        <div
+          className="flex items-center justify-between px-6 py-4 sticky top-0 z-10"
+          style={{ backgroundColor: '#1A381E' }}
+        >
           <button
             onClick={onClose}
-            className="px-6 py-2.5 text-sm font-semibold text-white rounded-lg"
-            style={{ backgroundColor: '#409645' }}
+            className="text-white text-sm font-medium hover:opacity-80 transition-opacity"
           >
-            RETURN
+            ← RETURN
           </button>
-          <h1 className="text-2xl font-bold text-gray-900">Inventory Reconciliation</h1>
+          <span className="text-white font-semibold text-lg">Inventory Reconciliation</span>
         </div>
 
-        {isTWH ? (
-          <p className="text-red-600 text-sm text-center py-8">
-            Reconciliation is not available for temporary warehouses.
-          </p>
-        ) : (
-          <>
-            <div className="grid grid-cols-3 gap-x-8 gap-y-4 mb-6">
-              <div>
-                <label className="block text-sm text-gray-500 mb-1.5">Reconciled By</label>
-                <div className={readonlyClass}>{user?.name ?? ''}</div>
-              </div>
-              <div>
-                <label className="block text-sm text-gray-500 mb-1.5">Date</label>
-                <div className={readonlyClass}>{today}</div>
-              </div>
-              <div>
-                <label className="block text-sm text-gray-500 mb-1.5">Warehouse</label>
-                <div className={readonlyClass}>{activeWarehouse?.name ?? ''}</div>
-              </div>
-            </div>
+        {/* Body */}
+        <div className="px-8 py-6">
 
-            <div className="rounded-lg overflow-hidden border border-gray-200 mb-4">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-white" style={{ backgroundColor: '#1A381E' }}>
-                    <th className="text-left font-semibold px-4 py-2.5">Product SKU</th>
-                    <th className="text-left font-semibold px-4 py-2.5">Product Name</th>
-                    <th className="text-left font-semibold px-4 py-2.5">Expected Stock</th>
-                    <th className="text-left font-semibold px-4 py-2.5">Actual Count</th>
-                    <th className="text-left font-semibold px-4 py-2.5">Discrepancy</th>
-                    <th className="text-left font-semibold px-4 py-2.5">Remarks</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading && (
-                    <tr>
-                      <td colSpan={6} className="px-4 py-5 text-center text-gray-400">Loading products…</td>
+          {isTWH ? (
+            <p className="text-red-600 text-sm text-center py-8">
+              Reconciliation is not available for temporary warehouses.
+            </p>
+          ) : (
+            <>
+              {/* Section label */}
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
+                Reconciliation Details
+              </p>
+
+              {/* Read-only metadata — 3 columns */}
+              <div className="grid grid-cols-3 gap-x-8 gap-y-4 mb-6">
+                <div>
+                  <p className="text-xs text-gray-500 mb-0.5">Reconciled By</p>
+                  <p className="font-semibold text-gray-800">{user?.name ?? '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-0.5">Date</p>
+                  <p className="font-semibold text-gray-800">{today}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-0.5">Warehouse</p>
+                  <p className="font-semibold text-gray-800">{activeWarehouse?.name ?? '—'}</p>
+                </div>
+              </div>
+
+              {/* Section label */}
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
+                Counted Items
+              </p>
+
+              <div className="rounded-lg overflow-hidden border border-gray-200 mb-4">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-white" style={{ backgroundColor: '#1A381E' }}>
+                      <th className="text-left font-semibold px-4 py-2.5">Product SKU</th>
+                      <th className="text-left font-semibold px-4 py-2.5">Product Name</th>
+                      <th className="text-left font-semibold px-4 py-2.5">Expected Stock</th>
+                      <th className="text-left font-semibold px-4 py-2.5">Actual Count</th>
+                      <th className="text-left font-semibold px-4 py-2.5">Discrepancy</th>
+                      <th className="text-left font-semibold px-4 py-2.5">Remarks</th>
                     </tr>
-                  )}
-                  {!loading && products.length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="px-4 py-5 text-center text-gray-400">
-                        No in-stock products to reconcile at this warehouse.
-                      </td>
-                    </tr>
-                  )}
-                  {!loading && products.map((product) => {
-                    const state = rowState[product.id] ?? { actualCount: '', remarks: '' };
-                    const disc = computeDiscrepancy(product);
-
-                    let discCell = null;
-                    if (disc !== null) {
-                      const formatted = formatDiscrepancy(disc, product.unit);
-                      discCell = <span style={{ color: formatted.color }}>{formatted.label}</span>;
-                    }
-
-                    return (
-                      <tr key={product.id} className="border-t border-gray-100">
-                        <td className="px-4 py-2 font-mono text-xs text-gray-700">{product.sku_code}</td>
-                        <td className="px-4 py-2 text-gray-800">{product.name}</td>
-                        <td className="px-4 py-2 text-gray-600">{product.total_quantity} {product.unit}</td>
-                        <td className="px-4 py-2">
-                          <div className="flex items-center gap-1.5">
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.001"
-                              value={state.actualCount}
-                              onChange={(e) => updateRow(product.id, 'actualCount', e.target.value)}
-                              className="w-24 bg-gray-100 border border-transparent rounded px-2 py-1 text-sm focus:outline-none focus:border-[#1A381E] focus:bg-white"
-                            />
-                            <span className="text-xs text-gray-500">{product.unit}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-2">{discCell}</td>
-                        <td className="px-4 py-2">
-                          <input
-                            type="text"
-                            value={state.remarks}
-                            onChange={(e) => updateRow(product.id, 'remarks', e.target.value)}
-                            placeholder="e.g., Weighing Error"
-                            className="w-full bg-gray-100 border border-transparent rounded px-2 py-1 text-sm focus:outline-none focus:border-[#1A381E] focus:bg-white"
-                          />
+                  </thead>
+                  <tbody>
+                    {loading && (
+                      <tr>
+                        <td colSpan={6} className="px-4 py-5 text-center text-gray-400">Loading products…</td>
+                      </tr>
+                    )}
+                    {!loading && products.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="px-4 py-5 text-center text-gray-400">
+                          No in-stock products to reconcile at this warehouse.
                         </td>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                    )}
+                    {!loading && products.map((product) => {
+                      const state = rowState[product.id] ?? { actualCount: '', remarks: '' };
+                      const disc = computeDiscrepancy(product);
 
-            {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
+                      let discCell = null;
+                      if (disc !== null) {
+                        const formatted = formatDiscrepancy(disc, product.unit);
+                        discCell = <span style={{ color: formatted.color }}>{formatted.label}</span>;
+                      }
 
-            <div className="flex items-center justify-end gap-3">
-              {successCode && (
-                <span className="px-4 py-2 text-sm font-medium text-gray-500 bg-gray-200 rounded-lg">
-                  Created {successCode}
-                </span>
-              )}
-              <button
-                onClick={handleSubmit}
-                disabled={isSubmitDisabled}
-                className="px-8 py-2.5 text-sm font-bold text-white rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
-                style={{ backgroundColor: '#409645' }}
-              >
-                {submitting ? 'Saving…' : 'SUBMIT'}
-              </button>
-            </div>
-          </>
-        )}
+                      return (
+                        <tr key={product.id} className="border-t border-gray-100">
+                          <td className="px-4 py-2 font-mono text-xs text-gray-700">{product.sku_code}</td>
+                          <td className="px-4 py-2 text-gray-800">{product.name}</td>
+                          <td className="px-4 py-2 text-gray-600">{product.total_quantity} {product.unit}</td>
+                          <td className="px-4 py-2">
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.001"
+                                value={state.actualCount}
+                                onChange={(e) => updateRow(product.id, 'actualCount', e.target.value)}
+                                className="w-24 bg-gray-100 border border-transparent rounded px-2 py-1 text-sm focus:outline-none focus:border-[#1A381E] focus:bg-white"
+                              />
+                              <span className="text-xs text-gray-500">{product.unit}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-2">{discCell}</td>
+                          <td className="px-4 py-2">
+                            <input
+                              type="text"
+                              value={state.remarks}
+                              onChange={(e) => updateRow(product.id, 'remarks', e.target.value)}
+                              placeholder="e.g., Weighing Error"
+                              className="w-full bg-gray-100 border border-transparent rounded px-2 py-1 text-sm focus:outline-none focus:border-[#1A381E] focus:bg-white"
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
+
+              <div className="flex items-center justify-end gap-3">
+                {successCode && (
+                  <span className="px-4 py-2 text-sm font-medium text-gray-500 bg-gray-200 rounded-lg">
+                    Created {successCode}
+                  </span>
+                )}
+                <button
+                  onClick={handleSubmit}
+                  disabled={isSubmitDisabled}
+                  className="px-8 py-2.5 text-sm font-bold text-white rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: '#409645' }}
+                >
+                  {submitting ? 'Saving…' : 'SUBMIT'}
+                </button>
+              </div>
+            </>
+          )}
+
+        </div>
       </div>
 
       <PinVerificationModal isOpen={pinModalOpen} onVerify={handleVerify} onClose={() => setPinModalOpen(false)} />

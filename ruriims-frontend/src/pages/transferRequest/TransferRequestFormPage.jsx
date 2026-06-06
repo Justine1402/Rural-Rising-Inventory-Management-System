@@ -11,9 +11,7 @@ import { useWarehouse } from '../../context/WarehouseContext';
 import { planBatchCascade } from '../../utils/planBatchCascade';
 
 const fieldClass =
-  'w-full bg-gray-100 border border-transparent rounded-lg px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#1A381E] focus:bg-white transition';
-const readonlyClass =
-  'w-full bg-gray-100 border border-transparent rounded-lg px-4 py-2.5 text-sm text-gray-500 cursor-not-allowed';
+  'w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#409645] bg-white transition';
 
 export default function TransferRequestFormPage({ onClose, onSuccess }) {
   const { id } = useParams();
@@ -229,95 +227,154 @@ export default function TransferRequestFormPage({ onClose, onSuccess }) {
       <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40" />
 
       {/* Card */}
-      <div className="fixed top-[105px] left-1/2 -translate-x-1/2 w-[960px] max-h-[85vh] bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 flex flex-col overflow-auto">
+      <div className={`fixed top-[105px] left-1/2 -translate-x-1/2 w-[960px] max-h-[85vh] bg-white shadow-2xl z-50 ${
+        isAccomplish
+          ? 'rounded-lg overflow-y-auto'
+          : 'rounded-2xl overflow-y-auto'
+      }`}>
 
         {fetchLoading ? (
-          <div className="flex-1 flex items-center justify-center text-gray-400">Loading transfer request…</div>
+          <div className="flex items-center justify-center py-20 text-gray-400">Loading transfer request…</div>
         ) : (
           <>
             {/* Header */}
-            <div className="flex items-center justify-between px-8 py-5 flex-shrink-0">
-              <button
-                onClick={() => isAccomplish ? navigate('/transfer-requests') : onClose?.()}
-                className="px-6 py-2.5 text-sm font-semibold text-white rounded-lg"
-                style={{ backgroundColor: '#409645' }}
+            {isAccomplish ? (
+              <div
+                className="flex items-center justify-between px-6 py-4 sticky top-0 z-10"
+                style={{ backgroundColor: '#1A381E' }}
               >
-                RETURN
-              </button>
-              <h1 className="text-2xl font-bold text-gray-900">
-                {isAccomplish ? (transferData?.code ?? 'Accomplish Transfer') : 'Create Transfer Request'}
-              </h1>
-            </div>
+                <button
+                  onClick={() => navigate('/transfer-requests')}
+                  className="flex items-center gap-2 text-sm font-semibold text-white hover:opacity-80"
+                >
+                  ← RETURN
+                </button>
+                <span className="text-sm font-semibold text-white font-mono">
+                  {transferData?.code ?? ''}
+                </span>
+              </div>
+            ) : (
+              <div
+                className="flex items-center justify-between px-6 py-4 sticky top-0 z-10"
+                style={{ backgroundColor: '#1A381E' }}
+              >
+                <button
+                  onClick={() => onClose?.()}
+                  className="text-white text-sm font-medium hover:opacity-80 transition-opacity"
+                >
+                  ← RETURN
+                </button>
+                <span className="text-white font-semibold text-lg">Create Transfer Request</span>
+              </div>
+            )}
 
-            {/* Scrollable body */}
-            <div className="flex-1 overflow-auto px-8 pb-6">
+            {/* Body */}
+            <div className="px-8 py-6">
+
+              {/* Section label */}
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
+                Transfer Details
+              </p>
 
               {/* Top form fields */}
-              <div className="grid grid-cols-2 gap-x-12 gap-y-4 mb-6">
+              <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-6">
                 <div>
-                  <label className="block text-sm text-gray-500 mb-1.5">Requested By</label>
-                  <div className={readonlyClass}>{isAccomplish ? transferData?.requested_by : (user?.name ?? '')}</div>
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-500 mb-1.5">Date Requested</label>
-                  <div className={readonlyClass}>{isAccomplish ? transferData?.date_requested : today}</div>
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-500 mb-1.5">Source Warehouse</label>
                   {isAccomplish ? (
-                    <div className={readonlyClass}>{transferData?.source_warehouse}</div>
-                  ) : user?.role === 'manager' ? (
-                    <div className={readonlyClass}>{activeWarehouse?.name ?? ''}</div>
+                    <>
+                      <p className="text-sm text-gray-500 mb-0.5">Requested By</p>
+                      <p className="text-sm font-medium text-gray-800">{transferData?.requested_by ?? '—'}</p>
+                    </>
                   ) : (
-                    <div className="relative">
-                      <select
-                        value={sourceWarehouseId}
-                        onChange={(e) => { setSourceWarehouseId(e.target.value); if (e.target.value === destinationWarehouseId) setDestinationWarehouseId(''); }}
-                        className={`${fieldClass} appearance-none pr-8`}
-                        style={{ color: sourceWarehouseId ? '#1f2937' : '#9ca3af' }}
-                      >
-                        <option value="">Select source warehouse</option>
-                        {permanentWarehouses.map((w) => (
-                          <option key={w.id} value={w.id} disabled={String(w.id) === String(destinationWarehouseId)}>
-                            {w.name}
-                          </option>
-                        ))}
-                      </select>
-                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">▾</span>
-                    </div>
+                    <>
+                      <p className="text-xs text-gray-500 mb-0.5">Requested By</p>
+                      <p className="font-semibold text-gray-800">{user?.name ?? '—'}</p>
+                    </>
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-500 mb-1.5">Destination Warehouse</label>
                   {isAccomplish ? (
-                    <div className={readonlyClass}>{transferData?.destination_warehouse}</div>
+                    <>
+                      <p className="text-sm text-gray-500 mb-0.5">Date Requested</p>
+                      <p className="text-sm font-medium text-gray-800">{transferData?.date_requested ?? '—'}</p>
+                    </>
                   ) : (
-                    <div className="relative">
-                      <select
-                        value={destinationWarehouseId}
-                        onChange={(e) => { setDestinationWarehouseId(e.target.value); if (e.target.value === sourceWarehouseId) setSourceWarehouseId(''); }}
-                        className={`${fieldClass} appearance-none pr-8`}
-                        style={{ color: destinationWarehouseId ? '#1f2937' : '#9ca3af' }}
-                      >
-                        <option value="">Select destination warehouse</option>
-                        {warehouses.map((w) => (
-                          <option key={w.id} value={w.id} disabled={String(w.id) === String(sourceWarehouseId)}>
-                            {w.name}
-                          </option>
-                        ))}
-                      </select>
-                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">▾</span>
-                    </div>
+                    <>
+                      <p className="text-xs text-gray-500 mb-0.5">Date Requested</p>
+                      <p className="font-semibold text-gray-800">{today}</p>
+                    </>
+                  )}
+                </div>
+                <div>
+                  {isAccomplish ? (
+                    <>
+                      <p className="text-sm text-gray-500 mb-0.5">Source Warehouse</p>
+                      <p className="text-sm font-medium text-gray-800">{transferData?.source_warehouse ?? '—'}</p>
+                    </>
+                  ) : user?.role === 'manager' ? (
+                    <>
+                      <label className="text-xs text-gray-500 mb-1 block">Source Warehouse</label>
+                      <div className="w-full bg-gray-100 border border-transparent rounded-lg px-4 py-2.5 text-sm text-gray-500 cursor-not-allowed">
+                        {activeWarehouse?.name ?? ''}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <label className="text-xs text-gray-500 mb-1 block">Source Warehouse</label>
+                      <div className="relative">
+                        <select
+                          value={sourceWarehouseId}
+                          onChange={(e) => { setSourceWarehouseId(e.target.value); if (e.target.value === destinationWarehouseId) setDestinationWarehouseId(''); }}
+                          className={`${fieldClass} appearance-none pr-8`}
+                          style={{ color: sourceWarehouseId ? '#1f2937' : '#9ca3af' }}
+                        >
+                          <option value="">Select source warehouse</option>
+                          {permanentWarehouses.map((w) => (
+                            <option key={w.id} value={w.id} disabled={String(w.id) === String(destinationWarehouseId)}>
+                              {w.name}
+                            </option>
+                          ))}
+                        </select>
+                        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">▾</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div>
+                  {isAccomplish ? (
+                    <>
+                      <p className="text-sm text-gray-500 mb-0.5">Destination Warehouse</p>
+                      <p className="text-sm font-medium text-gray-800">{transferData?.destination_warehouse ?? '—'}</p>
+                    </>
+                  ) : (
+                    <>
+                      <label className="text-xs text-gray-500 mb-1 block">Destination Warehouse</label>
+                      <div className="relative">
+                        <select
+                          value={destinationWarehouseId}
+                          onChange={(e) => { setDestinationWarehouseId(e.target.value); if (e.target.value === sourceWarehouseId) setSourceWarehouseId(''); }}
+                          className={`${fieldClass} appearance-none pr-8`}
+                          style={{ color: destinationWarehouseId ? '#1f2937' : '#9ca3af' }}
+                        >
+                          <option value="">Select destination warehouse</option>
+                          {warehouses.map((w) => (
+                            <option key={w.id} value={w.id} disabled={String(w.id) === String(sourceWarehouseId)}>
+                              {w.name}
+                            </option>
+                          ))}
+                        </select>
+                        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">▾</span>
+                      </div>
+                    </>
                   )}
                 </div>
                 {isAccomplish && (
                   <div>
-                    <label className="block text-sm text-gray-500 mb-1.5">Date Received</label>
+                    <p className="text-xs text-gray-500 mb-1">Date Received</p>
                     <input
                       type="date"
                       value={dateReceived}
                       onChange={(e) => setDateReceived(e.target.value)}
-                      className={fieldClass}
+                      className="date-input"
                     />
                   </div>
                 )}
@@ -326,7 +383,9 @@ export default function TransferRequestFormPage({ onClose, onSuccess }) {
               {/* Product Details */}
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-sm font-semibold text-gray-700">Product Details</h2>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">
+                    Product Details
+                  </p>
                   {!isAccomplish && (
                     <button
                       onClick={() => setAddModalOpen(true)}
@@ -491,15 +550,21 @@ export default function TransferRequestFormPage({ onClose, onSuccess }) {
               {/* Footer */}
               <div className="flex items-center justify-end gap-3">
                 {successCode && (
-                  <span className="px-4 py-2 text-sm font-medium text-gray-500 bg-gray-200 rounded-lg">
-                    {isAccomplish ? successCode : `Created ${successCode}`}
-                  </span>
+                  isAccomplish ? (
+                    <span className="px-4 py-2 text-sm font-bold rounded-lg" style={{ color: '#409645' }}>
+                      {successCode}
+                    </span>
+                  ) : (
+                    <span className="px-4 py-2 text-sm font-medium text-gray-500 bg-gray-200 rounded-lg">
+                      Created {successCode}
+                    </span>
+                  )
                 )}
                 <button
                   onClick={handleSubmit}
                   disabled={loading || !!successCode || hasRowErrors}
-                  className="px-8 py-2.5 text-sm font-bold text-white rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
-                  style={{ backgroundColor: '#409645' }}
+                  className={`px-8 py-2.5 text-sm font-bold text-white rounded-lg disabled:opacity-60 disabled:cursor-not-allowed ${isAccomplish ? 'btn-brand' : ''}`}
+                  style={isAccomplish ? undefined : { backgroundColor: '#409645' }}
                 >
                   {loading ? 'Saving…' : isAccomplish ? 'ACCOMPLISH' : 'CREATE'}
                 </button>

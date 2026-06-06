@@ -11,3 +11,30 @@
 .btn-brand-outline:hover {
   background-color: #409645;
 }
+
+.date-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  color: #111827;
+  background-color: #ffffff;
+  outline: none;
+  transition: border-color 0.15s ease;
+  cursor: pointer;
+}
+
+.date-input:focus {
+  border-color: #409645;
+  box-shadow: 0 0 0 2px rgba(64, 150, 69, 0.15);
+}
+
+.date-input::-webkit-calendar-picker-indicator {
+  opacity: 0.5;
+  cursor: pointer;
+}
+
+.date-input::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}

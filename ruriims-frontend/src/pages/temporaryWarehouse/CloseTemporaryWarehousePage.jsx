@@ -6,8 +6,6 @@ import { useUI } from '../../context/UIContext';
 import { useWarehouse } from '../../context/WarehouseContext';
 import { formatDate } from '../../utils/formatDate';
 
-const readonlyClass =
-  'w-full bg-gray-100 border border-transparent rounded-lg px-4 py-2.5 text-sm text-gray-500 cursor-not-allowed';
 const todayISO = new Date().toISOString().split('T')[0];
 
 export default function CloseTemporaryWarehousePage() {
@@ -145,22 +143,24 @@ export default function CloseTemporaryWarehousePage() {
       <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40" />
 
       {/* Card */}
-      <div className="fixed top-[105px] left-1/2 -translate-x-1/2 w-[1040px] max-h-[85vh] bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 flex flex-col overflow-auto">
+      <div className="fixed top-[105px] left-1/2 -translate-x-1/2 w-[1040px] max-h-[85vh] bg-white rounded-2xl shadow-2xl z-50 overflow-y-auto">
 
-        {/* Header */}
-        <div className="flex items-center justify-between px-8 py-5 flex-shrink-0 border-b border-gray-100">
+        {/* Dark green sticky header */}
+        <div
+          className="flex items-center justify-between px-6 py-4 sticky top-0 z-10"
+          style={{ backgroundColor: '#1A381E' }}
+        >
           <button
             onClick={handleClose}
-            className="px-6 py-2.5 text-sm font-semibold text-white rounded-lg"
-            style={{ backgroundColor: '#409645' }}
+            className="text-white text-sm font-medium hover:opacity-80 transition-opacity"
           >
-            RETURN
+            ← RETURN
           </button>
-          <h1 className="text-2xl font-bold text-gray-900">Close Temporary Warehouse</h1>
+          <span className="text-white font-semibold text-lg">Close Temporary Warehouse</span>
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-auto px-8 py-6">
+        <div className="px-8 py-6">
 
           {loading && (
             <p className="text-gray-500 text-sm text-center py-8">Loading…</p>
@@ -176,37 +176,44 @@ export default function CloseTemporaryWarehousePage() {
 
           {!loading && !fetchError && twh && twh.status !== 'closed' && (
             <>
+              {/* Section label */}
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
+                Warehouse Details
+              </p>
+
               {/* Pre-filled read-only fields */}
-              <div className="grid grid-cols-2 gap-x-12 gap-y-4 mb-6">
+              <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-6">
                 <div>
-                  <label className="block text-sm text-gray-500 mb-1.5">Warehouse Name</label>
-                  <div className={readonlyClass}>{twh.name}</div>
+                  <p className="text-xs text-gray-500 mb-0.5">Warehouse Name</p>
+                  <p className="font-semibold text-gray-800">{twh.name || '—'}</p>
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-500 mb-1.5">Event Date</label>
-                  <div className={readonlyClass}>{formatDate(twh.event_date)}</div>
+                  <p className="text-xs text-gray-500 mb-0.5">Event Date</p>
+                  <p className="font-semibold text-gray-800">{formatDate(twh.event_date)}</p>
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-500 mb-1.5">Created By</label>
-                  <div className={readonlyClass}>{twh.created_by}</div>
+                  <p className="text-xs text-gray-500 mb-0.5">Created By</p>
+                  <p className="font-semibold text-gray-800">{twh.created_by || '—'}</p>
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-500 mb-1.5">Location</label>
-                  <div className={readonlyClass}>{twh.location}</div>
+                  <p className="text-xs text-gray-500 mb-0.5">Location</p>
+                  <p className="font-semibold text-gray-800">{twh.location || '—'}</p>
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-500 mb-1.5">Closed By</label>
-                  <div className={readonlyClass}>{successMessage ? (user?.name ?? ' ') : ' '}</div>
+                  <p className="text-xs text-gray-500 mb-0.5">Closed By</p>
+                  <p className="font-semibold text-gray-800">{successMessage ? (user?.name ?? '—') : '—'}</p>
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-500 mb-1.5">Date Closed</label>
-                  <div className={readonlyClass}>{successMessage ? formatDate(todayISO) : ' '}</div>
+                  <p className="text-xs text-gray-500 mb-0.5">Date Closed</p>
+                  <p className="font-semibold text-gray-800">{successMessage ? formatDate(todayISO) : '—'}</p>
                 </div>
               </div>
 
               {/* Products to Return table */}
               <div className="mb-6">
-                <h2 className="text-sm font-semibold text-gray-700 mb-3">Products to Return</h2>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
+                  Products to Return
+                </p>
                 <div className="rounded-lg overflow-hidden border border-gray-200">
                   <table className="w-full text-sm">
                     <thead>

@@ -7,9 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useWarehouse } from '../../context/WarehouseContext';
 
 const fieldClass =
-  'w-full bg-gray-100 border border-transparent rounded-lg px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#1A381E] focus:bg-white transition';
-const readonlyClass =
-  'w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-500 cursor-not-allowed';
+  'w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#409645] bg-white transition';
 
 export default function ReceiveOrderFormPage({ onClose, onSuccess }) {
   const { id } = useParams();
@@ -129,66 +127,151 @@ export default function ReceiveOrderFormPage({ onClose, onSuccess }) {
       <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40" />
 
       {/* Card */}
-      <div className="fixed top-[105px] left-1/2 -translate-x-1/2 w-[960px] max-h-[85vh] bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 flex flex-col overflow-auto">
+      <div className={`fixed top-[105px] left-1/2 -translate-x-1/2 w-[960px] max-h-[85vh] bg-white shadow-2xl z-50 ${
+        isAccomplish
+          ? 'rounded-lg overflow-y-auto'
+          : 'rounded-2xl overflow-y-auto'
+      }`}>
 
         {fetchLoading ? (
-          <div className="flex-1 flex items-center justify-center text-gray-400">Loading order…</div>
+          <div className="flex items-center justify-center py-20 text-gray-400">Loading order…</div>
         ) : (
           <>
             {/* Header */}
-            <div className="flex items-center justify-between px-8 py-5 flex-shrink-0">
-              <button
-                onClick={() => isAccomplish ? navigate('/receive-orders') : onClose?.()}
-                className="px-6 py-2.5 text-sm font-semibold text-white rounded-lg"
-                style={{ backgroundColor: '#409645' }}
+            {isAccomplish ? (
+              <div
+                className="flex items-center justify-between px-6 py-4 sticky top-0 z-10"
+                style={{ backgroundColor: '#1A381E' }}
               >
-                RETURN
-              </button>
-              <h1 className="text-2xl font-bold text-gray-900">
-                {isAccomplish ? (orderData?.code ?? 'Accomplish Order') : 'Receive Order'}
-              </h1>
-            </div>
+                <button
+                  onClick={() => navigate('/receive-orders')}
+                  className="flex items-center gap-2 text-sm font-semibold text-white hover:opacity-80"
+                >
+                  ← RETURN
+                </button>
+                <span className="text-sm font-semibold text-white font-mono">
+                  {orderData?.code ?? ''}
+                </span>
+              </div>
+            ) : (
+              <div
+                className="flex items-center justify-between px-6 py-4 sticky top-0 z-10"
+                style={{ backgroundColor: '#1A381E' }}
+              >
+                <button
+                  onClick={() => onClose?.()}
+                  className="text-white text-sm font-medium hover:opacity-80 transition-opacity"
+                >
+                  ← RETURN
+                </button>
+                <span className="text-white font-semibold text-lg">Receive Order</span>
+              </div>
+            )}
 
-            {/* Scrollable body */}
-            <div className="flex-1 overflow-auto px-8 pb-6">
+            {/* Body */}
+            <div className="px-8 py-6">
+
+              {/* Section label */}
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
+                Order Details
+              </p>
 
               {/* Form fields */}
-              <div className="grid grid-cols-2 gap-x-12 gap-y-4 mb-6">
+              <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-6">
                 <div>
-                  <label className="block text-sm text-gray-500 mb-1.5">Supplier Name</label>
-                  {isAccomplish ? <div className={readonlyClass}>{form.supplier_name}</div>
-                    : <input type="text" value={form.supplier_name} onChange={set('supplier_name')} disabled={submitted} className={fieldClass} />}
+                  {isAccomplish ? (
+                    <>
+                      <p className="text-sm text-gray-500 mb-0.5">Supplier Name</p>
+                      <p className="text-sm font-medium text-gray-800">{form.supplier_name || '—'}</p>
+                    </>
+                  ) : (
+                    <>
+                      <label className="text-xs text-gray-500 mb-1 block">Supplier Name</label>
+                      <input type="text" value={form.supplier_name} onChange={set('supplier_name')} disabled={submitted} className={fieldClass} />
+                    </>
+                  )}
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-500 mb-1.5">Date Ordered</label>
-                  {isAccomplish ? <div className={readonlyClass}>{form.date_ordered}</div>
-                    : <input type="date" value={form.date_ordered} onChange={set('date_ordered')} disabled={submitted} className={fieldClass} />}
+                  {isAccomplish ? (
+                    <>
+                      <p className="text-sm text-gray-500 mb-0.5">Date Ordered</p>
+                      <p className="text-sm font-medium text-gray-800">{form.date_ordered || '—'}</p>
+                    </>
+                  ) : (
+                    <>
+                      <label className="text-xs text-gray-500 mb-1 block">Date Ordered</label>
+                      <input type="date" value={form.date_ordered} onChange={set('date_ordered')} disabled={submitted} className="date-input" />
+                    </>
+                  )}
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-500 mb-1.5">Order Cost (PHP)</label>
-                  <div className={readonlyClass}>₱ {orderCost.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>
+                  {isAccomplish ? (
+                    <>
+                      <p className="text-sm text-gray-500 mb-0.5">Order Cost (PHP)</p>
+                      <p className="text-sm font-medium text-gray-800">₱ {orderCost.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-xs text-gray-500 mb-0.5">Order Cost (PHP)</p>
+                      <p className="font-semibold text-gray-800">₱ {orderCost.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p>
+                    </>
+                  )}
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-500 mb-1.5">Date Arrived</label>
-                  {isAccomplish
-                    ? <input type="date" value={form.date_arrived} onChange={set('date_arrived')} disabled={submitted} className={fieldClass} />
-                    : <input type="date" disabled className={readonlyClass} />}
+                  {isAccomplish ? (
+                    <>
+                      <p className="text-xs text-gray-500 mb-1">Date Arrived</p>
+                      <input type="date" value={form.date_arrived} onChange={set('date_arrived')} disabled={submitted} className="date-input" />
+                    </>
+                  ) : (
+                    <>
+                      <label className="text-xs text-gray-500 mb-1 block">Date Arrived</label>
+                      <div className="opacity-50 cursor-not-allowed">
+                        <input type="date" disabled className="date-input" />
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-500 mb-1.5">Delivery Fee (PHP)</label>
-                  {isAccomplish ? <div className={readonlyClass}>₱ {parseFloat(form.delivery_fee).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>
-                    : <input type="number" min="0" value={form.delivery_fee} onChange={set('delivery_fee')} disabled={submitted} className={fieldClass} placeholder="0.00" />}
+                  {isAccomplish ? (
+                    <>
+                      <p className="text-sm text-gray-500 mb-0.5">Delivery Fee (PHP)</p>
+                      <p className="text-sm font-medium text-gray-800">₱ {parseFloat(form.delivery_fee).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p>
+                    </>
+                  ) : (
+                    <>
+                      <label className="text-xs text-gray-500 mb-1 block">Delivery Fee (PHP)</label>
+                      <input type="number" min="0" value={form.delivery_fee} onChange={set('delivery_fee')} disabled={submitted} className={fieldClass} placeholder="0.00" />
+                    </>
+                  )}
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-500 mb-1.5">Total (PHP)</label>
-                  <div className={readonlyClass}>₱ {total.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>
+                  {isAccomplish ? (
+                    <>
+                      <p className="text-sm text-gray-500 mb-0.5">Total (PHP)</p>
+                      <p className="text-sm font-medium text-gray-800">₱ {total.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-xs text-gray-500 mb-0.5">Total (PHP)</p>
+                      <p className="font-semibold text-gray-800">₱ {total.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p>
+                    </>
+                  )}
                 </div>
+                {isAccomplish && (
+                  <div>
+                    <p className="text-sm text-gray-500 mb-0.5">Warehouse</p>
+                    <p className="text-sm font-medium text-gray-800">{orderData?.warehouse ?? '—'}</p>
+                  </div>
+                )}
               </div>
 
               {/* Product Details */}
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-sm font-semibold text-gray-700">Product Details</h2>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">
+                    Product Details
+                  </p>
                   {!isAccomplish && (
                     <div className="flex items-center gap-2">
                       {user?.role === 'manager' ? (
@@ -290,15 +373,21 @@ export default function ReceiveOrderFormPage({ onClose, onSuccess }) {
               {/* Footer */}
               <div className="flex items-center justify-end gap-3">
                 {successCode && (
-                  <span className="px-4 py-2 text-sm font-medium text-gray-500 bg-gray-200 rounded-lg">
-                    {isAccomplish ? successCode : `Created ${successCode}`}
-                  </span>
+                  isAccomplish ? (
+                    <span className="px-4 py-2 text-sm font-bold rounded-lg" style={{ color: '#409645' }}>
+                      {successCode}
+                    </span>
+                  ) : (
+                    <span className="px-4 py-2 text-sm font-medium text-gray-500 bg-gray-200 rounded-lg">
+                      Created {successCode}
+                    </span>
+                  )
                 )}
                 <button
                   onClick={handleSubmit}
                   disabled={loading || !!successCode}
-                  className="px-8 py-2.5 text-sm font-bold text-white rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
-                  style={{ backgroundColor: '#409645' }}
+                  className={`px-8 py-2.5 text-sm font-bold text-white rounded-lg disabled:opacity-60 disabled:cursor-not-allowed ${isAccomplish ? 'btn-brand' : ''}`}
+                  style={isAccomplish ? undefined : { backgroundColor: '#409645' }}
                 >
                   {loading ? 'Saving…' : isAccomplish ? 'COMPLETE' : 'CREATE'}
                 </button>

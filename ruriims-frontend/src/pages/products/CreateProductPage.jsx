@@ -6,7 +6,7 @@ const CATEGORIES = ['Fruits', 'Vegetables', 'Poultry', 'Herbs & Spices', 'Proces
 const UNITS = ['kg', 'g', 'pcs'];
 
 const fieldClass =
-  'w-full bg-gray-100 border border-transparent rounded-lg px-4 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#1A381E] focus:bg-white transition';
+  'w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#409645] bg-white transition';
 
 export default function CreateProductPage({ onClose, onSuccess }) {
 
@@ -67,105 +67,115 @@ export default function CreateProductPage({ onClose, onSuccess }) {
 
   return (
     <>
-      {/* Blur overlay — blocks interaction with everything behind */}
+      {/* Blur overlay */}
       <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40" />
 
       {/* Card */}
-      <div className="fixed top-[115px] left-1/2 -translate-x-1/2 w-[900px] bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 p-8 flex flex-col">
+      <div className="fixed top-[115px] left-1/2 -translate-x-1/2 w-[900px] bg-white rounded-2xl shadow-2xl z-50 overflow-y-auto">
 
-        {/* Header row */}
-        <div className="flex items-center justify-between mb-8">
+        {/* Dark green sticky header */}
+        <div
+          className="flex items-center justify-between px-6 py-4 sticky top-0 z-10"
+          style={{ backgroundColor: '#1A381E' }}
+        >
           <button
             onClick={() => onClose?.()}
-            className="px-6 py-2.5 text-sm font-semibold text-white rounded-lg"
-            style={{ backgroundColor: '#409645' }}
+            className="text-white text-sm font-medium hover:opacity-80 transition-opacity"
           >
-            RETURN
+            ← RETURN
           </button>
-          <h1 className="text-2xl font-bold text-gray-900">Create Product</h1>
+          <span className="text-white font-semibold text-lg">Create Product</span>
         </div>
 
-        {/* 2-column form */}
-        <div className="grid grid-cols-2 gap-x-16 gap-y-7">
+        {/* Body */}
+        <div className="p-6">
 
-          <div>
-            <label className="block text-sm text-gray-500 mb-2">Name</label>
-            <input
-              type="text"
-              value={form.name}
-              onChange={set('name')}
-              className={fieldClass}
-            />
-          </div>
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
+            Product Details
+          </p>
 
-          <div>
-            <label className="block text-sm text-gray-500 mb-2">Unit</label>
-            {useCustomUnit ? (
-              <div>
-                <input
-                  type="text"
-                  value={customUnitInput}
-                  onChange={handleCustomUnitChange}
-                  placeholder="Enter custom unit"
-                  className={fieldClass}
-                />
-                <button
-                  onClick={switchBackToDropdown}
-                  className="mt-2 text-xs text-gray-500 hover:text-gray-700 underline"
-                >
-                  ← Use dropdown instead
-                </button>
-              </div>
-            ) : (
-              <select value={form.unit} onChange={handleUnitChange} className={fieldClass}>
+          {/* 2-column form */}
+          <div className="grid grid-cols-2 gap-x-16 gap-y-7">
+
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Name</label>
+              <input
+                type="text"
+                value={form.name}
+                onChange={set('name')}
+                className={fieldClass}
+              />
+            </div>
+
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Unit</label>
+              {useCustomUnit ? (
+                <div>
+                  <input
+                    type="text"
+                    value={customUnitInput}
+                    onChange={handleCustomUnitChange}
+                    placeholder="Enter custom unit"
+                    className={fieldClass}
+                  />
+                  <button
+                    onClick={switchBackToDropdown}
+                    className="mt-2 text-xs text-gray-500 hover:text-gray-700 underline"
+                  >
+                    ← Use dropdown instead
+                  </button>
+                </div>
+              ) : (
+                <select value={form.unit} onChange={handleUnitChange} className={fieldClass}>
+                  <option value="" />
+                  {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+                  <option value="__other__">Other (specify)</option>
+                </select>
+              )}
+            </div>
+
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Category</label>
+              <select value={form.category} onChange={set('category')} className={fieldClass}>
                 <option value="" />
-                {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
-                <option value="__other__">Other (specify)</option>
+                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
+            </div>
+
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Shelf Life</label>
+              <input
+                type="number"
+                min="1"
+                value={form.shelf_life}
+                onChange={set('shelf_life')}
+                placeholder="Days"
+                className={fieldClass}
+              />
+            </div>
+
+          </div>
+
+          {error && <p className="text-red-600 text-sm mt-6">{error}</p>}
+
+          {/* Footer */}
+          <div className="flex items-center justify-end gap-3 mt-8">
+            {successCode && (
+              <span className="px-4 py-2 text-sm font-medium text-gray-500 bg-gray-200 rounded-lg">
+                Created {successCode}
+              </span>
             )}
-          </div>
-
-          <div>
-            <label className="block text-sm text-gray-500 mb-2">Category</label>
-            <select value={form.category} onChange={set('category')} className={fieldClass}>
-              <option value="" />
-              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm text-gray-500 mb-2">Shelf Life</label>
-            <input
-              type="number"
-              min="1"
-              value={form.shelf_life}
-              onChange={set('shelf_life')}
-              placeholder="Days"
-              className={fieldClass}
-            />
+            <button
+              onClick={handleCreate}
+              disabled={loading || !!successCode}
+              className="px-8 py-2.5 text-sm font-bold text-white rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
+              style={{ backgroundColor: '#409645' }}
+            >
+              {loading ? 'Saving…' : 'CREATE'}
+            </button>
           </div>
 
         </div>
-
-        {error && <p className="text-red-600 text-sm mt-6">{error}</p>}
-
-        {/* Footer — pushed to bottom */}
-        <div className="flex items-center justify-end gap-3 mt-auto pt-6">
-          {successCode && (
-            <span className="px-4 py-2 text-sm font-medium text-gray-500 bg-gray-200 rounded-lg">
-              Created {successCode}
-            </span>
-          )}
-          <button
-            onClick={handleCreate}
-            disabled={loading || !!successCode}
-            className="px-8 py-2.5 text-sm font-bold text-white rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
-            style={{ backgroundColor: '#409645' }}
-          >
-            {loading ? 'Saving…' : 'CREATE'}
-          </button>
-        </div>
-
       </div>
 
       <PinVerificationModal

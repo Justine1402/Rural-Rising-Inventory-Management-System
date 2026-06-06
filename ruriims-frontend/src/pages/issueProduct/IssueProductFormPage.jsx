@@ -8,10 +8,8 @@ import { useAuth } from '../../context/AuthContext';
 import { useWarehouse } from '../../context/WarehouseContext';
 import { planBatchCascade } from '../../utils/planBatchCascade';
 
-const readonlyClass =
-  'w-full bg-gray-100 border border-transparent rounded-lg px-4 py-2.5 text-sm text-gray-500 cursor-not-allowed';
 const fieldClass =
-  'w-full bg-gray-100 border border-transparent rounded-lg px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#1A381E] focus:bg-white transition';
+  'w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#409645] bg-white transition';
 
 const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 const todayISO = new Date().toISOString().split('T')[0];
@@ -158,39 +156,46 @@ export default function IssueProductFormPage({ onClose, onSuccess }) {
       <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40" />
 
       {/* Card */}
-      <div className="fixed top-[105px] left-1/2 -translate-x-1/2 w-[960px] max-h-[85vh] bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 flex flex-col overflow-auto">
+      <div className="fixed top-[105px] left-1/2 -translate-x-1/2 w-[960px] max-h-[85vh] bg-white rounded-2xl shadow-2xl z-50 overflow-y-auto">
 
-        {/* Header */}
-        <div className="flex items-center justify-between px-8 py-5 flex-shrink-0">
+        {/* Dark green sticky header */}
+        <div
+          className="flex items-center justify-between px-6 py-4 sticky top-0 z-10"
+          style={{ backgroundColor: '#1A381E' }}
+        >
           <button
             onClick={() => onClose?.()}
-            className="px-6 py-2.5 text-sm font-semibold text-white rounded-lg"
-            style={{ backgroundColor: '#409645' }}
+            className="text-white text-sm font-medium hover:opacity-80 transition-opacity"
           >
-            RETURN
+            ← RETURN
           </button>
-          <h1 className="text-2xl font-bold text-gray-900">Issue Products</h1>
+          <span className="text-white font-semibold text-lg">Issue Products</span>
         </div>
 
-        {/* Scrollable body */}
-        <div className="flex-1 overflow-auto px-8 pb-6">
+        {/* Body */}
+        <div className="px-8 py-6">
+
+          {/* Section label */}
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
+            Issue Details
+          </p>
 
           {/* Top form fields */}
-          <div className="grid grid-cols-2 gap-x-12 gap-y-4 mb-6">
+          <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-6">
             <div>
-              <label className="block text-sm text-gray-500 mb-1.5">Issued By</label>
-              <div className={readonlyClass}>{user?.name ?? ''}</div>
+              <p className="text-xs text-gray-500 mb-0.5">Issued By</p>
+              <p className="font-semibold text-gray-800">{user?.name ?? '—'}</p>
             </div>
             <div>
-              <label className="block text-sm text-gray-500 mb-1.5">Date Requested</label>
-              <div className={readonlyClass}>{today}</div>
+              <p className="text-xs text-gray-500 mb-0.5">Date Requested</p>
+              <p className="font-semibold text-gray-800">{today}</p>
             </div>
             <div>
-              <label className="block text-sm text-gray-500 mb-1.5">Warehouse</label>
-              <div className={readonlyClass}>{activeWarehouse?.name ?? ''}</div>
+              <p className="text-xs text-gray-500 mb-0.5">Warehouse</p>
+              <p className="font-semibold text-gray-800">{activeWarehouse?.name ?? '—'}</p>
             </div>
             <div>
-              <label className="block text-sm text-gray-500 mb-1.5">Issue Type</label>
+              <label className="text-xs text-gray-500 mb-1 block">Issue Type</label>
               <div className="relative">
                 <select
                   value={issueType}
@@ -211,7 +216,9 @@ export default function IssueProductFormPage({ onClose, onSuccess }) {
           {/* Product Details */}
           <div className="mb-4">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-gray-700">Product Details</h2>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">
+                Product Details
+              </p>
               <button
                 onClick={() => setAddModalOpen(true)}
                 disabled={!!successCode}
