@@ -33,36 +33,45 @@ export default function IssueProductAuditPage({ overrideId = null, onReturn = nu
   };
 
   const bodyContent = issue && (
-    <>
-      <div className="p-6 grid grid-cols-2 gap-x-8 gap-y-6 max-w-2xl">
+    <div className="px-8 py-6">
+
+      <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
+        Issue Details
+      </p>
+
+      <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-8">
         <div>
-          <p className="text-xs text-gray-500 mb-1">Issued By</p>
-          <p className="text-sm text-gray-800 font-medium">{issue.issued_by}</p>
+          <p className="text-xs text-gray-500 mb-0.5">Issued By</p>
+          <p className="text-sm font-medium text-gray-800">{issue.issued_by}</p>
         </div>
         <div>
-          <p className="text-xs text-gray-500 mb-1">Date Issued</p>
-          <p className="text-sm text-gray-800 font-medium">{issue.date_issued}</p>
+          <p className="text-xs text-gray-500 mb-0.5">Date Issued</p>
+          <p className="text-sm font-medium text-gray-800">{issue.date_issued}</p>
         </div>
         <div>
-          <p className="text-xs text-gray-500 mb-1">Warehouse</p>
-          <p className="text-sm text-gray-800 font-medium">{issue.warehouse}</p>
+          <p className="text-xs text-gray-500 mb-0.5">Warehouse</p>
+          <p className="text-sm font-medium text-gray-800">{issue.warehouse}</p>
         </div>
         <div>
-          <p className="text-xs text-gray-500 mb-1">Issue Type</p>
-          <p className="text-sm text-gray-800 font-medium">{fmtIssueType(issue.issue_type)}</p>
+          <p className="text-xs text-gray-500 mb-0.5">Issue Type</p>
+          <p className="text-sm font-medium text-gray-800">{fmtIssueType(issue.issue_type)}</p>
         </div>
       </div>
 
-      <div className="overflow-x-auto mt-4">
+      <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
+        Product Details
+      </p>
+
+      <div className="rounded-lg overflow-hidden border border-gray-200">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-white" style={{ backgroundColor: '#1A381E' }}>
-              <th className="text-left font-semibold px-4 py-3">Product SKU</th>
-              <th className="text-left font-semibold px-4 py-3">Product Name</th>
-              <th className="text-left font-semibold px-4 py-3">Stock-In-Use Code</th>
-              <th className="text-left font-semibold px-4 py-3">Quantity Issued</th>
-              <th className="text-left font-semibold px-4 py-3">Harvest Date</th>
-              <th className="text-left font-semibold px-4 py-3">Note</th>
+              <th className="text-left font-semibold px-4 py-2.5">Product SKU</th>
+              <th className="text-left font-semibold px-4 py-2.5">Product Name</th>
+              <th className="text-left font-semibold px-4 py-2.5">Stock-In-Use Code</th>
+              <th className="text-left font-semibold px-4 py-2.5">Quantity Issued</th>
+              <th className="text-left font-semibold px-4 py-2.5">Harvest Date</th>
+              <th className="text-left font-semibold px-4 py-2.5">Note</th>
             </tr>
           </thead>
           <tbody>
@@ -72,19 +81,20 @@ export default function IssueProductAuditPage({ overrideId = null, onReturn = nu
               </tr>
             )}
             {issue.items.map((item, idx) => (
-              <tr key={item.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                <td className="px-4 py-3 font-mono text-xs text-gray-700">{item.product_code}</td>
-                <td className="px-4 py-3 text-gray-800">{item.product_name}</td>
-                <td className="px-4 py-3 font-mono text-xs text-gray-700">{item.stock_in_use_code}</td>
-                <td className="px-4 py-3 text-gray-600">{item.quantity_issued} {item.unit}</td>
-                <td className="px-4 py-3 text-gray-600">{item.harvest_date || '—'}</td>
-                <td className="px-4 py-3 text-gray-600">{item.note || '—'}</td>
+              <tr key={item.id} className={`border-t border-gray-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                <td className="px-4 py-2.5 font-mono text-xs text-gray-700">{item.product_code}</td>
+                <td className="px-4 py-2.5 text-gray-800">{item.product_name}</td>
+                <td className="px-4 py-2.5 font-mono text-xs text-gray-700">{item.stock_in_use_code}</td>
+                <td className="px-4 py-2.5 text-gray-600">{item.quantity_issued} {item.unit}</td>
+                <td className="px-4 py-2.5 text-gray-600">{item.harvest_date || '—'}</td>
+                <td className="px-4 py-2.5 text-gray-600">{item.note || '—'}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-    </>
+
+    </div>
   );
 
   // Overlay mode — when opened from a report page
@@ -117,11 +127,9 @@ export default function IssueProductAuditPage({ overrideId = null, onReturn = nu
               </button>
             </div>
           </div>
-          <div>
-            {loading && <p className="text-center text-gray-400 py-8">Loading...</p>}
-            {!loading && error && <p className="text-center text-red-500 py-8">{error}</p>}
-            {!loading && !error && bodyContent}
-          </div>
+          {loading && <p className="text-center text-gray-400 py-8">Loading...</p>}
+          {!loading && error && <p className="text-center text-red-500 py-8">{error}</p>}
+          {!loading && !error && bodyContent}
         </div>
       </>
     );
