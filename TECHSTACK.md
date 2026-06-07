@@ -136,12 +136,12 @@ Routes defined in `ruriims-backend/routes/api.php`:
 
 | Method | Path | Auth | Response |
 |---|---|---|---|
-| `GET` | `/api/test` | None | `{ "message": "Laravel is connected!" }` |
-| `POST` | `/api/login` | None | `{ "user": {...} }` |
+| `POST` | `/api/login` | None | `{ "user": {...} }` — rate-limited: `throttle:5,1` (5 attempts per minute per IP) |
 | `GET` | `/api/user` | `auth:sanctum` | `{ "user": {...} }` |
 | `POST` | `/api/logout` | `auth:sanctum` | `{ "message": "Logged out" }` |
 | `PATCH` | `/api/user/password` | `auth:sanctum` | `{ "message": "Password updated successfully." }` — verifies current password via Hash::check; updates own password; 422 on mismatch |
 | `PATCH` | `/api/user/pin` | `auth:sanctum` | `{ "message": "PIN updated successfully." }` — verifies current PIN via Hash::check; updates own PIN with Hash::make(); 422 on mismatch |
+| `PATCH` | `/api/user/profile` | `auth:sanctum` | `{ "user": {...} }` — optional `name` (string) + optional `avatar` (image, max 2048 KB); stores avatar to `avatars/` disk, deletes old file if replaced; returns updated user including `avatar_url` accessor |
 | `GET` | `/api/users` | `auth:sanctum` (admin) | `{ "users": [...] }` — withTrashed; includes warehouse relation |
 | `POST` | `/api/users` | `auth:sanctum` (admin) | `{ "user": {...} }` — creates account; role-conditional warehouse_id |
 | `GET` | `/api/users/{user}` | `auth:sanctum` (admin) | `{ "user": {...} }` — withTrashed binding |
@@ -269,7 +269,7 @@ Rural Rising Inventory Management System/   ← project root
     ├── app/
     │   ├── Http/
     │   │   └── Controllers/
-    │   │       ├── AuthController.php          ← login, logout, user
+    │   │       ├── AuthController.php          ← login, logout, user, updateProfile (avatar upload + name), changePassword, changePin
     │   │       ├── UserController.php          ← index, store, show, update, destroy, restore, resetPassword, resetPin (admin-only; SoftDeletes; role-conditional warehouse_id validation)
     │   │       ├── WarehouseController.php     ← index (returns all warehouses including TWH; is_temporary serialized via model cast)
     │   │       ├── ProductController.php       ← index (with warehouse_stock + harvest_date), store (PIN-verified), show, batches (active StockInUse per product; manager-scoped to own warehouse)
@@ -284,7 +284,7 @@ Rural Rising Inventory Management System/   ← project root
     │   │   ├── GeneratesTransactionCode.php    ← per-warehouse scoped code generator; used by RO, TRF, ISS controllers
     │   │   └── PlansBatchCascade.php           ← nearest-harvest-date batch cascade planner with FIFO tiebreak and fallback; used by TRF and ISS controllers
     │   └── Models/
-    │       ├── User.php                        ← fillable: name, email, password, role, warehouse_id, position_title, pin; SoftDeletes trait (deleted_at = inactive); belongsTo warehouse()
+    │       ├── User.php                        ← fillable: name, email, password, role, warehouse_id, position_title, pin, avatar; SoftDeletes trait (deleted_at = inactive); belongsTo warehouse(); `avatar_url` appended accessor returns `Storage::url(avatar)` or null
     │       ├── Warehouse.php                   ← fillable: name, code, is_temporary; cast is_temporary → boolean
     │       ├── Product.php                     ← fillable: sku_code, name, category, unit, shelf_life, created_by; creator() uses withTrashed() so soft-deleted users still resolve in eager loads
     │       ├── StockInUse.php                  ← table: stock_in_use_codes; fillable: code, product_id, warehouse_id, quantity, harvest_date
@@ -330,7 +330,8 @@ Rural Rising Inventory Management System/   ← project root
     │   │   ├── create_reconciliations_table
     │   │   ├── create_reconciliation_items_table
     │   │   ├── create_reconciliation_batch_adjustments_table
-    │   │   └── add_soft_deletes_to_users_table
+    │   │   ├── add_soft_deletes_to_users_table
+    │   │   └── add_avatar_to_users_table
     │   └── seeders/
     │       └── UserSeeder.php                 ← seeds 3 warehouses + 2 accounts:
     │                                              admin@ruriims.com (role=admin, PIN=123456)
@@ -380,4 +381,5 @@ npm run dev                # starts on http://localhost:5173
 cd ruriims-backend
 php artisan migrate        # creates all tables in ruriims_db
 php artisan db:seed        # optional: seed with sample data
+php artisan storage:link   # required for avatar uploads (public/storage → storage/app/public)
 ```

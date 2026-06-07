@@ -1260,10 +1260,16 @@ URL and no read-only mode built into it.
 
 ### Fourth Polishing Session — 2026-06-04
 
-#### AvatarCropModal — Profile Photo Cropping
+#### AvatarCropModal + Profile Avatar Upload (First Polishing Session, 2026-06-01)
 
+- `add_avatar_to_users_table` migration — adds nullable `string avatar` column to `users` table (after `position_title`); run.
+- `User.php` — added `avatar` to `$fillable`; added `$appends = ['avatar_url']`; `getAvatarUrlAttribute()` accessor returns `Storage::url($this->avatar)` or null.
+- `AuthController@updateProfile` — new `PATCH /api/user/profile` endpoint; accepts optional `name` (string) and optional `avatar` (image, max 2048 KB); deletes old avatar file from public disk when replaced; saves new file to `avatars/` path; returns updated user object. Note: requires `php artisan storage:link` on first deploy.
+- `PATCH /api/user/profile` route added to `routes/api.php` under `auth:sanctum`.
+- `AuthContext.jsx` — `updateUser(fields)` helper added; merges partial fields into `user` state without a full re-fetch (used by `ProfileModal` after avatar/name update to sync Navbar avatar immediately).
 - `AvatarCropModal.jsx` (`src/components/modals/`) — new component providing an interactive 280×280 canvas crop tool. Supports drag-to-reposition and scroll/pinch-to-zoom; enforces a minimum fill scale so the canvas is never partially empty. Exports a 400×400 JPEG data URL via `onConfirm`. Integrated into `ProfileModal.jsx` for profile avatar upload flow.
 - Crop state: `{ scale, x, y }` stored in `useState`; a `clamp()` helper enforces boundary constraints (image must fully cover the 280×280 canvas at all zoom levels). Touch events supported alongside mouse events for pinch-to-zoom.
+- `ProfileModal.jsx` — avatar circle is now clickable; opens `AvatarCropModal`; on confirm, blob is posted to `PATCH /api/user/profile`; calls `AuthContext.updateUser({ avatar_url })` on success.
 
 ---
 
@@ -1329,6 +1335,54 @@ All 4 audit pages and `TemporaryWarehouseDetailPage` received an "Export as PDF"
 
 ---
 
+### Deployment Starting Phase — 2026-06-05
+
+- **Removed `GET /api/test` route** — test endpoint not needed in production; removed from `routes/api.php`.
+- **Rate limiting on login** — `POST /api/login` now uses `.middleware('throttle:5,1')` (5 attempts per minute per IP). Guards against brute-force password attacks in production.
+- **CORS config update** — `config/cors.php` updated for production deployment (allowed origins / paths adjusted).
+
+---
+
+### Fifth Polishing Session — 2026-06-06
+
+#### Form Overlay UI Overhaul — Dark Green Sticky Headers
+
+All create-mode form overlays received a visual redesign to match the audit page pattern established in Steps 13.25 and 14:
+
+- **Dark green sticky header** added to all create-form overlays:
+  `CreateProductPage`, `ReceiveOrderFormPage` (create), `TransferRequestFormPage` (create),
+  `ReconciliationFormPage`, `IssueProductFormPage`, `TemporaryWarehouseFormPage`, `CloseTemporaryWarehousePage`.
+- RETURN button changed from a standalone green button to an inline `← RETURN` text link inside the sticky dark green header (matching audit-page style).
+- Form title moved from `<h1 className="text-2xl font-bold text-gray-900">` to `<span className="text-white font-semibold text-lg">` inside the header.
+- Panel changed from `rounded-2xl ... border border-gray-200 z-50 p-8 flex flex-col` (padded, no scroll) to `rounded-2xl shadow-2xl z-50 overflow-y-auto` (scrollable with sticky header inside).
+
+#### `.date-input` CSS Class
+
+- `src/index.css` — new `.date-input` class added for all `<input type="date">` elements.
+  Provides: `border-gray-300` border, `#409645` focus border with soft box-shadow ring, 50% opacity calendar-picker-indicator with full-opacity hover. All date inputs in form pages migrated to this class.
+
+#### Form Field Styling Harmonization
+
+- `fieldClass` constant in form pages updated to `'w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#409645] bg-white transition'` — unified across all overlay forms.
+
+---
+
+### Pre-Deployment Polish — 2026-06-07
+
+#### IssueProductAuditPage — Section Labels + Table Polish
+
+- Section labels added above the header fields grid ("Issue Details") and product table ("Product Details") using `<p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">`.
+- Product table wrapped in `<div className="rounded-lg overflow-hidden border border-gray-200">` for consistent card border styling.
+- Row padding tightened from `py-3` to `py-2.5`; header cell padding tightened similarly.
+
+#### TemporaryWarehouseDetailPage — Sticky Dark Green Header
+
+- Header redesigned to match all other audit overlays: dark green `sticky top-0 z-10` bar with `← RETURN` text button on the left and TWH transaction code + "Export as PDF" button on the right.
+- Sub-table section labels changed from `<h2 className="text-sm font-semibold text-gray-700">` to `<p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">` (matches the audit page label style).
+- Table row padding tightened from `py-2` to `py-2.5`.
+
+---
+
 ## Completion Tracker
 
 - [x] Step 13 — `UserManagementPage` + `UserController` — COMPLETE (see ✅ Step 13 COMPLETE above)
@@ -1344,8 +1398,12 @@ All 4 audit pages and `TemporaryWarehouseDetailPage` received an "Export as PDF"
 - [x] First Polishing Session — Reconciliation fixes, report scoping, audit pages, report overlay navigation — COMPLETE
 - [x] Second Polishing Session — Backend manager scoping, RO form polish, Reconciliation PIN model, ProductDetailOverlay docs, WarehouseTabs removal from report pages — COMPLETE
 - [x] Third Polishing Session — WarehouseTabs list filtering, RO sort order, Navbar isListPage/isReportsPage flags, ReconciliationReviewPage readOnly prop, expired batch highlighting, ProductDetailOverlay warehouse scoping, TRF OR scoping + TWH destination bypass — COMPLETE
+- [x] First Polishing Session (avatar sub-feature) — Avatar upload backend (migration, User model, AuthController@updateProfile, PATCH /api/user/profile, AuthContext.updateUser, ProfileModal wiring) — COMPLETE
 - [x] Fourth Polishing Session — AvatarCropModal, UI/UX improvements — COMPLETE
 - [x] PDF Export Enhancement — exportDetailPdf (5 types), exportTablePdf columnWidths + splitTextToSize, drawTable upgrade, fmtNum/safeCell decimal stripping, checkbox selection + context-aware export on 5 report pages, "Export as PDF" button on all audit overlays — COMPLETE
+- [x] Deployment Starting Phase — Removed GET /api/test, added throttle:5,1 on login, CORS update — COMPLETE
+- [x] Fifth Polishing Session — Form overlay dark green sticky headers (all create forms), .date-input CSS class, field styling harmonization — COMPLETE
+- [x] Pre-Deployment Polish — IssueProductAuditPage section labels + table polish, TemporaryWarehouseDetailPage sticky dark green header — COMPLETE
 
 ---
 

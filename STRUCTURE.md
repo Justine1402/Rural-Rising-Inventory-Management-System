@@ -214,8 +214,8 @@ ruriims-frontend/
 /transfer-requests/:id/audit        → TransferRequestAuditPage         (protected)
 /transfer-requests/:id              → TransferRequestListPage + TransferRequestFormPage overlay (accomplish) (protected)
 /reconciliation                     → ReconciliationListPage           (protected)
-/reconciliation/new                 → ReconciliationFormPage           (protected)
 /reconciliation/:id/review          → ReconciliationListPage + ReconciliationReviewPage overlay (protected)
+                                       (ReconciliationFormPage opens as UIContext overlay — no /reconciliation/new route)
 /issue-products/:id/audit           → IssueProductAuditPage            (protected)
 /reports                            → ReportsHistoryPage               (protected)
 /reports/products                   → ProductReportsPage               (protected)
@@ -261,6 +261,7 @@ On mount, calls `GET /api/user` to restore session from the existing Sanctum coo
   } | null,
   login: async (email, password) => void,
   logout: async () => void,
+  updateUser: (fields: object) => void,  // merges partial fields into user state (used by ProfileModal after avatar/name update)
   isAuthenticated: boolean,
   loading: boolean,
 }
@@ -318,6 +319,7 @@ a product is created — without navigating away.
 - `CloseTemporaryWarehousePage` — always mounted; self-guards on `closeTemporaryWarehouseOverlayTwhId !== null`
 - `TemporaryWarehouseDetailPage` — always mounted; self-guards on `temporaryWarehouseDetailOverlayTwhId !== null`
 - `ReconciliationFormPage` — when `reconciliationFormOpen` is true
+- `UserFormPage` — always mounted; self-guards on `userFormOpen === true` (create mode) or `userDetailOverlayUserId !== null` (edit mode); returns `null` when both are falsy
 - `ProductDetailOverlay` — always mounted; self-guards on `productDetailOverlayProductId !== null`; triggered by clicking any product row on DashboardPage
 
 The Navbar buttons set boolean flags for the first five. `CloseTemporaryWarehousePage` and
@@ -540,6 +542,7 @@ status   string
 | `"Out of Stock"` | red (`bg-red-100 text-red-700`) |
 | `"Incomplete"` | red (`bg-red-100 text-red-700`) |
 | `"Closed"` | red (`bg-red-100 text-red-700`) |
+| `"Inactive"` | red (`bg-red-100 text-red-700`) |
 | any other | red (`bg-red-100 text-red-700`, fallback) |
 
 ---
@@ -560,6 +563,8 @@ Content:
   6-digit numeric inputs, centered and masked
 
 > **Step 13.5 complete:** All display fields read from `AuthContext.user` and `WarehouseContext.warehouses`. Change Password wired to `PATCH /api/user/password`. Change PIN wired to `PATCH /api/user/pin`. Both forms show inline red/green feedback and reset on modal close.
+>
+> **Avatar upload (First Polishing Session):** The avatar circle is clickable and opens `AvatarCropModal` for cropping. On confirm, the 400×400 JPEG blob is `POST`ed to `PATCH /api/user/profile` as multipart form data. On success, `AuthContext.updateUser({ avatar_url })` updates the in-memory user so the Navbar avatar re-renders immediately without a page reload. `Storage::disk('public')` is used backend-side — requires `php artisan storage:link` on first deploy.
 
 Props:
 ```js
@@ -1236,7 +1241,7 @@ Status: `Pending Review` (amber) / `Reviewed` (green)
 
 ### `ReconciliationFormPage` (proto p.47-48, SRS §3.8 Workflow)
 
-Accessed via `+ New Reconciliation` → `/reconciliation/new`.
+Accessed via `+ New Reconciliation` button in `ReconciliationListPage` — opens as UIContext overlay (`reconciliationFormOpen` flag). No URL change. No `/reconciliation/new` route.
 Header: RETURN button + "Inventory Reconciliation" title
 
 Auto-filled (read-only):
@@ -1487,14 +1492,23 @@ All styling uses Tailwind CSS utility classes for layout, spacing, and typograph
 - Amber / Pending Review: `bg-amber-100 text-amber-800`
 - Red / fallback: `bg-red-100 text-red-700`
 
+**Date inputs:**
+- Use the `.date-input` CSS class (defined in `src/index.css`) for all `<input type="date">` elements in forms. Provides consistent border, focus ring, and calendar-picker-indicator styling. Do not inline these styles — always use the class.
+
 **Modals:**
 - Overlay: `fixed inset-0 bg-black/50 z-50 flex items-center justify-center`
 - Panel: `bg-white rounded-lg shadow-xl p-6 w-full max-w-md relative`
 - PIN inputs: `w-10 h-12 border-2 border-gray-300 rounded text-center text-xl font-bold focus:border-green-600 focus:outline-none`
 
-**Form overlay panel (Create Product pattern):**
-- Blur overlay: `fixed inset-0 bg-black/20 backdrop-blur-sm z-40` (blocks all pointer events on content behind)
-- Panel: `fixed top-[115px] left-1/2 -translate-x-1/2 w-[900px] bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 p-8 flex flex-col` (content-height; no `bottom` so it shrinks to fit its fields)
+**Form overlay panel (Create Product pattern — updated in Fifth Polishing Session):**
+- Blur overlay: `fixed inset-0 bg-black/20 backdrop-blur-sm z-40`
+- Panel: `fixed top-[115px] left-1/2 -translate-x-1/2 w-[900px] bg-white rounded-2xl shadow-2xl z-50 overflow-y-auto`
+- Dark green sticky header inside panel: `flex items-center justify-between px-6 py-4 sticky top-0 z-10` + `style={{ backgroundColor: '#1A381E' }}`
+  - RETURN button: `← RETURN` text button with `text-white text-sm font-medium hover:opacity-80`
+  - Title: `<span className="text-white font-semibold text-lg">`
+- Form body: `px-6 py-6` (or similar padding block inside the scrollable card)
+
+All create-mode form overlays (`CreateProductPage`, `ReceiveOrderFormPage` create, `TransferRequestFormPage` create, `IssueProductFormPage`, `ReconciliationFormPage`, `TemporaryWarehouseFormPage`, `CloseTemporaryWarehousePage`) now follow this sticky-header pattern, matching the audit page style.
 
 ---
 
