@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import CustomSelect from '../ui/CustomSelect';
 
 const TYPE_OPTIONS = [
   { label: 'All Reports',                      value: 'all',                  path: '/reports' },
@@ -52,28 +53,26 @@ export default function ReportsFilterBar({
     <div className="flex items-center gap-3 flex-wrap p-4 border-b border-gray-200 bg-white">
 
       {/* Report Type */}
-      <select
-        value={currentType}
-        onChange={handleTypeChange}
-        className={`${inputClass} w-56`}
-      >
-        {TYPE_OPTIONS.map((o) => (
-          <option key={o.value} value={o.value}>{o.label}</option>
-        ))}
-      </select>
+      <div className="w-56">
+        <CustomSelect
+          value={currentType}
+          onChange={handleTypeChange}
+          options={TYPE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+        />
+      </div>
 
       {/* Warehouse — admin only */}
       {user?.role === 'admin' && (
-        <select
-          value={warehouseId}
-          onChange={(e) => onWarehouseChange(e.target.value)}
-          className={`${inputClass} w-48`}
-        >
-          <option value="">All Warehouses</option>
-          {permanentWarehouses.map((w) => (
-            <option key={w.id} value={String(w.id)}>{w.name}</option>
-          ))}
-        </select>
+        <div className="w-48">
+          <CustomSelect
+            value={warehouseId}
+            onChange={(e) => onWarehouseChange(e.target.value)}
+            options={[
+              { value: '', label: 'All Warehouses' },
+              ...permanentWarehouses.map((w) => ({ value: String(w.id), label: w.name })),
+            ]}
+          />
+        </div>
       )}
 
       {/* Date From */}

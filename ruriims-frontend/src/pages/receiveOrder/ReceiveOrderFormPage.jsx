@@ -5,6 +5,7 @@ import AddProductsModal from '../../components/shared/AddProductsModal';
 import PinVerificationModal from '../../components/shared/PinVerificationModal';
 import { useAuth } from '../../context/AuthContext';
 import { useWarehouse } from '../../context/WarehouseContext';
+import CustomSelect from '../../components/ui/CustomSelect';
 
 const fieldClass =
   'w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#409645] bg-white transition';
@@ -279,17 +280,18 @@ export default function ReceiveOrderFormPage({ onClose, onSuccess }) {
                           {activeWarehouse?.name ?? ''}
                         </div>
                       ) : (
-                        <select
-                          value={selectedWarehouseId}
-                          onChange={(e) => setSelectedWarehouseId(e.target.value)}
-                          disabled={submitted}
-                          className="bg-gray-100 border border-transparent rounded-lg px-3 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-[#1A381E] focus:bg-white transition disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <option value="">Select Warehouse</option>
-                          {warehouses.map((w) => (
-                            <option key={w.id} value={w.id}>{w.name}</option>
-                          ))}
-                        </select>
+                        <div className="w-48">
+                          <CustomSelect
+                            value={selectedWarehouseId}
+                            onChange={(e) => setSelectedWarehouseId(e.target.value)}
+                            disabled={submitted}
+                            compact
+                            options={[
+                              { value: '', label: 'Select Warehouse' },
+                              ...warehouses.map((w) => ({ value: w.id, label: w.name })),
+                            ]}
+                          />
+                        </div>
                       )}
                       <button
                         onClick={() => setAddModalOpen(true)}

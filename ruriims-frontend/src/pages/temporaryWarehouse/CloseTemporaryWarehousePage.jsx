@@ -4,6 +4,7 @@ import PinVerificationModal from '../../components/shared/PinVerificationModal';
 import { useAuth } from '../../context/AuthContext';
 import { useUI } from '../../context/UIContext';
 import { useWarehouse } from '../../context/WarehouseContext';
+import CustomSelect from '../../components/ui/CustomSelect';
 import { formatDate } from '../../utils/formatDate';
 
 const todayISO = new Date().toISOString().split('T')[0];
@@ -242,21 +243,16 @@ export default function CloseTemporaryWarehousePage() {
                             <td className="px-4 py-2 text-gray-600">{row.unit}</td>
                             <td className="px-4 py-2 text-gray-800">{row.quantity}</td>
                             <td className="px-4 py-2">
-                              <div className="relative">
-                                <select
-                                  value={row.destinationWarehouseId}
-                                  onChange={(e) => setRowDestination(idx, e.target.value)}
-                                  disabled={!!successMessage}
-                                  className="w-full bg-gray-100 border border-transparent rounded-lg px-3 py-1.5 text-sm appearance-none focus:outline-none focus:border-[#1A381E] focus:bg-white transition disabled:opacity-50 disabled:cursor-not-allowed"
-                                  style={{ color: row.destinationWarehouseId ? '#1f2937' : '#9ca3af' }}
-                                >
-                                  <option value="">Select warehouse…</option>
-                                  {permanentWarehouses.map((w) => (
-                                    <option key={w.id} value={w.id}>{w.name}</option>
-                                  ))}
-                                </select>
-                                <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">▾</span>
-                              </div>
+                              <CustomSelect
+                                value={row.destinationWarehouseId}
+                                onChange={(e) => setRowDestination(idx, e.target.value)}
+                                disabled={!!successMessage}
+                                compact
+                                options={[
+                                  { value: '', label: 'Select warehouse…' },
+                                  ...permanentWarehouses.map((w) => ({ value: w.id, label: w.name })),
+                                ]}
+                              />
                             </td>
                           </tr>
                         ))

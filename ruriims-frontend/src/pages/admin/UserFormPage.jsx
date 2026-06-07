@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useUI } from '../../context/UIContext';
 import api from '../../api/axios';
+import CustomSelect from '../../components/ui/CustomSelect';
 
 const fieldClass =
   'w-full bg-gray-100 border border-transparent rounded-lg px-4 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#1A381E] focus:bg-white transition';
@@ -282,15 +283,15 @@ export default function UserFormPage() {
             {!isSelf && (
               <div>
                 <label className={labelClass}>Role <span className="text-red-500">*</span></label>
-                <select
+                <CustomSelect
                   value={formData.role}
                   onChange={setField('role')}
                   disabled={isReadOnly}
-                  className={fc}
-                >
-                  <option value="admin">Admin</option>
-                  <option value="manager">Manager</option>
-                </select>
+                  options={[
+                    { value: 'admin', label: 'Admin' },
+                    { value: 'manager', label: 'Manager' },
+                  ]}
+                />
                 {errors.role && <p className={errorClass}>{errors.role[0]}</p>}
               </div>
             )}
@@ -300,17 +301,15 @@ export default function UserFormPage() {
               <label className={labelClass}>
                 Warehouse{formData.role === 'manager' && <span className="text-red-500"> *</span>}
               </label>
-              <select
+              <CustomSelect
                 value={formData.warehouse_id}
                 onChange={setField('warehouse_id')}
                 disabled={isReadOnly}
-                className={fc}
-              >
-                <option value="">— None —</option>
-                {warehouses.map(w => (
-                  <option key={w.id} value={w.id}>{w.name}</option>
-                ))}
-              </select>
+                options={[
+                  { value: '', label: '— None —' },
+                  ...warehouses.map((w) => ({ value: w.id, label: w.name })),
+                ]}
+              />
               {errors.warehouse_id && <p className={errorClass}>{errors.warehouse_id[0]}</p>}
             </div>
 

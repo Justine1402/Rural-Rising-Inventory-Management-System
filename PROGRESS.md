@@ -1383,6 +1383,16 @@ All create-mode form overlays received a visual redesign to match the audit page
 
 ---
 
+### Bug Fix — TRF Destination Warehouse Dropdown Empty for Managers — 2026-06-07
+
+**Root cause:** `WarehouseContext.warehouses` is scoped to a single-entry list (the manager's own warehouse) after Step 13.75. `TransferRequestFormPage` used `warehouses` from context to populate the destination dropdown. For managers, this meant only their own warehouse appeared — which was then disabled by the mutual-disable logic (since it also matched the pre-filled source). Result: zero selectable destinations.
+
+**Fix:** Added a local `allWarehouses` state and a separate `useEffect` in `TransferRequestFormPage.jsx` (create mode only, `!isAccomplish`) that parallel-fetches `/api/warehouses` + `/api/temporary-warehouses?status=active`, builds a flat list of permanent + active TWH entries, and stores it in `allWarehouses`. The destination dropdown now iterates `allWarehouses` instead of context `warehouses`.
+
+**Scope of change:** Only the destination `<select>` in create mode. Source warehouse dropdown (admin: context `permanentWarehouses`; manager: read-only label) is untouched. Accomplish mode is untouched. Backend is untouched. No other pages affected.
+
+---
+
 ## Completion Tracker
 
 - [x] Step 13 — `UserManagementPage` + `UserController` — COMPLETE (see ✅ Step 13 COMPLETE above)
@@ -1404,6 +1414,7 @@ All create-mode form overlays received a visual redesign to match the audit page
 - [x] Deployment Starting Phase — Removed GET /api/test, added throttle:5,1 on login, CORS update — COMPLETE
 - [x] Fifth Polishing Session — Form overlay dark green sticky headers (all create forms), .date-input CSS class, field styling harmonization — COMPLETE
 - [x] Pre-Deployment Polish — IssueProductAuditPage section labels + table polish, TemporaryWarehouseDetailPage sticky dark green header — COMPLETE
+- [x] Bug Fix — TRF destination warehouse dropdown empty for managers — COMPLETE
 
 ---
 

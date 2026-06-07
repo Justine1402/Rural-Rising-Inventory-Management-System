@@ -8,6 +8,7 @@ import StockInUseModal from '../../components/shared/StockInUseModal';
 import { useAuth } from '../../context/AuthContext';
 import { useUI } from '../../context/UIContext';
 import { useWarehouse } from '../../context/WarehouseContext';
+import CustomSelect from '../../components/ui/CustomSelect';
 import { planBatchCascade } from '../../utils/planBatchCascade';
 
 const fieldClass =
@@ -31,6 +32,7 @@ export default function TransferRequestFormPage({ onClose, onSuccess }) {
   const [items, setItems] = useState([]);
   const [transferData, setTransferData] = useState(null);
 
+  const [allWarehouses, setAllWarehouses] = useState([]);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [stockInUseModal, setStockInUseModal] = useState({ open: false, rowIndex: null, skuCode: null });
   const [cascadePreview, setCascadePreview] = useState(null);
@@ -41,6 +43,23 @@ export default function TransferRequestFormPage({ onClose, onSuccess }) {
   const [successCode, setSuccessCode] = useState(null);
 
   const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+  // Fetch ALL warehouses (permanent + active TWH) for the destination dropdown.
+  // Cannot use WarehouseContext.warehouses here — it is scoped to 1 entry for managers.
+  useEffect(() => {
+    if (isAccomplish) return;
+    Promise.all([
+      api.get('/warehouses'),
+      api.get('/temporary-warehouses?status=active'),
+    ]).then(([permRes, twhRes]) => {
+      const permanent = (permRes.data.warehouses ?? [])
+        .filter((w) => !w.is_temporary)
+        .map((w) => ({ id: w.id, name: w.name, isTemporary: false }));
+      const temporary = (twhRes.data.temporary_warehouses ?? [])
+        .map((t) => ({ id: t.warehouse_id, name: t.name, isTemporary: true }));
+      setAllWarehouses([...permanent, ...temporary]);
+    }).catch(() => {});
+  }, [isAccomplish]);
 
   useEffect(() => {
     if (!isAccomplish) return;
@@ -320,22 +339,18 @@ export default function TransferRequestFormPage({ onClose, onSuccess }) {
                   ) : (
                     <>
                       <label className="text-xs text-gray-500 mb-1 block">Source Warehouse</label>
-                      <div className="relative">
-                        <select
-                          value={sourceWarehouseId}
-                          onChange={(e) => { setSourceWarehouseId(e.target.value); if (e.target.value === destinationWarehouseId) setDestinationWarehouseId(''); }}
-                          className={`${fieldClass} appearance-none pr-8`}
-                          style={{ color: sourceWarehouseId ? '#1f2937' : '#9ca3af' }}
-                        >
-                          <option value="">Select source warehouse</option>
-                          {permanentWarehouses.map((w) => (
-                            <option key={w.id} value={w.id} disabled={String(w.id) === String(destinationWarehouseId)}>
-                              {w.name}
-                            </option>
-                          ))}
-                        </select>
-                        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">▾</span>
-                      </div>
+                      <CustomSelect
+                        value={sourceWarehouseId}
+                        onChange={(e) => { setSourceWarehouseId(e.target.value); if (e.target.value === destinationWarehouseId) setDestinationWarehouseId(''); }}
+                        options={[
+                          { value: '', label: 'Select source warehouse' },
+                          ...permanentWarehouses.map((w) => ({
+                            value: w.id,
+                            label: w.name,
+                            disabled: String(w.id) === String(destinationWarehouseId),
+                          })),
+                        ]}
+                      />
                     </>
                   )}
                 </div>
@@ -348,22 +363,18 @@ export default function TransferRequestFormPage({ onClose, onSuccess }) {
                   ) : (
                     <>
                       <label className="text-xs text-gray-500 mb-1 block">Destination Warehouse</label>
-                      <div className="relative">
-                        <select
-                          value={destinationWarehouseId}
-                          onChange={(e) => { setDestinationWarehouseId(e.target.value); if (e.target.value === sourceWarehouseId) setSourceWarehouseId(''); }}
-                          className={`${fieldClass} appearance-none pr-8`}
-                          style={{ color: destinationWarehouseId ? '#1f2937' : '#9ca3af' }}
-                        >
-                          <option value="">Select destination warehouse</option>
-                          {warehouses.map((w) => (
-                            <option key={w.id} value={w.id} disabled={String(w.id) === String(sourceWarehouseId)}>
-                              {w.name}
-                            </option>
-                          ))}
-                        </select>
-                        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">▾</span>
-                      </div>
+                      <CustomSelect
+                        value={destinationWarehouseId}
+                        onChange={(e) => { setDestinationWarehouseId(e.target.value); if (e.target.value === sourceWarehouseId) setSourceWarehouseId(''); }}
+                        options={[
+                          { value: '', label: 'Select destination warehouse' },
+                          ...allWarehouses.map((w) => ({
+                            value: w.id,
+                            label: w.name,
+                            disabled: String(w.id) === String(sourceWarehouseId),
+                          })),
+                        ]}
+                      />
                     </>
                   )}
                 </div>

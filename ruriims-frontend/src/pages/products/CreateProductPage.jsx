@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import api from '../../api/axios';
 import PinVerificationModal from '../../components/shared/PinVerificationModal';
+import CustomSelect from '../../components/ui/CustomSelect';
 
 const CATEGORIES = ['Fruits', 'Vegetables', 'Poultry', 'Herbs & Spices', 'Processed Goods'];
 const UNITS = ['kg', 'g', 'pcs'];
@@ -126,20 +127,28 @@ export default function CreateProductPage({ onClose, onSuccess }) {
                   </button>
                 </div>
               ) : (
-                <select value={form.unit} onChange={handleUnitChange} className={fieldClass}>
-                  <option value="" />
-                  {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
-                  <option value="__other__">Other (specify)</option>
-                </select>
+                <CustomSelect
+                  value={form.unit}
+                  onChange={handleUnitChange}
+                  options={[
+                    { value: '', label: '' },
+                    ...UNITS.map((u) => ({ value: u, label: u })),
+                    { value: '__other__', label: 'Other (specify)' },
+                  ]}
+                />
               )}
             </div>
 
             <div>
               <label className="text-xs text-gray-500 mb-1 block">Category</label>
-              <select value={form.category} onChange={set('category')} className={fieldClass}>
-                <option value="" />
-                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
+              <CustomSelect
+                value={form.category}
+                onChange={set('category')}
+                options={[
+                  { value: '', label: '' },
+                  ...CATEGORIES.map((c) => ({ value: c, label: c })),
+                ]}
+              />
             </div>
 
             <div>

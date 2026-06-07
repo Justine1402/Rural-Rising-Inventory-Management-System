@@ -6,6 +6,7 @@ import PinVerificationModal from '../../components/shared/PinVerificationModal';
 import StockInUseModal from '../../components/shared/StockInUseModal';
 import { useAuth } from '../../context/AuthContext';
 import { useWarehouse } from '../../context/WarehouseContext';
+import CustomSelect from '../../components/ui/CustomSelect';
 import { planBatchCascade } from '../../utils/planBatchCascade';
 
 const fieldClass =
@@ -196,20 +197,16 @@ export default function IssueProductFormPage({ onClose, onSuccess }) {
             </div>
             <div>
               <label className="text-xs text-gray-500 mb-1 block">Issue Type</label>
-              <div className="relative">
-                <select
-                  value={issueType}
-                  onChange={(e) => setIssueType(e.target.value)}
-                  className={`${fieldClass} appearance-none pr-8`}
-                  style={{ color: issueType ? '#1f2937' : '#9ca3af' }}
-                  disabled={!!successCode}
-                >
-                  <option value="">Select issue type</option>
-                  <option value="sale">Sale</option>
-                  <option value="internal_use">Internal Use</option>
-                </select>
-                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">▾</span>
-              </div>
+              <CustomSelect
+                value={issueType}
+                onChange={(e) => setIssueType(e.target.value)}
+                disabled={!!successCode}
+                options={[
+                  { value: '', label: 'Select issue type' },
+                  { value: 'sale', label: 'Sale' },
+                  { value: 'internal_use', label: 'Internal Use' },
+                ]}
+              />
             </div>
           </div>
 
