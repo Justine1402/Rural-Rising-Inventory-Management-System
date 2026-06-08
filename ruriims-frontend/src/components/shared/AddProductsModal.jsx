@@ -1,6 +1,17 @@
 import { useEffect, useState } from 'react';
 import api from '../../api/axios';
 
+const isExpired = (harvestDate, shelfLifeDays) => {
+  if (!harvestDate || shelfLifeDays == null) return false;
+  const d = harvestDate.includes('T') ? harvestDate : harvestDate + 'T00:00:00';
+  const expiry = new Date(d);
+  expiry.setDate(expiry.getDate() + Number(shelfLifeDays));
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  expiry.setHours(0, 0, 0, 0);
+  return today >= expiry;
+};
+
 export default function AddProductsModal({ isOpen, onSelect, onClose, warehouseId }) {
   const [products, setProducts] = useState([]);
   const [selected, setSelected] = useState([]);
@@ -124,21 +135,36 @@ export default function AddProductsModal({ isOpen, onSelect, onClose, warehouseI
                   <td colSpan={4} className="px-5 py-6 text-center text-gray-400">No products match your search.</td>
                 </tr>
               )}
-              {!loading && !error && filteredProducts.map((product) => (
-                <tr
-                  key={product.sku_code}
-                  onClick={() => toggle(product)}
-                  className="border-b border-gray-100 cursor-pointer transition-colors"
-                  style={isRowSelected(product) ? { backgroundColor: '#d1fae5' } : {}}
-                  onMouseEnter={(e) => { if (!isRowSelected(product)) e.currentTarget.style.backgroundColor = '#f9fafb'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = isRowSelected(product) ? '#d1fae5' : ''; }}
-                >
-                  <td className="px-5 py-3 text-gray-700 font-mono text-xs">{product.sku_code}</td>
-                  <td className="px-5 py-3 text-gray-800">{product.name}</td>
-                  <td className="px-5 py-3 text-gray-600">{product.unit}</td>
-                  <td className="px-5 py-3 text-gray-600">{product.category}</td>
-                </tr>
-              ))}
+              {!loading && !error && filteredProducts.map((product) => {
+                const minHarvest = product.min_harvest_date_per_warehouse?.[warehouseId]
+                  ?? product.min_harvest_date_per_warehouse?.[String(warehouseId)];
+                const hasExpiredBatch = warehouseId
+                  ? isExpired(minHarvest, product.shelf_life)
+                  : false;
+                return (
+                  <tr
+                    key={product.sku_code}
+                    onClick={() => toggle(product)}
+                    className="border-b border-gray-100 cursor-pointer transition-colors"
+                    style={isRowSelected(product) ? { backgroundColor: '#d1fae5' } : {}}
+                    onMouseEnter={(e) => { if (!isRowSelected(product)) e.currentTarget.style.backgroundColor = '#f9fafb'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = isRowSelected(product) ? '#d1fae5' : ''; }}
+                  >
+                    <td className="px-5 py-3 font-mono text-xs"
+                      style={{ color: hasExpiredBatch ? '#DC2626' : undefined }}
+                    >
+                      {product.sku_code}
+                    </td>
+                    <td className="px-5 py-3"
+                      style={{ color: hasExpiredBatch ? '#DC2626' : '#1f2937' }}
+                    >
+                      {product.name}
+                    </td>
+                    <td className="px-5 py-3 text-gray-600">{product.unit}</td>
+                    <td className="px-5 py-3 text-gray-600">{product.category}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

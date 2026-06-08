@@ -64,6 +64,29 @@ export default function DashboardPage() {
     return wh?.code ?? null;
   };
 
+  // Uses MIN(harvest_date) per warehouse — finds the globally oldest active batch
+  const getEarliestActiveHarvestDate = (product) => {
+    const perWh = product.min_harvest_date_per_warehouse ?? {};
+    const stock = product.warehouse_stock ?? {};
+    const dates = Object.entries(perWh)
+      .filter(([whId, date]) => date && parseFloat(stock[whId] ?? 0) > 0)
+      .map(([, date]) => date);
+    if (dates.length === 0) return null;
+    return dates.slice().sort()[0];
+  };
+
+  const getWarehouseCodeForMinDate = (product, targetDate) => {
+    if (!targetDate) return null;
+    const perWh = product.min_harvest_date_per_warehouse ?? {};
+    const stock = product.warehouse_stock ?? {};
+    const matchingWhId = Object.entries(perWh).find(
+      ([whId, date]) => date === targetDate && parseFloat(stock[whId] ?? 0) > 0
+    )?.[0];
+    if (!matchingWhId) return null;
+    const wh = warehouses.find((w) => String(w.id) === String(matchingWhId));
+    return wh?.code ?? null;
+  };
+
   const displayedProducts = products
     .filter((p) => !selectedCategory || p.category === selectedCategory)
     .filter((p) => !searchTerm || p.name.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -72,10 +95,11 @@ export default function DashboardPage() {
         if (activeWarehouse) {
           const qty = product.warehouse_stock?.[activeWarehouse.id] ?? 0;
           if (qty === 0) return null;
-          return product.harvest_date_per_warehouse?.[activeWarehouse.id] ?? null;
+          if (sortMode === 'LIFO') return product.harvest_date_per_warehouse?.[activeWarehouse.id] ?? null;
+          return product.min_harvest_date_per_warehouse?.[activeWarehouse.id] ?? null;
         }
         if (sortMode === 'LIFO') return getNewestActiveHarvestDate(product);
-        return getOldestActiveHarvestDate(product);
+        return getEarliestActiveHarvestDate(product);
       };
 
       if (sortMode === 'FIFO') {
@@ -278,8 +302,8 @@ export default function DashboardPage() {
                 {!loading && !error && displayedProducts.map((product) => {
                   let harvestCell;
                   if (sortMode === 'FIFO') {
-                    const fifoDate = getOldestActiveHarvestDate(product);
-                    const fifoWhCode = getWarehouseCodeForDate(product, fifoDate);
+                    const fifoDate = getEarliestActiveHarvestDate(product);
+                    const fifoWhCode = getWarehouseCodeForMinDate(product, fifoDate);
                     harvestCell = (
                       <td className="px-5 py-3 text-gray-600">
                         <div className="flex flex-col">
@@ -308,8 +332,8 @@ export default function DashboardPage() {
                       </td>
                     );
                   } else {
-                    const fefoDate = getOldestActiveHarvestDate(product);
-                    const fefoWhCode = getWarehouseCodeForDate(product, fefoDate);
+                    const fefoDate = getEarliestActiveHarvestDate(product);
+                    const fefoWhCode = getWarehouseCodeForMinDate(product, fefoDate);
                     const days = getDaysUntilExpiry(fefoDate, product.shelf_life);
                     harvestCell = (
                       <td className="px-5 py-3 text-gray-600">
@@ -391,10 +415,11 @@ export default function DashboardPage() {
                   const qty = product.warehouse_stock?.[activeWarehouse.id] ?? 0;
                   const warehouseStatus = qty > 0 ? 'In Stock' : 'Out of Stock';
                   const whHarvestDate = product.harvest_date_per_warehouse?.[activeWarehouse.id] ?? null;
+                  const whMinHarvestDate = product.min_harvest_date_per_warehouse?.[activeWarehouse.id] ?? null;
 
                   let harvestCell;
                   if (sortMode === 'FEFO') {
-                    const days = getDaysUntilExpiry(whHarvestDate, product.shelf_life);
+                    const days = getDaysUntilExpiry(whMinHarvestDate, product.shelf_life);
                     if (days === null || qty === 0) {
                       harvestCell = <td className="px-5 py-3 text-gray-600">—</td>;
                     } else if (days >= 0) {
@@ -402,6 +427,8 @@ export default function DashboardPage() {
                     } else {
                       harvestCell = <td className="px-5 py-3 font-medium" style={{ color: '#DC2626' }}>Expired for {Math.abs(days)} days</td>;
                     }
+                  } else if (sortMode === 'FIFO') {
+                    harvestCell = <td className="px-5 py-3 text-gray-600">{(qty === 0 || !whMinHarvestDate) ? '—' : whMinHarvestDate}</td>;
                   } else {
                     harvestCell = <td className="px-5 py-3 text-gray-600">{(qty === 0 || !whHarvestDate) ? '—' : whHarvestDate}</td>;
                   }

@@ -28,6 +28,7 @@ class StockInUseController extends Controller
             ->sum('quantity');
 
         return response()->json([
+            'shelf_life'      => $product->shelf_life,
             'warehouse_total' => $warehouseTotal,
             'batches'         => $batches->map(fn ($b) => [
                 'id'           => $b->id,

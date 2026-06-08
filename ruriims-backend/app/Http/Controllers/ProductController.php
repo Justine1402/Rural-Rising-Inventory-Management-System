@@ -35,6 +35,17 @@ class ProductController extends Controller
                 return $rows->pluck('latest_harvest', 'warehouse_id')->toArray();
             });
 
+        // Oldest harvest date per product per warehouse among active batches (quantity > 0)
+        // Used by AddProductsModal to detect if any batch is expired in a given warehouse
+        $earliestHarvestPerWarehouse = StockInUse::selectRaw('product_id, warehouse_id, MIN(harvest_date) as earliest_harvest')
+            ->where('quantity', '>', 0)
+            ->groupBy('product_id', 'warehouse_id')
+            ->get()
+            ->groupBy('product_id')
+            ->map(function ($rows) {
+                return $rows->pluck('earliest_harvest', 'warehouse_id')->toArray();
+            });
+
         $products = Product::when(
             $request->filled('has_stock_in_warehouse'),
             fn ($q) => $q->whereExists(function ($sub) use ($request) {
@@ -43,7 +54,7 @@ class ProductController extends Controller
                     ->where('stock_in_use_codes.warehouse_id', (int) $request->input('has_stock_in_warehouse'))
                     ->where('stock_in_use_codes.quantity', '>', 0);
             })
-        )->get()->map(function ($p) use ($warehouses, $stock, $latestHarvest, $latestHarvestPerWarehouse) {
+        )->get()->map(function ($p) use ($warehouses, $stock, $latestHarvest, $latestHarvestPerWarehouse, $earliestHarvestPerWarehouse) {
             $productStock = $stock->get($p->id, collect());
             $warehouseStock = $warehouses->mapWithKeys(
                 fn ($w) => [$w->id => $productStock->get($w->id, 0.0)]
@@ -58,8 +69,9 @@ class ProductController extends Controller
                 'unit'           => $p->unit,
                 'shelf_life'     => $p->shelf_life,
                 'warehouse_stock' => $warehouseStock,
-                'harvest_date'                => $latestHarvest->get($p->id),
-                'harvest_date_per_warehouse' => $latestHarvestPerWarehouse->get($p->id, []),
+                'harvest_date'                    => $latestHarvest->get($p->id),
+                'harvest_date_per_warehouse'     => $latestHarvestPerWarehouse->get($p->id, []),
+                'min_harvest_date_per_warehouse' => $earliestHarvestPerWarehouse->get($p->id, []),
                 'status'         => $totalQty > 0 ? 'In Stock' : 'Out of Stock',
             ];
         });

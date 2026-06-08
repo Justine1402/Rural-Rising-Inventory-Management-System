@@ -1,9 +1,21 @@
 import { useEffect, useState } from 'react';
 import api from '../../api/axios';
 
+const isExpired = (harvestDate, shelfLifeDays) => {
+  if (!harvestDate || shelfLifeDays == null) return false;
+  const d = harvestDate.includes('T') ? harvestDate : harvestDate + 'T00:00:00';
+  const expiry = new Date(d);
+  expiry.setDate(expiry.getDate() + Number(shelfLifeDays));
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  expiry.setHours(0, 0, 0, 0);
+  return today >= expiry;
+};
+
 export default function StockInUseModal({ isOpen, skuCode, warehouseId, onSelect, onClose }) {
   const [batches, setBatches] = useState([]);
   const [warehouseTotal, setWarehouseTotal] = useState(null);
+  const [shelfLife, setShelfLife] = useState(null);
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -16,6 +28,7 @@ export default function StockInUseModal({ isOpen, skuCode, warehouseId, onSelect
     api.get('/stock-in-use', { params: { sku_code: skuCode, warehouse_id: warehouseId } })
       .then((res) => {
         setWarehouseTotal(res.data.warehouse_total);
+        setShelfLife(res.data.shelf_life);
         setBatches(res.data.batches);
       })
       .catch(() => setError('Failed to load batches.'))
@@ -67,21 +80,32 @@ export default function StockInUseModal({ isOpen, skuCode, warehouseId, onSelect
                   </td>
                 </tr>
               )}
-              {!loading && !error && batches.map((batch) => (
-                <tr
-                  key={batch.code}
-                  onClick={() => setSelected(batch)}
-                  className="border-b border-gray-100 cursor-pointer transition-colors"
-                  style={selected?.code === batch.code ? { backgroundColor: '#d1fae5' } : {}}
-                  onMouseEnter={(e) => { if (selected?.code !== batch.code) e.currentTarget.style.backgroundColor = '#f9fafb'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = selected?.code === batch.code ? '#d1fae5' : ''; }}
-                >
-                  <td className="px-5 py-3 text-gray-700 font-mono text-xs">{batch.code}</td>
-                  <td className="px-5 py-3 text-gray-600">{batch.harvest_date}</td>
-                  <td className="px-5 py-3 text-gray-600">{batch.quantity}</td>
-                  <td className="px-5 py-3 text-gray-600">{batch.category}</td>
-                </tr>
-              ))}
+              {!loading && !error && batches.map((batch) => {
+                const expired = isExpired(batch.harvest_date, shelfLife);
+                return (
+                  <tr
+                    key={batch.code}
+                    onClick={() => setSelected(batch)}
+                    className="border-b border-gray-100 cursor-pointer transition-colors"
+                    style={selected?.code === batch.code ? { backgroundColor: '#d1fae5' } : {}}
+                    onMouseEnter={(e) => { if (selected?.code !== batch.code) e.currentTarget.style.backgroundColor = '#f9fafb'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = selected?.code === batch.code ? '#d1fae5' : ''; }}
+                  >
+                    <td className="px-5 py-3 font-mono text-xs"
+                      style={{ color: expired ? '#DC2626' : '#374151' }}
+                    >
+                      {batch.code}
+                    </td>
+                    <td className="px-5 py-3"
+                      style={{ color: expired ? '#DC2626' : '#4B5563' }}
+                    >
+                      {batch.harvest_date}
+                    </td>
+                    <td className="px-5 py-3 text-gray-600">{batch.quantity}</td>
+                    <td className="px-5 py-3 text-gray-600">{batch.category}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
