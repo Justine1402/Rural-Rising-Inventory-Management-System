@@ -136,17 +136,7 @@ export default function LoginPage() {
         </form>
 
         <div className="flex justify-center mt-8">
-          <svg width="76" height="90" viewBox="0 0 76 90" xmlns="http://www.w3.org/2000/svg">
-            {/* Outer shield — dark green border */}
-            <path d="M38 1 L74 14 L74 52 Q74 74 38 89 Q2 74 2 52 L2 14 Z" fill="#1A381E"/>
-            {/* Middle ring — medium green */}
-            <path d="M38 7 L68 19 L68 52 Q68 70 38 83 Q8 70 8 52 L8 19 Z" fill="#409645"/>
-            {/* Inner panel — dark green */}
-            <path d="M38 12 L63 23 L63 52 Q63 67 38 78 Q13 67 13 52 L13 23 Z" fill="#1A381E"/>
-            <text x="38" y="40" textAnchor="middle" fill="#FAA31A" fontSize="13" fontWeight="bold" fontFamily="Arial, sans-serif" letterSpacing="1">RURAL</text>
-            <text x="38" y="50" textAnchor="middle" fill="white" fontSize="5" fontFamily="Arial, sans-serif" letterSpacing="2">PHILIPPINES</text>
-            <text x="38" y="62" textAnchor="middle" fill="#FAA31A" fontSize="13" fontWeight="bold" fontFamily="Arial, sans-serif" letterSpacing="1">RISING</text>
-          </svg>
+          <img src="/ruriicon.png" alt="Rural Rising Philippines" className="h-32 w-auto" />
         </div>
 
       </div>
