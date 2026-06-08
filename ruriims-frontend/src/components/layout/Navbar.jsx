@@ -23,7 +23,7 @@ const BUTTON_ORDER = ['+ Create Product', '+ Receive Order', '+ Transfer Request
 
 export default function Navbar({ selectedCategory = '', onCategoryChange = () => {}, sortMode = 'LIFO', onSortModeChange = () => {} }) {
   const { user, logout } = useAuth();
-  const { activeWarehouse } = useWarehouse();
+  const { activeWarehouse, warehouses, setActiveWarehouse } = useWarehouse();
   const { setReceiveOrderFormOpen, setCreateProductFormOpen, setTransferRequestFormOpen, setIssueProductFormOpen, setTemporaryWarehouseFormOpen, setCloseTemporaryWarehouseOverlayTwhId } = useUI();
   const navigate = useNavigate();
   const location = useLocation();
@@ -64,6 +64,12 @@ export default function Navbar({ selectedCategory = '', onCategoryChange = () =>
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const handleLogoReset = () => {
+    // Reset activeWarehouse to role-appropriate default, then navigate to /
+    setActiveWarehouse(user?.role === 'manager' ? (warehouses[0] ?? null) : null);
+    navigate('/');
+  };
+
   const handleLogout = async () => {
     setMenuOpen(false);
     await logout();
@@ -76,9 +82,14 @@ export default function Navbar({ selectedCategory = '', onCategoryChange = () =>
 
       {/* Row 1 — Brand + Warehouse + Icons */}
       <div className="flex items-center justify-between px-6 py-3">
-        <span className="font-bold text-base tracking-widest uppercase" style={{ color: '#FAA31A' }}>
+        <button
+          type="button"
+          onClick={handleLogoReset}
+          className="font-bold text-base tracking-widest uppercase hover:opacity-80 transition-opacity"
+          style={{ color: '#FAA31A', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+        >
           RURAL RISING
-        </span>
+        </button>
         <div className="flex items-center gap-3">
           <span className="text-white font-semibold text-sm">{activeWarehouse?.name ?? 'All Warehouses'}</span>
           {user?.role === 'admin' && (
