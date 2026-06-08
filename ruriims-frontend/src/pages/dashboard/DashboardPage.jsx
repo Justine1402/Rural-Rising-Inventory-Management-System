@@ -17,6 +17,7 @@ export default function DashboardPage() {
   const [error, setError] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [sortMode, setSortMode] = useState('LIFO');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const permanentWarehouses = warehouses.filter((w) => !w.isTemporary);
 
@@ -65,9 +66,12 @@ export default function DashboardPage() {
 
   const displayedProducts = products
     .filter((p) => !selectedCategory || p.category === selectedCategory)
+    .filter((p) => !searchTerm || p.name.toLowerCase().includes(searchTerm.toLowerCase()))
     .sort((a, b) => {
       const getSortDate = (product) => {
         if (activeWarehouse) {
+          const qty = product.warehouse_stock?.[activeWarehouse.id] ?? 0;
+          if (qty === 0) return null;
           return product.harvest_date_per_warehouse?.[activeWarehouse.id] ?? null;
         }
         if (sortMode === 'LIFO') return getNewestActiveHarvestDate(product);
@@ -102,6 +106,10 @@ export default function DashboardPage() {
     });
 
   useEffect(() => {
+    setSearchTerm('');
+  }, [activeWarehouse]);
+
+  useEffect(() => {
     setLoading(true);
     setError(null);
     api.get('/products')
@@ -126,6 +134,32 @@ export default function DashboardPage() {
 
       <main className="flex-1 p-5">
         <div className="bg-white rounded-xl shadow overflow-hidden">
+
+          {/* Search bar — applies to all three branches */}
+          <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-end gap-2">
+            <div className="relative flex items-center">
+              <span className="absolute left-2 text-gray-400 pointer-events-none">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </span>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search products…"
+                className="border border-gray-300 rounded-lg pl-8 pr-7 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#409645] w-64"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-2 text-gray-400 hover:text-gray-600 text-xs"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
 
           {isTwh ? (
             /* ── Branch A: Temporary Warehouse simplified table ── */
@@ -362,7 +396,7 @@ export default function DashboardPage() {
                       harvestCell = <td className="px-5 py-3 font-medium" style={{ color: '#DC2626' }}>Expired for {Math.abs(days)} days</td>;
                     }
                   } else {
-                    harvestCell = <td className="px-5 py-3 text-gray-600">{whHarvestDate ?? '—'}</td>;
+                    harvestCell = <td className="px-5 py-3 text-gray-600">{(qty === 0 || !whHarvestDate) ? '—' : whHarvestDate}</td>;
                   }
 
                   return (

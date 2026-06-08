@@ -21,9 +21,11 @@ export default function IssueProductFormPage({ onClose, onSuccess }) {
 
   const permanentWarehouses = warehouses.filter((w) => !w.isTemporary);
 
-  // Admin selects warehouse via dropdown; managers always use their assigned activeWarehouse.
+  // Admin on "All Warehouses" (activeWarehouse=null) selects via dropdown.
+  // Admin on a specific tab (permanent or TWH) uses that tab's warehouse directly.
+  // Managers always use their assigned activeWarehouse.
   const [selectedWarehouseId, setSelectedWarehouseId] = useState('');
-  const effectiveWarehouseId = user?.role === 'admin'
+  const effectiveWarehouseId = (user?.role === 'admin' && !activeWarehouse)
     ? selectedWarehouseId
     : (activeWarehouse?.id ?? '');
 
@@ -201,7 +203,7 @@ export default function IssueProductFormPage({ onClose, onSuccess }) {
               <p className="font-semibold text-gray-800">{today}</p>
             </div>
             <div>
-              {user?.role === 'admin' ? (
+              {(user?.role === 'admin' && !activeWarehouse) ? (
                 <>
                   <label className="text-xs text-gray-500 mb-1 block">Warehouse</label>
                   <CustomSelect
@@ -378,7 +380,7 @@ export default function IssueProductFormPage({ onClose, onSuccess }) {
             )}
             <button
               onClick={handleSubmit}
-              disabled={loading || !!successCode || (user?.role === 'admin' && !selectedWarehouseId) || !issueType || hasRowErrors || hasEmptyQty}
+              disabled={loading || !!successCode || !effectiveWarehouseId || !issueType || hasRowErrors || hasEmptyQty}
               className="px-8 py-2.5 text-sm font-bold text-white rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
               style={{ backgroundColor: '#409645' }}
             >
@@ -389,7 +391,7 @@ export default function IssueProductFormPage({ onClose, onSuccess }) {
         </div>
       </div>
 
-      <AddProductsModal isOpen={addModalOpen} onSelect={handleAddProducts} onClose={() => setAddModalOpen(false)} />
+      <AddProductsModal isOpen={addModalOpen} onSelect={handleAddProducts} onClose={() => setAddModalOpen(false)} warehouseId={effectiveWarehouseId} />
       <StockInUseModal
         isOpen={stockInUseModal.open}
         skuCode={stockInUseModal.skuCode}

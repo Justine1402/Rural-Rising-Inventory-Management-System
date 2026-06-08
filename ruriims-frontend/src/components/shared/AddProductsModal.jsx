@@ -1,22 +1,35 @@
 import { useEffect, useState } from 'react';
 import api from '../../api/axios';
 
-export default function AddProductsModal({ isOpen, onSelect, onClose }) {
+export default function AddProductsModal({ isOpen, onSelect, onClose, warehouseId }) {
   const [products, setProducts] = useState([]);
   const [selected, setSelected] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      setSearchTerm('');
+      return;
+    }
     setSelected([]);
     setError(null);
     setLoading(true);
-    api.get('/products')
+    const params = {};
+    if (warehouseId) params.has_stock_in_warehouse = warehouseId;
+    api.get('/products', { params })
       .then((res) => setProducts(res.data.products))
       .catch(() => setError('Failed to load products.'))
       .finally(() => setLoading(false));
-  }, [isOpen]);
+  }, [isOpen, warehouseId]);
+
+  const filteredProducts = searchTerm
+    ? products.filter((p) => {
+        const term = searchTerm.toLowerCase();
+        return p.name.toLowerCase().includes(term) || p.sku_code.toLowerCase().includes(term);
+      })
+    : products;
 
   if (!isOpen) return null;
 
@@ -53,6 +66,32 @@ export default function AddProductsModal({ isOpen, onSelect, onClose }) {
           <button onClick={onClose} className="text-white/70 hover:text-white text-xl font-light transition-colors">✕</button>
         </div>
 
+        {/* Search */}
+        <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-2">
+          <div className="relative flex items-center w-full">
+            <span className="absolute left-2 text-gray-400 pointer-events-none">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </span>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by name or SKU…"
+              className="w-full border border-gray-300 rounded-lg pl-8 pr-7 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#409645]"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2 text-gray-400 hover:text-gray-600 text-xs"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        </div>
+
         {/* Table */}
         <div className="overflow-y-auto max-h-80">
           <table className="w-full text-sm">
@@ -80,7 +119,12 @@ export default function AddProductsModal({ isOpen, onSelect, onClose }) {
                   <td colSpan={4} className="px-5 py-6 text-center text-gray-400">No products found.</td>
                 </tr>
               )}
-              {!loading && !error && products.map((product) => (
+              {!loading && !error && products.length > 0 && filteredProducts.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-5 py-6 text-center text-gray-400">No products match your search.</td>
+                </tr>
+              )}
+              {!loading && !error && filteredProducts.map((product) => (
                 <tr
                   key={product.sku_code}
                   onClick={() => toggle(product)}

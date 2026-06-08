@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Hash;
 
 class ProductController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $warehouses = Warehouse::all();
 
@@ -35,7 +35,15 @@ class ProductController extends Controller
                 return $rows->pluck('latest_harvest', 'warehouse_id')->toArray();
             });
 
-        $products = Product::all()->map(function ($p) use ($warehouses, $stock, $latestHarvest, $latestHarvestPerWarehouse) {
+        $products = Product::when(
+            $request->filled('has_stock_in_warehouse'),
+            fn ($q) => $q->whereExists(function ($sub) use ($request) {
+                $sub->from('stock_in_use_codes')
+                    ->whereColumn('stock_in_use_codes.product_id', 'products.id')
+                    ->where('stock_in_use_codes.warehouse_id', (int) $request->input('has_stock_in_warehouse'))
+                    ->where('stock_in_use_codes.quantity', '>', 0);
+            })
+        )->get()->map(function ($p) use ($warehouses, $stock, $latestHarvest, $latestHarvestPerWarehouse) {
             $productStock = $stock->get($p->id, collect());
             $warehouseStock = $warehouses->mapWithKeys(
                 fn ($w) => [$w->id => $productStock->get($w->id, 0.0)]

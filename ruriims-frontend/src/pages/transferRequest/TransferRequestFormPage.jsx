@@ -352,7 +352,7 @@ export default function TransferRequestFormPage({ onClose, onSuccess }) {
                       <label className="text-xs text-gray-500 mb-1 block">Source Warehouse</label>
                       <CustomSelect
                         value={sourceWarehouseId}
-                        onChange={(e) => { setSourceWarehouseId(e.target.value); if (e.target.value === destinationWarehouseId) setDestinationWarehouseId(''); }}
+                        onChange={(e) => { setSourceWarehouseId(e.target.value); if (e.target.value === destinationWarehouseId) setDestinationWarehouseId(''); setItems([]); }}
                         options={[
                           { value: '', label: 'Select source warehouse' },
                           ...permanentWarehouses.map((w) => ({
@@ -597,7 +597,7 @@ export default function TransferRequestFormPage({ onClose, onSuccess }) {
         )}
       </div>
 
-      <AddProductsModal isOpen={addModalOpen} onSelect={handleAddProducts} onClose={() => setAddModalOpen(false)} />
+      <AddProductsModal isOpen={addModalOpen} onSelect={handleAddProducts} onClose={() => setAddModalOpen(false)} warehouseId={sourceWarehouseId} />
       <StockInUseModal
         isOpen={stockInUseModal.open}
         skuCode={stockInUseModal.skuCode}
