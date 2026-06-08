@@ -135,10 +135,13 @@ export default function DashboardPage() {
       <main className="flex-1 p-5">
         <div className="bg-white rounded-xl shadow overflow-hidden">
 
-          {/* Search bar — applies to all three branches */}
-          <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-end gap-2">
+          {/* Search bar */}
+          <div
+            className="px-5 py-3 flex items-center justify-end gap-2"
+            style={{ backgroundColor: '#1A381E', borderBottom: '1px solid rgba(255,255,255,0.10)' }}
+          >
             <div className="relative flex items-center">
-              <span className="absolute left-2 text-gray-400 pointer-events-none">
+              <span className="absolute left-2 text-white/50 pointer-events-none">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
@@ -148,12 +151,16 @@ export default function DashboardPage() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search products…"
-                className="border border-gray-300 rounded-lg pl-8 pr-7 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#409645] w-64"
+                className="rounded-lg pl-8 pr-7 py-1.5 text-sm text-white placeholder-white/40 focus:outline-none w-96 transition"
+                style={{
+                  backgroundColor: 'rgba(255,255,255,0.12)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                }}
               />
               {searchTerm && (
                 <button
                   onClick={() => setSearchTerm('')}
-                  className="absolute right-2 text-gray-400 hover:text-gray-600 text-xs"
+                  className="absolute right-2 text-white/60 hover:text-white text-xs"
                 >
                   ✕
                 </button>
