@@ -61,7 +61,10 @@ class ReportController extends Controller
         // Transfer Requests
         $trQuery = TransferRequest::with(['sourceWarehouse', 'verifier']);
         if ($warehouseId) {
-            $trQuery->where('source_warehouse_id', $warehouseId);
+            $trQuery->where(function ($q) use ($warehouseId) {
+                $q->where('source_warehouse_id', $warehouseId)
+                  ->orWhere('destination_warehouse_id', $warehouseId);
+            });
         }
         if ($dateFrom) {
             $trQuery->whereDate('date_received', '>=', $dateFrom);
@@ -112,6 +115,9 @@ class ReportController extends Controller
 
         // Temporary Warehouses
         $twhQuery = TemporaryWarehouse::with(['warehouse', 'closer']);
+        if ($warehouseId) {
+            $twhQuery->whereHas('creator', fn($q) => $q->where('warehouse_id', $warehouseId));
+        }
         if ($dateFrom) {
             $twhQuery->whereDate('date_closed', '>=', $dateFrom);
         }
@@ -158,6 +164,23 @@ class ReportController extends Controller
                 'status'            => $this->formatStatus($r->status),
             ]);
         });
+
+        // Create Product
+        $pQuery = Product::with('creator')
+            ->when($dateFrom, fn($q) => $q->whereDate('created_at', '>=', $dateFrom))
+            ->when($dateTo,   fn($q) => $q->whereDate('created_at', '<=', $dateTo));
+
+        foreach ($pQuery->get() as $p) {
+            $rows->push([
+                'id'                => $p->id,
+                'transaction_code'  => $p->sku_code,
+                'transaction_type'  => 'Create Product',
+                'warehouse'         => '—',
+                'date_accomplished' => $p->created_at->format('Y-m-d'),
+                'accomplished_by'   => $p->creator?->name ?? '—',
+                'status'            => 'Active',
+            ]);
+        }
 
         $sorted = $rows->sortByDesc(fn ($row) => $row['date_accomplished'] ?? '')->values();
 
