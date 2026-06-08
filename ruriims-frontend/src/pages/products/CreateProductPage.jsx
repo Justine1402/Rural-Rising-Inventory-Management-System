@@ -176,7 +176,7 @@ export default function CreateProductPage({ onClose, onSuccess }) {
             )}
             <button
               onClick={handleCreate}
-              disabled={loading || !!successCode}
+              disabled={loading || !!successCode || !form.name || !form.category || !form.unit || !form.shelf_life}
               className="px-8 py-2.5 text-sm font-bold text-white rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
               style={{ backgroundColor: '#409645' }}
             >

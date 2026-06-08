@@ -126,6 +126,15 @@ export default function ReceiveOrderFormPage({ onClose, onSuccess }) {
     }
   };
 
+  const hasInvalidCreateFields = !isAccomplish && (
+    !selectedWarehouseId ||
+    !form.supplier_name ||
+    !form.delivery_fee ||
+    !form.date_ordered ||
+    items.length === 0 ||
+    items.some((i) => !i.quantity_ordered || !i.product_cost || !i.harvest_date)
+  );
+
   return (
     <>
       {/* Blur overlay */}
@@ -391,7 +400,7 @@ export default function ReceiveOrderFormPage({ onClose, onSuccess }) {
                 )}
                 <button
                   onClick={handleSubmit}
-                  disabled={loading || !!successCode || (isAccomplish && items.some((i) => i.quantity_arrived === ''))}
+                  disabled={loading || !!successCode || (isAccomplish && items.some((i) => i.quantity_arrived === '')) || hasInvalidCreateFields}
                   className={`px-8 py-2.5 text-sm font-bold text-white rounded-lg disabled:opacity-60 disabled:cursor-not-allowed ${isAccomplish ? 'btn-brand' : ''}`}
                   style={isAccomplish ? undefined : { backgroundColor: '#409645' }}
                 >

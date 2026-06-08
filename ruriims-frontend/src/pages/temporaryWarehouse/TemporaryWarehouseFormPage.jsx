@@ -135,7 +135,7 @@ export default function TemporaryWarehouseFormPage({ onClose }) {
             )}
             <button
               onClick={handleCreate}
-              disabled={loading || !!successCode}
+              disabled={loading || !!successCode || !canCreate}
               className="px-8 py-2.5 text-sm font-bold text-white rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
               style={{ backgroundColor: '#409645' }}
             >

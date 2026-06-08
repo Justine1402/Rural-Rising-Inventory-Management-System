@@ -188,6 +188,12 @@ export default function TransferRequestFormPage({ onClose, onSuccess }) {
 
   const hasRowErrors = items.some((item) => getRowError(item) !== null);
   const hasEmptyAccomplishQty = isAccomplish && items.some((i) => i.quantity_received === '');
+  const hasInvalidCreateFields = !isAccomplish && (
+    !sourceWarehouseId ||
+    !destinationWarehouseId ||
+    items.length === 0 ||
+    items.some((i) => !i.stock_in_use_id || !i.quantity_requested || parseFloat(i.quantity_requested) <= 0)
+  );
 
   const handleSubmit = () => {
     setError(null);
@@ -578,7 +584,7 @@ export default function TransferRequestFormPage({ onClose, onSuccess }) {
                 )}
                 <button
                   onClick={handleSubmit}
-                  disabled={loading || !!successCode || hasRowErrors || hasEmptyAccomplishQty}
+                  disabled={loading || !!successCode || hasRowErrors || hasEmptyAccomplishQty || hasInvalidCreateFields}
                   className={`px-8 py-2.5 text-sm font-bold text-white rounded-lg disabled:opacity-60 disabled:cursor-not-allowed ${isAccomplish ? 'btn-brand' : ''}`}
                   style={isAccomplish ? undefined : { backgroundColor: '#409645' }}
                 >
