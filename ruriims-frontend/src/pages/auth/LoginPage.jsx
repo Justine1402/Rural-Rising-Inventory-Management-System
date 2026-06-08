@@ -9,8 +9,6 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [remember, setRemember] = useState(false);
-
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
@@ -102,22 +100,6 @@ export default function LoginPage() {
                 )}
               </button>
             </div>
-          </div>
-
-          {/* Remember me + Forgot password */}
-          <div className="flex items-center justify-between">
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={remember}
-                onChange={(e) => setRemember(e.target.checked)}
-                className="w-4 h-4 rounded accent-[#409645] cursor-pointer"
-              />
-              <span className="text-sm text-gray-600">Remember me</span>
-            </label>
-            <a href="#" className="text-sm text-[#409645] hover:underline font-medium">
-              Forgot password?
-            </a>
           </div>
 
           {error && (
