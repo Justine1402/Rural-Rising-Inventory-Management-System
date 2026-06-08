@@ -17,7 +17,15 @@ const todayISO = new Date().toISOString().split('T')[0];
 
 export default function IssueProductFormPage({ onClose, onSuccess }) {
   const { user } = useAuth();
-  const { activeWarehouse } = useWarehouse();
+  const { activeWarehouse, warehouses } = useWarehouse();
+
+  const permanentWarehouses = warehouses.filter((w) => !w.isTemporary);
+
+  // Admin selects warehouse via dropdown; managers always use their assigned activeWarehouse.
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState('');
+  const effectiveWarehouseId = user?.role === 'admin'
+    ? selectedWarehouseId
+    : (activeWarehouse?.id ?? '');
 
   const [issueType, setIssueType] = useState('');
   const [items, setItems] = useState([]);
@@ -78,7 +86,7 @@ export default function IssueProductFormPage({ onClose, onSuccess }) {
   };
 
   const openStockInUseModal = (rowIndex) => {
-    if (!activeWarehouse?.id) {
+    if (!effectiveWarehouseId) {
       setError('No active warehouse selected.');
       return;
     }
@@ -131,7 +139,7 @@ export default function IssueProductFormPage({ onClose, onSuccess }) {
     setLoading(true);
     try {
       const res = await api.post('/issue-products', {
-        warehouse_id: activeWarehouse.id,
+        warehouse_id: effectiveWarehouseId,
         issue_type: issueType,
         date_issued: todayISO,
         pin,
@@ -193,8 +201,28 @@ export default function IssueProductFormPage({ onClose, onSuccess }) {
               <p className="font-semibold text-gray-800">{today}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-500 mb-0.5">Warehouse</p>
-              <p className="font-semibold text-gray-800">{activeWarehouse?.name ?? '—'}</p>
+              {user?.role === 'admin' ? (
+                <>
+                  <label className="text-xs text-gray-500 mb-1 block">Warehouse</label>
+                  <CustomSelect
+                    value={selectedWarehouseId}
+                    onChange={(e) => {
+                      setSelectedWarehouseId(e.target.value);
+                      setItems([]);
+                    }}
+                    disabled={!!successCode}
+                    options={[
+                      { value: '', label: 'Select warehouse' },
+                      ...permanentWarehouses.map((w) => ({ value: String(w.id), label: w.name })),
+                    ]}
+                  />
+                </>
+              ) : (
+                <>
+                  <p className="text-xs text-gray-500 mb-0.5">Warehouse</p>
+                  <p className="font-semibold text-gray-800">{activeWarehouse?.name ?? '—'}</p>
+                </>
+              )}
             </div>
             <div>
               <label className="text-xs text-gray-500 mb-1 block">Issue Type</label>
@@ -350,7 +378,7 @@ export default function IssueProductFormPage({ onClose, onSuccess }) {
             )}
             <button
               onClick={handleSubmit}
-              disabled={loading || !!successCode || !issueType || hasRowErrors || hasEmptyQty}
+              disabled={loading || !!successCode || (user?.role === 'admin' && !selectedWarehouseId) || !issueType || hasRowErrors || hasEmptyQty}
               className="px-8 py-2.5 text-sm font-bold text-white rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
               style={{ backgroundColor: '#409645' }}
             >
@@ -365,7 +393,7 @@ export default function IssueProductFormPage({ onClose, onSuccess }) {
       <StockInUseModal
         isOpen={stockInUseModal.open}
         skuCode={stockInUseModal.skuCode}
-        warehouseId={activeWarehouse?.id}
+        warehouseId={effectiveWarehouseId || undefined}
         onSelect={handleBatchSelect}
         onClose={() => setStockInUseModal({ open: false, rowIndex: null, skuCode: null })}
       />
