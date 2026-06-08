@@ -36,7 +36,7 @@ export default function ReceiveOrderFormPage({ onClose, onSuccess }) {
         const o = res.data.order;
         setOrderData(o);
         setForm({ supplier_name: o.supplier_name, delivery_fee: o.delivery_fee, date_ordered: o.date_ordered, date_arrived: o.date_arrived ?? '' });
-        setItems(o.items.map((i) => ({ ...i, quantity_arrived: parseFloat(i.quantity_arrived) || 0 })));
+        setItems(o.items.map((i) => ({ ...i, quantity_arrived: parseFloat(i.quantity_arrived) > 0 ? String(parseFloat(i.quantity_arrived)) : '' })));
       })
       .catch(() => setError('Failed to load order.'))
       .finally(() => setFetchLoading(false));
@@ -81,6 +81,10 @@ export default function ReceiveOrderFormPage({ onClose, onSuccess }) {
       if (items.some((i) => !i.quantity_ordered || !i.product_cost)) { setError('Fill in Quantity Ordered and Product Cost for all items.'); return; }
     } else {
       if (!form.date_arrived) { setError('Date Arrived is required.'); return; }
+      if (items.some((i) => i.quantity_arrived === '')) {
+        setError('Enter a Quantity Arrived for all items. Type 0 if none arrived.');
+        return;
+      }
       if (items.some((i) => parseFloat(i.quantity_arrived) < 0)) {
         setError('Quantity Arrived cannot be negative.');
         return;
@@ -110,7 +114,7 @@ export default function ReceiveOrderFormPage({ onClose, onSuccess }) {
         const res = await api.post(`/receive-orders/${id}/complete`, {
           date_arrived: form.date_arrived,
           pin,
-          items: items.map((i) => ({ id: i.id, quantity_arrived: parseFloat(i.quantity_arrived) || 0 })),
+          items: items.map((i) => ({ id: i.id, quantity_arrived: parseFloat(i.quantity_arrived) })),
         });
         setSuccessCode(res.data.message);
         setSubmitted(true);
@@ -387,7 +391,7 @@ export default function ReceiveOrderFormPage({ onClose, onSuccess }) {
                 )}
                 <button
                   onClick={handleSubmit}
-                  disabled={loading || !!successCode}
+                  disabled={loading || !!successCode || (isAccomplish && items.some((i) => i.quantity_arrived === ''))}
                   className={`px-8 py-2.5 text-sm font-bold text-white rounded-lg disabled:opacity-60 disabled:cursor-not-allowed ${isAccomplish ? 'btn-brand' : ''}`}
                   style={isAccomplish ? undefined : { backgroundColor: '#409645' }}
                 >

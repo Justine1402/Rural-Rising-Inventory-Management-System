@@ -91,7 +91,7 @@ export default function TransferRequestFormPage({ onClose, onSuccess }) {
         setItems(
           t.items.map((i) => ({
             ...i,
-            quantity_received: parseFloat(i.quantity_received) || 0,
+            quantity_received: parseFloat(i.quantity_received) > 0 ? String(parseFloat(i.quantity_received)) : '',
             batch_quantity: i.batch_quantity ?? null,
             warehouseTotal: batchDataByCode[i.product_code]?.warehouse_total ?? null,
             allBatches: batchDataByCode[i.product_code]?.batches ?? [],
@@ -187,6 +187,7 @@ export default function TransferRequestFormPage({ onClose, onSuccess }) {
   };
 
   const hasRowErrors = items.some((item) => getRowError(item) !== null);
+  const hasEmptyAccomplishQty = isAccomplish && items.some((i) => i.quantity_received === '');
 
   const handleSubmit = () => {
     setError(null);
@@ -201,6 +202,10 @@ export default function TransferRequestFormPage({ onClose, onSuccess }) {
       }
     } else {
       if (!dateReceived) { setError('Date Received is required.'); return; }
+      if (items.some((i) => i.quantity_received === '')) {
+        setError('Enter a Quantity Received for all items. Type 0 if none received.');
+        return;
+      }
     }
     setPinOpen(true);
   };
@@ -227,7 +232,7 @@ export default function TransferRequestFormPage({ onClose, onSuccess }) {
         const res = await api.post(`/transfer-requests/${id}/accomplish`, {
           date_received: dateReceived,
           pin,
-          items: items.map((i) => ({ id: i.id, quantity_received: parseFloat(i.quantity_received) || 0 })),
+          items: items.map((i) => ({ id: i.id, quantity_received: parseFloat(i.quantity_received) })),
         });
         refreshProducts();
         refreshTransferRequests();
@@ -573,7 +578,7 @@ export default function TransferRequestFormPage({ onClose, onSuccess }) {
                 )}
                 <button
                   onClick={handleSubmit}
-                  disabled={loading || !!successCode || hasRowErrors}
+                  disabled={loading || !!successCode || hasRowErrors || hasEmptyAccomplishQty}
                   className={`px-8 py-2.5 text-sm font-bold text-white rounded-lg disabled:opacity-60 disabled:cursor-not-allowed ${isAccomplish ? 'btn-brand' : ''}`}
                   style={isAccomplish ? undefined : { backgroundColor: '#409645' }}
                 >

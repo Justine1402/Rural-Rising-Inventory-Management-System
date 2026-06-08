@@ -111,6 +111,7 @@ export default function IssueProductFormPage({ onClose, onSuccess }) {
   };
 
   const hasRowErrors = items.some((item) => getRowError(item) !== null);
+  const hasEmptyQty = items.some((i) => !i.quantity_issued);
 
   const handleSubmit = () => {
     setError(null);
@@ -349,7 +350,7 @@ export default function IssueProductFormPage({ onClose, onSuccess }) {
             )}
             <button
               onClick={handleSubmit}
-              disabled={loading || !!successCode || hasRowErrors}
+              disabled={loading || !!successCode || hasRowErrors || hasEmptyQty}
               className="px-8 py-2.5 text-sm font-bold text-white rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
               style={{ backgroundColor: '#409645' }}
             >
