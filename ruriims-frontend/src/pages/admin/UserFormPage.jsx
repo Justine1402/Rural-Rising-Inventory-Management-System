@@ -5,10 +5,8 @@ import api from '../../api/axios';
 import CustomSelect from '../../components/ui/CustomSelect';
 
 const fieldClass =
-  'w-full bg-gray-100 border border-transparent rounded-lg px-4 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#1A381E] focus:bg-white transition';
-const disabledFieldClass =
-  'w-full bg-gray-100 border border-transparent rounded-lg px-4 py-3 text-sm text-gray-400 cursor-not-allowed';
-const labelClass = 'block text-sm text-gray-500 mb-1';
+  'w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#409645] bg-white transition';
+const labelClass = 'text-xs text-gray-500 mb-1 block';
 const errorClass = 'text-red-600 text-xs mt-1';
 
 const EMPTY_FORM = {
@@ -194,326 +192,318 @@ export default function UserFormPage() {
     }
   }
 
-  const fc = isReadOnly ? disabledFieldClass : fieldClass;
-
   return (
     <>
+      {/* Backdrop */}
       <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40" onClick={handleClose} />
 
-      <div className="fixed top-[115px] left-1/2 -translate-x-1/2 w-[700px] max-h-[calc(100vh-150px)] overflow-y-auto bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 p-8 flex flex-col">
+      {/* Card */}
+      <div className="fixed top-[105px] left-1/2 -translate-x-1/2 w-[700px] max-h-[85vh] bg-white rounded-2xl shadow-2xl z-50 overflow-y-auto">
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">
-            {isCreateMode ? 'New User' : 'Edit User'}
-          </h2>
+        {/* Dark green sticky header */}
+        <div
+          className="flex items-center justify-between px-6 py-4 sticky top-0 z-10"
+          style={{ backgroundColor: '#1A381E' }}
+        >
           <button
             onClick={handleClose}
-            className="px-6 py-2.5 text-sm font-semibold text-white rounded-lg btn-brand"
+            className="text-white text-sm font-medium hover:opacity-80 transition-opacity"
           >
-            RETURN
+            ← RETURN
           </button>
+          <span className="text-white font-semibold text-lg">
+            {isCreateMode ? 'New User' : 'Edit User'}
+          </span>
         </div>
 
-        {/* Deactivated notice */}
-        {isReadOnly && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
-            This user is deactivated.
-          </div>
-        )}
+        {/* Body */}
+        <div className="px-8 py-6">
 
-        {/* Global error */}
-        {errors._global && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            {errors._global}
-          </div>
-        )}
-
-        {/* Loading in edit mode */}
-        {isEditMode && !editingUser && !errors._global && (
-          <div className="text-gray-500 text-sm py-8 text-center">Loading...</div>
-        )}
-
-        {/* Form */}
-        {(isCreateMode || editingUser) && (
-          <form onSubmit={handleSubmit} className="space-y-4">
-
-            {/* Name */}
-            <div>
-              <label className={labelClass}>Name <span className="text-red-500">*</span></label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={setField('name')}
-                disabled={isReadOnly}
-                className={fc}
-              />
-              {errors.name && <p className={errorClass}>{errors.name[0]}</p>}
+          {/* Deactivated notice */}
+          {isReadOnly && (
+            <div className="mb-5 p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
+              This user is deactivated.
             </div>
+          )}
 
-            {/* Email */}
-            <div>
-              <label className={labelClass}>Email <span className="text-red-500">*</span></label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={setField('email')}
-                disabled={isReadOnly}
-                className={fc}
-              />
-              {errors.email && <p className={errorClass}>{errors.email[0]}</p>}
+          {/* Global error */}
+          {errors._global && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+              {errors._global}
             </div>
+          )}
 
-            {/* Password — create mode only */}
-            {isCreateMode && (
-              <div>
-                <label className={labelClass}>Password <span className="text-red-500">*</span></label>
-                <input
-                  type="password"
-                  value={formData.password}
-                  onChange={setField('password')}
-                  className={fieldClass}
-                  autoComplete="new-password"
-                />
-                {errors.password && <p className={errorClass}>{errors.password[0]}</p>}
-              </div>
-            )}
+          {/* Loading state */}
+          {isEditMode && !editingUser && !errors._global && (
+            <div className="text-gray-500 text-sm py-8 text-center">Loading…</div>
+          )}
 
-            {/* Role — hidden when editing self */}
-            {!isSelf && (
-              <div>
-                <label className={labelClass}>Role <span className="text-red-500">*</span></label>
-                <CustomSelect
-                  value={formData.role}
-                  onChange={setField('role')}
-                  disabled={isReadOnly}
-                  options={[
-                    { value: 'admin', label: 'Admin' },
-                    { value: 'manager', label: 'Manager' },
-                  ]}
-                />
-                {errors.role && <p className={errorClass}>{errors.role[0]}</p>}
-              </div>
-            )}
+          {/* Form */}
+          {(isCreateMode || editingUser) && (
+            <>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">
+                User Details
+              </p>
 
-            {/* Warehouse */}
-            <div>
-              <label className={labelClass}>
-                Warehouse{formData.role === 'manager' && <span className="text-red-500"> *</span>}
-              </label>
-              <CustomSelect
-                value={formData.warehouse_id}
-                onChange={setField('warehouse_id')}
-                disabled={isReadOnly}
-                options={[
-                  { value: '', label: '— None —' },
-                  ...warehouses.map((w) => ({ value: w.id, label: w.name })),
-                ]}
-              />
-              {errors.warehouse_id && <p className={errorClass}>{errors.warehouse_id[0]}</p>}
-            </div>
+              <form onSubmit={handleSubmit}>
+                <div className="space-y-4 mb-6">
 
-            {/* Position Title */}
-            <div>
-              <label className={labelClass}>Position Title</label>
-              <input
-                type="text"
-                value={formData.position_title}
-                onChange={setField('position_title')}
-                disabled={isReadOnly}
-                className={fc}
-              />
-              {errors.position_title && <p className={errorClass}>{errors.position_title[0]}</p>}
-            </div>
-
-            {/* PIN — create mode only */}
-            {isCreateMode && (
-              <div>
-                <label className={labelClass}>PIN <span className="text-red-500">*</span></label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={6}
-                  value={formData.pin}
-                  onChange={setField('pin')}
-                  className={fieldClass}
-                  placeholder="6 digits"
-                />
-                {errors.pin && <p className={errorClass}>{errors.pin[0]}</p>}
-              </div>
-            )}
-
-            {/* Submit row — not shown in read-only mode */}
-            {!isReadOnly && (
-              <div className="flex items-center gap-3 pt-2">
-                {successLabel && (
-                  <span className="text-sm text-green-700 font-medium">{successLabel}</span>
-                )}
-                <button
-                  type="submit"
-                  disabled={submitting || !!successLabel}
-                  className="btn-brand text-white px-6 py-2.5 rounded-lg font-semibold text-sm disabled:opacity-60 disabled:cursor-not-allowed ml-auto"
-                >
-                  {submitting ? 'Saving…' : isCreateMode ? 'CREATE' : 'UPDATE'}
-                </button>
-              </div>
-            )}
-          </form>
-        )}
-
-        {/* Restore button — read-only mode only */}
-        {isReadOnly && (
-          <button
-            type="button"
-            onClick={handleRestore}
-            disabled={submitting}
-            className="btn-brand text-white px-4 py-2 rounded mt-4 font-semibold text-sm disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {submitting ? 'Restoring…' : 'Restore User'}
-          </button>
-        )}
-
-        {/* Reset Password / Reset PIN / Delete — edit mode, not read-only */}
-        {isEditMode && editingUser && !isReadOnly && (
-          <div className="mt-6 pt-6 border-t border-gray-100 space-y-4">
-
-            {/* Reset Password */}
-            <div>
-              {!resetPasswordOpen ? (
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => { setResetPasswordOpen(true); setResetPasswordError(''); }}
-                    className="text-sm text-[#409645] font-medium hover:underline"
-                  >
-                    Reset Password
-                  </button>
-                  {resetPasswordSuccess && (
-                    <span className="text-sm text-green-700">{resetPasswordSuccess}</span>
-                  )}
-                </div>
-              ) : (
-                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <label className={labelClass}>New Password</label>
-                  <input
-                    type="password"
-                    value={resetPasswordValue}
-                    onChange={e => setResetPasswordValue(e.target.value)}
-                    className={fieldClass}
-                    autoComplete="new-password"
-                    minLength={8}
-                  />
-                  {resetPasswordError && <p className={errorClass}>{resetPasswordError}</p>}
-                  <div className="flex gap-2 mt-3">
-                    <button
-                      type="button"
-                      onClick={handleResetPassword}
-                      className="btn-brand text-white px-4 py-2 rounded-lg text-sm font-medium"
-                    >
-                      Confirm
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setResetPasswordOpen(false); setResetPasswordValue(''); setResetPasswordError(''); }}
-                      className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
-                    >
-                      Cancel
-                    </button>
+                  {/* Name */}
+                  <div>
+                    {isReadOnly ? (
+                      <>
+                        <p className="text-xs text-gray-500 mb-0.5">Name</p>
+                        <p className="font-semibold text-gray-800">{formData.name || '—'}</p>
+                      </>
+                    ) : (
+                      <>
+                        <label className={labelClass}>Name <span className="text-red-500">*</span></label>
+                        <input type="text" value={formData.name} onChange={setField('name')} className={fieldClass} />
+                        {errors.name && <p className={errorClass}>{errors.name[0]}</p>}
+                      </>
+                    )}
                   </div>
-                </div>
-              )}
-            </div>
 
-            {/* Reset PIN */}
-            <div>
-              {!resetPinOpen ? (
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => { setResetPinOpen(true); setResetPinError(''); }}
-                    className="text-sm text-[#409645] font-medium hover:underline"
-                  >
-                    Reset PIN
-                  </button>
-                  {resetPinSuccess && (
-                    <span className="text-sm text-green-700">{resetPinSuccess}</span>
-                  )}
-                </div>
-              ) : (
-                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <label className={labelClass}>New PIN (6 digits)</label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={6}
-                    value={resetPinValue}
-                    onChange={e => setResetPinValue(e.target.value)}
-                    className={fieldClass}
-                    placeholder="6 digits"
-                  />
-                  {resetPinError && <p className={errorClass}>{resetPinError}</p>}
-                  <div className="flex gap-2 mt-3">
-                    <button
-                      type="button"
-                      onClick={handleResetPin}
-                      className="btn-brand text-white px-4 py-2 rounded-lg text-sm font-medium"
-                    >
-                      Confirm
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setResetPinOpen(false); setResetPinValue(''); setResetPinError(''); }}
-                      className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
-                    >
-                      Cancel
-                    </button>
+                  {/* Email */}
+                  <div>
+                    {isReadOnly ? (
+                      <>
+                        <p className="text-xs text-gray-500 mb-0.5">Email</p>
+                        <p className="font-semibold text-gray-800">{formData.email || '—'}</p>
+                      </>
+                    ) : (
+                      <>
+                        <label className={labelClass}>Email <span className="text-red-500">*</span></label>
+                        <input type="email" value={formData.email} onChange={setField('email')} className={fieldClass} />
+                        {errors.email && <p className={errorClass}>{errors.email[0]}</p>}
+                      </>
+                    )}
                   </div>
-                </div>
-              )}
-            </div>
 
-            {/* Delete — hidden when editing self */}
-            {!isSelf && (
-              <div>
-                {!deleteConfirmOpen ? (
-                  <button
-                    type="button"
-                    onClick={() => setDeleteConfirmOpen(true)}
-                    className="px-4 py-2 border border-red-300 text-red-600 rounded text-sm hover:bg-red-50"
-                  >
-                    Delete User
-                  </button>
-                ) : (
-                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                    <h3 className="font-semibold text-red-900 mb-2">Delete user?</h3>
-                    <p className="text-sm text-red-800 mb-3">
-                      {editingUser.name} will be deactivated. Their past transaction records will remain intact, but they will no longer be able to log in.
-                    </p>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={handleDelete}
-                        disabled={submitting}
-                        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm disabled:opacity-60"
-                      >
-                        Delete
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDeleteConfirmOpen(false)}
-                        className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
-                      >
-                        Cancel
-                      </button>
+                  {/* Password — create mode only */}
+                  {isCreateMode && (
+                    <div>
+                      <label className={labelClass}>Password <span className="text-red-500">*</span></label>
+                      <input type="password" value={formData.password} onChange={setField('password')} className={fieldClass} autoComplete="new-password" />
+                      {errors.password && <p className={errorClass}>{errors.password[0]}</p>}
                     </div>
+                  )}
+
+                  {/* Role — hidden when editing self */}
+                  {!isSelf && (
+                    <div>
+                      {isReadOnly ? (
+                        <>
+                          <p className="text-xs text-gray-500 mb-0.5">Role</p>
+                          <p className="font-semibold text-gray-800 capitalize">{formData.role || '—'}</p>
+                        </>
+                      ) : (
+                        <>
+                          <label className={labelClass}>Role <span className="text-red-500">*</span></label>
+                          <CustomSelect
+                            value={formData.role}
+                            onChange={setField('role')}
+                            options={[
+                              { value: 'admin', label: 'Admin' },
+                              { value: 'manager', label: 'Manager' },
+                            ]}
+                          />
+                          {errors.role && <p className={errorClass}>{errors.role[0]}</p>}
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Warehouse */}
+                  <div>
+                    {isReadOnly ? (
+                      <>
+                        <p className="text-xs text-gray-500 mb-0.5">Warehouse</p>
+                        <p className="font-semibold text-gray-800">
+                          {warehouses.find((w) => String(w.id) === String(formData.warehouse_id))?.name ?? '—'}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <label className={labelClass}>
+                          Warehouse{formData.role === 'manager' && <span className="text-red-500"> *</span>}
+                        </label>
+                        <CustomSelect
+                          value={formData.warehouse_id}
+                          onChange={setField('warehouse_id')}
+                          options={[
+                            { value: '', label: '— None —' },
+                            ...warehouses.map((w) => ({ value: w.id, label: w.name })),
+                          ]}
+                        />
+                        {errors.warehouse_id && <p className={errorClass}>{errors.warehouse_id[0]}</p>}
+                      </>
+                    )}
+                  </div>
+
+                  {/* Position Title */}
+                  <div>
+                    {isReadOnly ? (
+                      <>
+                        <p className="text-xs text-gray-500 mb-0.5">Position Title</p>
+                        <p className="font-semibold text-gray-800">{formData.position_title || '—'}</p>
+                      </>
+                    ) : (
+                      <>
+                        <label className={labelClass}>Position Title</label>
+                        <input type="text" value={formData.position_title} onChange={setField('position_title')} className={fieldClass} />
+                        {errors.position_title && <p className={errorClass}>{errors.position_title[0]}</p>}
+                      </>
+                    )}
+                  </div>
+
+                  {/* PIN — create mode only */}
+                  {isCreateMode && (
+                    <div>
+                      <label className={labelClass}>PIN <span className="text-red-500">*</span></label>
+                      <input type="text" inputMode="numeric" maxLength={6} value={formData.pin} onChange={setField('pin')} className={fieldClass} placeholder="6 digits" />
+                      {errors.pin && <p className={errorClass}>{errors.pin[0]}</p>}
+                    </div>
+                  )}
+
+                </div>
+
+                {/* Submit — not shown in read-only mode */}
+                {!isReadOnly && (
+                  <div className="flex items-center justify-end gap-3">
+                    {successLabel && (
+                      <span className="text-sm text-green-700 font-medium">{successLabel}</span>
+                    )}
+                    <button
+                      type="submit"
+                      disabled={submitting || !!successLabel}
+                      className="px-8 py-2.5 text-sm font-bold text-white rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
+                      style={{ backgroundColor: '#409645' }}
+                    >
+                      {submitting ? 'Saving…' : isCreateMode ? 'CREATE' : 'UPDATE'}
+                    </button>
                   </div>
                 )}
-              </div>
-            )}
+              </form>
 
-          </div>
-        )}
+              {/* Restore — read-only mode only */}
+              {isReadOnly && (
+                <div className="flex justify-end mt-4">
+                  <button
+                    type="button"
+                    onClick={handleRestore}
+                    disabled={submitting}
+                    className="px-8 py-2.5 text-sm font-bold text-white rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
+                    style={{ backgroundColor: '#409645' }}
+                  >
+                    {submitting ? 'Restoring…' : 'Restore User'}
+                  </button>
+                </div>
+              )}
 
+              {/* Account Actions — edit mode, not read-only */}
+              {isEditMode && editingUser && !isReadOnly && (
+                <div className="mt-6 pt-6 border-t border-gray-100">
+
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">
+                    Account Actions
+                  </p>
+
+                  <div className="space-y-4">
+
+                    {/* Reset Password */}
+                    <div>
+                      {!resetPasswordOpen ? (
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => { setResetPasswordOpen(true); setResetPasswordError(''); }}
+                            className="text-sm font-medium px-4 py-2 border border-[#409645] text-[#409645] rounded-lg hover:bg-green-50 transition-colors"
+                          >
+                            Reset Password
+                          </button>
+                          {resetPasswordSuccess && (
+                            <span className="text-sm text-green-700">{resetPasswordSuccess}</span>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                          <label className={labelClass}>New Password</label>
+                          <input type="password" value={resetPasswordValue} onChange={e => setResetPasswordValue(e.target.value)} className={fieldClass} autoComplete="new-password" minLength={8} />
+                          {resetPasswordError && <p className={errorClass}>{resetPasswordError}</p>}
+                          <div className="flex gap-2 mt-3">
+                            <button type="button" onClick={handleResetPassword} className="px-6 py-2 text-sm font-bold text-white rounded-lg" style={{ backgroundColor: '#409645' }}>Confirm</button>
+                            <button type="button" onClick={() => { setResetPasswordOpen(false); setResetPasswordValue(''); setResetPasswordError(''); }} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">Cancel</button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Reset PIN */}
+                    <div>
+                      {!resetPinOpen ? (
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => { setResetPinOpen(true); setResetPinError(''); }}
+                            className="text-sm font-medium px-4 py-2 border border-[#409645] text-[#409645] rounded-lg hover:bg-green-50 transition-colors"
+                          >
+                            Reset PIN
+                          </button>
+                          {resetPinSuccess && (
+                            <span className="text-sm text-green-700">{resetPinSuccess}</span>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                          <label className={labelClass}>New PIN (6 digits)</label>
+                          <input type="text" inputMode="numeric" maxLength={6} value={resetPinValue} onChange={e => setResetPinValue(e.target.value)} className={fieldClass} placeholder="6 digits" />
+                          {resetPinError && <p className={errorClass}>{resetPinError}</p>}
+                          <div className="flex gap-2 mt-3">
+                            <button type="button" onClick={handleResetPin} className="px-6 py-2 text-sm font-bold text-white rounded-lg" style={{ backgroundColor: '#409645' }}>Confirm</button>
+                            <button type="button" onClick={() => { setResetPinOpen(false); setResetPinValue(''); setResetPinError(''); }} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">Cancel</button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Delete — hidden when editing self */}
+                    {!isSelf && (
+                      <div>
+                        {!deleteConfirmOpen ? (
+                          <button
+                            type="button"
+                            onClick={() => setDeleteConfirmOpen(true)}
+                            className="px-4 py-2 border border-red-300 text-red-600 rounded-lg text-sm hover:bg-red-50 transition-colors"
+                          >
+                            Delete User
+                          </button>
+                        ) : (
+                          <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                            <p className="text-sm font-semibold text-red-900 mb-2">Delete {editingUser.name}?</p>
+                            <p className="text-sm text-red-800 mb-3">
+                              This account will be deactivated. Their past transaction records will remain intact, but they will no longer be able to log in.
+                            </p>
+                            <div className="flex gap-2">
+                              <button type="button" onClick={handleDelete} disabled={submitting} className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg text-sm font-bold disabled:opacity-60">
+                                {submitting ? 'Deleting…' : 'Delete'}
+                              </button>
+                              <button type="button" onClick={() => setDeleteConfirmOpen(false)} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+        </div>
       </div>
     </>
   );
