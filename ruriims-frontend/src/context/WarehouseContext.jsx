@@ -44,8 +44,11 @@ export function WarehouseProvider({ children }) {
         twhRes.data.temporary_warehouses ?? [],
       );
       if (user.role === 'manager') {
-        const assigned = list.find((w) => !w.isTemporary && w.id === user.warehouse_id);
-        const managerList = assigned ? [assigned] : list.slice(0, 1);
+        const permanent = list.find((w) => !w.isTemporary && w.id === user.warehouse_id)
+          ?? list.find((w) => !w.isTemporary)
+          ?? null;
+        const twhs = list.filter((w) => w.isTemporary);
+        const managerList = permanent ? [permanent, ...twhs] : twhs;
         setWarehouses(managerList);
         setActiveWarehouse(managerList[0] ?? null);
       } else {
@@ -68,10 +71,23 @@ export function WarehouseProvider({ children }) {
         twhRes.data.temporary_warehouses ?? [],
       );
       if (user?.role === 'manager') {
-        const assigned = list.find((w) => !w.isTemporary && w.id === user.warehouse_id);
-        const managerList = assigned ? [assigned] : list.slice(0, 1);
+        const permanent = list.find((w) => !w.isTemporary && w.id === user.warehouse_id)
+          ?? list.find((w) => !w.isTemporary)
+          ?? null;
+        const twhs = list.filter((w) => w.isTemporary);
+        const managerList = permanent ? [permanent, ...twhs] : twhs;
         setWarehouses(managerList);
-        setActiveWarehouse(managerList[0] ?? null);
+        if (selectWarehouseId !== null) {
+          const target = managerList.find((w) => w.id === selectWarehouseId && w.isTemporary);
+          setActiveWarehouse(target ?? (managerList[0] ?? null));
+        } else {
+          setActiveWarehouse((prev) => {
+            const match = managerList.find(
+              (w) => w.id === prev?.id && w.isTemporary === prev?.isTemporary,
+            );
+            return match ?? (managerList[0] ?? null);
+          });
+        }
       } else {
         setWarehouses(list);
         if (selectWarehouseId !== null) {
