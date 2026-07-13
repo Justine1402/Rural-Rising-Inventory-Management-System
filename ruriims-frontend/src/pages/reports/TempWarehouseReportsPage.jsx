@@ -6,6 +6,8 @@ import { formatDate } from '../../utils/formatDate';
 import Navbar from '../../components/layout/Navbar';
 import ReportsFilterBar from '../../components/shared/ReportsFilterBar';
 import StatusBadge from '../../components/ui/StatusBadge';
+import Pagination, { FillerRows } from '../../components/ui/Pagination';
+import { usePagination, REPORTS_PAGE_SIZE } from '../../utils/usePagination';
 import { useUI } from '../../context/UIContext';
 import { useWarehouse } from '../../context/WarehouseContext';
 
@@ -42,15 +44,22 @@ export default function TempWarehouseReportsPage() {
       || r.transaction_code?.toLowerCase().includes(search.toLowerCase())
       || r.name?.toLowerCase().includes(search.toLowerCase()));
 
-  const allVisibleIds = filtered.map(r => r.id);
-  const allChecked = allVisibleIds.length > 0 && allVisibleIds.every(id => selectedIds.has(id));
+  const { page, setPage, totalPages, pageItems, fillerCount } = usePagination(filtered, {
+    pageSize: REPORTS_PAGE_SIZE,
+    resetKey: `${dateFrom}-${dateTo}-${search}`,
+  });
 
+  const pageIds = pageItems.map(r => r.id);
+  const allChecked = pageIds.length > 0 && pageIds.every(id => selectedIds.has(id));
+
+  // Header "select all" scopes to the current page; ticks on other pages are preserved.
   const toggleAll = () => {
-    if (allChecked) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(allVisibleIds));
-    }
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (allChecked) pageIds.forEach(id => next.delete(id));
+      else pageIds.forEach(id => next.add(id));
+      return next;
+    });
   };
 
   const toggleOne = (id) => {
@@ -154,7 +163,7 @@ export default function TempWarehouseReportsPage() {
               {!loading && !error && filtered.length === 0 && (
                 <tr><td colSpan={10} className="px-5 py-6 text-center text-gray-400">No temporary warehouses yet.</td></tr>
               )}
-              {!loading && !error && filtered.map((twh) => (
+              {!loading && !error && pageItems.map((twh) => (
                 <tr
                   key={twh.id}
                   onClick={() => setTemporaryWarehouseDetailOverlayTwhId(twh.id)}
@@ -181,8 +190,11 @@ export default function TempWarehouseReportsPage() {
                   <td className="px-5 py-3"><StatusBadge status={statusLabel(twh.status)} /></td>
                 </tr>
               ))}
+              <FillerRows count={fillerCount} colSpan={10} lines={1} />
             </tbody>
           </table>
+
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </div>
       </main>
     </div>

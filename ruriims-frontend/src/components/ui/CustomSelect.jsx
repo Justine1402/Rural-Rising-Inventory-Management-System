@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from 'react';
  *   Include { value: '', label: 'Placeholder text' } as first item for a placeholder option.
  * compact: true → smaller padding (px-3 py-1.5 text-xs) for inline/table use.
  */
-export default function CustomSelect({ value, onChange, options, disabled, compact }) {
+export default function CustomSelect({ value, onChange, options, disabled, compact, borderColor }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
   const triggerRef = useRef(null);
@@ -62,6 +62,7 @@ export default function CustomSelect({ value, onChange, options, disabled, compa
         type="button"
         disabled={disabled}
         onClick={handleOpen}
+        style={borderColor ? { borderColor } : undefined}
         className={`w-full border border-gray-300 rounded-lg ${sizeCls} text-left flex items-center justify-between bg-white focus:outline-none transition disabled:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60`}
       >
         <span className={isPlaceholder ? 'text-gray-400' : 'text-gray-800'}>

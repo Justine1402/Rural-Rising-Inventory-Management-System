@@ -134,7 +134,8 @@ ruriims-frontend/
     │   │   └── ReportsFilterBar.jsx         ← Shared report-type/warehouse/date-range/search filter bar + PDF export button (all reports pages); props: warehouses, currentType, onTypeChange, warehouseId, onWarehouseChange, dateFrom, onDateFromChange, dateTo, onDateToChange, search, onSearchChange, showPdfButton, onExportPdf, exportLabel (default 'Export as PDF'); warehouse dropdown hidden for non-admin users; button renders {exportLabel} to support dynamic "Export Selected (N)" label
     │   │
     │   └── ui/
-    │       └── StatusBadge.jsx          ← Colored pill badge for all statuses
+    │       ├── StatusBadge.jsx          ← Colored pill badge for all statuses
+    │       └── CustomSelect.jsx         ← Portal-based dropdown (createPortal to document.body); avoids option panel clipping inside overflow-y:auto overlays; onChange({ target: { value } }) drop-in replaces native <select>; compact prop for table/inline use; used by CreateProductPage, ReceiveOrderFormPage, TransferRequestFormPage, IssueProductFormPage, CloseTemporaryWarehousePage, UserFormPage
     │
     ├── pages/
     │   ├── auth/
@@ -354,14 +355,18 @@ non-null (i.e., after auth is confirmed). The `useEffect` depends on `[user]` �
 `[]` — so it never fires before the Sanctum session is established, and it clears the
 warehouse list on logout. Temporary warehouses are appended dynamically when active.
 
-**Role-based initialization (Step 13.75):**
+**Role-based initialization:**
 - **Admin:** `warehouses` contains all permanent + active TWH entries; `activeWarehouse`
   defaults to `null` on login, representing "All Warehouses". `refreshWarehouses()` preserves
   `null` if `prev === null`, falls back to `null` (not `list[0]`) if the previously-selected
   warehouse disappears.
-- **Manager:** `warehouses` is filtered to a single-entry list containing only the manager's
-  assigned permanent warehouse (matched by `user.warehouse_id`; fallback to `list[0]` if not
-  found); `activeWarehouse` is set to that warehouse. Manager sees no tab switcher.
+- **Manager:** `warehouses` is built as `[permanent, ...twhs]` — the manager's assigned
+  permanent warehouse plus all currently active temporary warehouses. If the permanent warehouse
+  is not found by `user.warehouse_id`, falls back to the first non-temporary warehouse, then to
+  TWH-only list. `activeWarehouse` is set to the first entry on login. `refreshWarehouses()`
+  preserves the active warehouse by `id + isTemporary` pair (instead of always defaulting to
+  `list[0]`). When a manager creates a TWH, `refreshWarehouses(warehouse_id)` auto-selects the
+  new TWH tab. `WarehouseTabs` renders when `warehouses.length > 1` (manager + active TWH).
 
 ---
 
@@ -372,7 +377,7 @@ warehouse list on logout. Temporary warehouses are appended dynamically when act
 Persistent top bar on every protected page. Reads from `AuthContext` and
 `WarehouseContext` via `useContext` — no props needed.
 
-**Left:** "RURAL RISING" brand text.
+**Left:** "RURAL RISING" brand text — rendered as a `<button>` with `handleLogoReset` click handler. Admin click: sets `activeWarehouse` to `null` (All Warehouses) and navigates to `/`. Manager click: sets `activeWarehouse` to `warehouses[0]` (their permanent warehouse) and navigates to `/`. Provides a reliable one-click escape from any TWH or reports view.
 
 **Center-left action buttons:**
 
@@ -433,8 +438,7 @@ Mandaluyong Warehouse | [Active Temporary Warehouse name, if any]
 `activeWarehouse === null`. Specific warehouse tabs call `setActiveWarehouse(warehouse)`;
 highlighted when `activeWarehouse?.id === warehouse.id`.
 
-**Manager account:** Returns `null` immediately — no tabs rendered. Manager's
-`activeWarehouse` is always set to their assigned warehouse by `WarehouseContext`.
+**Manager account:** Returns `null` when `warehouses.length <= 1` — no tabs rendered when the manager has only their single permanent warehouse. When a manager has an active Temporary Warehouse open (e.g., they created or are visiting one), `warehouses` contains `[permanent, ...twhs]` and the tab switcher renders, allowing the manager to switch between their permanent warehouse and the active TWH. The "All Warehouses" tab is always admin-only.
 
 ---
 
@@ -470,9 +474,12 @@ Used by: `CreateProductPage`, `ReceiveOrderFormPage` (Stage 1 and Stage 2),
 
 ### `AddProductsModal.jsx`
 
-Master product picker. Shows all master SKU products in the system. Columns:
-Product Code | Product Name | Unit | Category. Multiple rows can be selected
-simultaneously (highlighted green). SELECT button confirms all selections at once.
+Master product picker. Columns: Product Code | Product Name | Unit | Category. Multiple rows
+can be selected simultaneously (highlighted green). SELECT button confirms all selections at once.
+
+**Search bar** (above table): filters displayed rows by product name or SKU code (case-insensitive). Cleared when modal closes.
+
+**`warehouseId` prop (optional):** when provided, passes `?has_stock_in_warehouse={warehouseId}` to `GET /api/products`, limiting results to products that have at least one active batch at that warehouse. `IssueProductFormPage` passes `effectiveWarehouseId`; `TransferRequestFormPage` passes `sourceWarehouseId`.
 
 After SELECT closes the modal, selected products appear in the calling form's
 product table with their Stock-In-Use Code column **blank**. The user then clicks
@@ -480,9 +487,10 @@ each product's Stock-In-Use Code cell to open `StockInUseModal` for that row.
 
 Props:
 ```js
-isOpen      boolean
-onSelect    function   // receives [{ productCode, productName, unit, category }]
-onClose     function
+isOpen       boolean
+onSelect     function   // receives [{ productCode, productName, unit, category }]
+onClose      function
+warehouseId  number | string | undefined   // optional; filters to products with stock at this warehouse
 ```
 
 Used by: `ReceiveOrderFormPage`, `TransferRequestFormPage`, `IssueProductFormPage`
@@ -498,6 +506,8 @@ product row, called individually after `AddProductsModal` closes.
 
 Title format: "Stock-In-Use: SKU-001" (where SKU-001 is the selected product's SKU)
 Columns: Code | Harvest Date | Quantity | Category
+
+**Expired batch highlighting:** Batch rows with an expired shelf life (harvest_date + shelf_life ≤ today) have their Code and Harvest Date cells rendered in red (`#DC2626`). `shelf_life` is now returned by `GET /api/stock-in-use` alongside `warehouse_total` and `batches`.
 
 Props:
 ```js
@@ -579,9 +589,11 @@ onClose  function
 ### `LoginPage` (proto p.3-4, SRS §3.1.1)
 
 Centered card titled "Rural Rising IMS". Fields: Email (placeholder: "Enter your
-email"), Password (show/hide toggle, placeholder: "Enter your password"), Remember me
-checkbox, Forgot password? link. Button: "Sign in" (green, full-width). Rural
-Rising PH logo at bottom of the card.
+email"), Password (show/hide toggle, placeholder: "Enter your password"). Button:
+"Sign in" (green, full-width). Rural Rising PH logo (`/ruriicon.png`) at bottom of
+the card.
+
+> **Note:** "Remember me" checkbox and "Forgot password?" link have been removed. The checkbox was local-only state with no persistence effect. The forgot-password link had no backend endpoint.
 
 Flow: `getCsrfCookie()` → `POST /api/login` → set user in `AuthContext` → navigate to `/`
 
@@ -733,6 +745,10 @@ The overlay shows product master data (Name, Category, Unit, Shelf Life) and a t
 of active batches (Stock-In-Use Code | Warehouse | Quantity | Harvest Date). The backend
 scopes batches to `user.warehouse_id` for managers; admins see batches across all warehouses.
 
+**Search bar:** A search input is rendered in a dark green toolbar row (`#1A381E` background) above the table header. Filters `displayedProducts` by product name (case-insensitive, client-side). Includes a ✕ clear button. `searchTerm` state automatically clears when `activeWarehouse` changes.
+
+**FIFO/FEFO sort fix:** Both FIFO and FEFO modes now use `min_harvest_date_per_warehouse` (the MIN harvest date per product per warehouse, returned by `ProductController@index`) rather than `harvest_date_per_warehouse` (MAX). This ensures oldest-batch-first ordering is correct. LIFO continues to use `harvest_date_per_warehouse` (MAX = newest batch).
+
 ---
 
 The dashboard renders one of three table branches based on `activeWarehouse`:
@@ -773,9 +789,9 @@ Name | [one column per permanent warehouse] | Total | Harvest Date | Status
 Name | [one column per permanent warehouse] | Total | Days Until Expiry | Status
 
 The column before Status changes header based on sort mode. Sorting behavior:
-- **FIFO** — ascending harvest date; sort key = oldest MAX-harvest-date across in-stock warehouses (computed frontend-side from `harvest_date_per_warehouse`); Harvest Date cell shows this date with a small green warehouse code label beneath it
+- **FIFO** — ascending harvest date; sort key = oldest MIN-harvest-date across in-stock warehouses (computed frontend-side from `min_harvest_date_per_warehouse`); Harvest Date cell shows this date with a small green warehouse code label beneath it
 - **FEFO** — ascending days before expiration; same sort key as FIFO but converted to days; can be negative for expired stock
-- **LIFO** — descending harvest date; sort key = newest MAX-harvest-date across in-stock warehouses; Harvest Date cell shows this date with a small green warehouse code label
+- **LIFO** — descending harvest date; sort key = newest MAX-harvest-date across in-stock warehouses (from `harvest_date_per_warehouse`); Harvest Date cell shows this date with a small green warehouse code label
 
 `All Products` dropdown filters rows by category. Table is read-only. Warehouse
 columns are driven by `permanentWarehouses` from `WarehouseContext` (filtered to
@@ -792,7 +808,7 @@ the dashboard shows a simplified single-warehouse table:
 
 - **Quantity:** `warehouse_stock[activeWarehouse.id]` formatted as `{qty} {unit}`;
   shows `"0 kg"` (or relevant unit) when zero — never blank.
-- **Harvest Date:** `harvest_date_per_warehouse[activeWarehouse.id] || '—'` — this is `MAX(harvest_date)` for that warehouse from `ProductController@index`; most recent batch date, not oldest
+- **Harvest Date:** Mode-dependent. **FIFO/FEFO mode:** uses `min_harvest_date_per_warehouse[activeWarehouse.id]` — the MIN (oldest) harvest date among active batches at that warehouse. **LIFO mode:** uses `harvest_date_per_warehouse[activeWarehouse.id]` — the MAX (most recent) harvest date. Both are returned by `ProductController@index`. Shows `'—'` when qty is 0.
 - **Status:** `"In Stock"` (green) when `qty > 0`; `"Out of Stock"` (red) when `qty === 0`.
 
 Empty state: "No products in stock at this warehouse." (when `products.length === 0`).
@@ -1072,13 +1088,15 @@ Header: RETURN button + "Issue Products" title
 Auto-filled (read-only):
 - Issued By / Requested By: logged-in manager's name
 - Date Requested: today's date
-- Warehouse: logged-in manager's current warehouse
+- Warehouse: logged-in manager's current warehouse; OR a `CustomSelect` dropdown for **admins on the "All Warehouses" view** (`activeWarehouse === null`) — selecting a warehouse clears existing product rows. Admins on a specific warehouse tab or managers see a read-only label.
 
 User-filled:
 - Issue Type (dropdown): Sale | Internal Use
 
+COMPLETE button disabled when: no items added, any item is missing `quantity_issued` or `stock_in_use_id` (`hasEmptyQty`), any row has a quantity error (`hasRowErrors`), loading, or after success.
+
 Product Details section — **two-step flow (same as Transfer):**
-1. "Add Product" button → `AddProductsModal` opens (select one or more master SKUs)
+1. "Add Product" button → `AddProductsModal` opens (passes `effectiveWarehouseId` as `warehouseId` prop to filter to products with stock at the selected warehouse)
 2. SELECT closes modal → selected products appear in product table with
    Stock-In-Use Code column blank
 3. User clicks the Stock-In-Use Code cell for a product row → `StockInUseModal`
@@ -1342,8 +1360,9 @@ All rows are clickable (`hover:bg-blue-50 cursor-pointer`). Row click behavior b
 - **Issue Product** → opens `IssueProductAuditPage` inline overlay
 - **Inventory Reconciliation** → opens `ReconciliationReviewPage` inline overlay
 - **Temporary Warehouse** → calls `setTemporaryWarehouseDetailOverlayTwhId(row.id)` via UIContext (same as `TempWarehouseReportsPage`)
+- **Create Product** → opens `ProductDetailInline` overlay (fetches `GET /api/products/{id}`, renders Name/Unit/Category/Shelf Life; defined inline inside `ReportsHistoryPage.jsx`)
 
-`ReportController@allReports()` now includes `id` in each normalized row — required so row clicks can identify the record to open.
+`ReportController@allReports()` includes `id` in every normalized row, plus a **Create Product** sub-query: queries `Product` model, sets `transaction_type = 'Create Product'`, `warehouse = '—'`, `status = 'Active'`. Transfer Request filter now uses `OR destination_warehouse_id` so both source and destination managers see their TRFs. Temporary Warehouse filter scopes by creator's warehouse_id.
 
 ---
 

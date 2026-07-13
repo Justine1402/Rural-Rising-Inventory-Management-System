@@ -1393,6 +1393,162 @@ All create-mode form overlays received a visual redesign to match the audit page
 
 ---
 
+### Post-Deployment Bug Fixes & UI/UX Improvements — Part 1 — 2026-06-07/08
+
+#### CustomSelect — New Portal-Based Dropdown Component
+
+- `src/components/ui/CustomSelect.jsx` (new) — drop-in replacement for native `<select>` that renders the option panel via `createPortal` to `document.body`. Avoids dropdown clipping inside scrollable overlay panels (the root cause of invisible options when native `<select>` sits inside `overflow-y: auto` containers).
+- Props: `value`, `onChange({ target: { value } })` (compatible with all existing handlers), `options: [{ value, label, disabled? }]`, `disabled`, `compact` (smaller padding for inline/table use).
+- Closes on outside click and on `window.scroll` (handles both click-away and scroll cases).
+- Adopted across: `CreateProductPage` (Unit dropdown), `ReceiveOrderFormPage` (Warehouse selector), `TransferRequestFormPage` (source + destination dropdowns), `IssueProductFormPage` (Warehouse dropdown), `CloseTemporaryWarehousePage` (Return To dropdown), `UserFormPage` (Role + Warehouse dropdowns).
+
+#### IssueProductFormPage — Admin Warehouse Selection
+
+- **Root cause:** When admin was on "All Warehouses" tab (`activeWarehouse = null`), the Issue Product form had no way to specify a warehouse — the `warehouse_id` payload was empty, causing a backend validation error.
+- **Fix:** Added `selectedWarehouseId` state and `effectiveWarehouseId` computed value (`selectedWarehouseId` when admin on All Warehouses; `activeWarehouse.id` otherwise). Admin on "All Warehouses" sees a `CustomSelect` warehouse dropdown; admin on a specific tab or manager always sees a read-only label.
+- `setItems([])` called on warehouse change to clear stale product rows.
+- `hasEmptyQty` guard added: submit disabled if `items.length === 0` or any item is missing `quantity_issued` or `stock_in_use_id`.
+
+#### ReportsFilterBar — Cosmetic/Compact Update
+
+- Minor layout and styling updates applied during the general dropdown replacement pass.
+
+#### UserFormPage — Sticky Dark Green Header + CustomSelect
+
+- Header redesigned to match all other overlay forms: dark green sticky `#1A381E` header with `← RETURN` and form title.
+- `CustomSelect` now used for Role dropdown and Warehouse dropdown.
+- Section label "User Details" added using `<p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">` matching audit page label style.
+- Loading state shown while edit mode fetches user data.
+
+---
+
+### Post-Deployment Bug Fixes & UI/UX Improvements — Part 2 — 2026-06-08
+
+#### Assets — Favicon + Page Title + Logo
+
+- `ruriims-frontend/public/ruriicon.png` — Rural Rising Philippines official logo added.
+- `ruriims-frontend/public/apple-touch-icon.png`, `favicon-16x16.png`, `favicon-32x32.png` — properly sized favicons added.
+- `ruriims-frontend/index.html` — `<title>` updated to "Rural Rising IMS"; `<link rel="icon">` wired to new favicons.
+- `LoginPage.jsx` — inline SVG shield logo replaced with `<img src="/ruriicon.png" alt="Rural Rising Philippines" className="h-32 w-auto" />`.
+
+#### LoginPage — Removed UI Elements
+
+- "Remember me" checkbox removed (state was local-only, not persisted — no functional effect).
+- "Forgot password?" link removed (no backend endpoint was ever built for password reset via email).
+
+#### Navbar — Logo as Navigation Reset Button
+
+- `"RURAL RISING"` brand text converted from `<span>` to a `<button>` with `handleLogoReset` click handler.
+- Admin: sets `activeWarehouse` to `null` (All Warehouses) then navigates to `/`.
+- Manager: sets `activeWarehouse` to `warehouses[0]` (their permanent warehouse) then navigates to `/`.
+- This provides a reliable one-click escape from TWH views and report pages back to the main inventory dashboard.
+
+#### ReceiveOrderFormPage — Accomplish Validation + Error Messages
+
+- Accomplish mode pre-submit check: blocks PIN modal if any item has `quantity_arrived === ''`; shows `"Enter a Quantity Arrived for all items. Type 0 if none arrived."` via existing `error` state.
+- `quantity_arrived` initial value from API: changed from `String(parseFloat(...))` to empty string (`''`) when `parseFloat === 0` so blank cells render blank (not "0") until the user consciously types.
+- `hasInvalidCreateFields` guard added for create mode: PIN modal blocked if warehouse, supplier name, delivery fee, date ordered, or any product row (qty ordered, product cost, harvest date) is incomplete.
+
+#### TransferRequestFormPage — Accomplish Validation
+
+- Accomplish mode pre-submit check: blocks PIN modal if any item has `quantity_received === ''`; shows `"Enter a Quantity Received for all items. Type 0 if none received."`.
+- `hasInvalidCreateFields` guard added for create mode: blocks PIN modal if source/destination warehouse not selected, no items added, or any item is missing batch code or quantity.
+- `CustomSelect` adopted for source and destination warehouse dropdowns (fixes clipping inside overlay).
+
+#### IssueProductFormPage — Input Handling Fix
+
+- `quantity_issued` serialization aligned with RO/TRF: blank on new rows; `parseFloat(...)` only at submit time.
+
+---
+
+### Post-Deployment Bug Fixes & UI/UX Improvements — Part 3 — 2026-06-08
+
+#### Reports — All Reports Now Includes Create Product Transactions
+
+- **Root cause:** `ReportController@allReports()` did not query the `products` table. Product creation events were missing from the All Reports page.
+- **Fix:** Added a `$pQuery = Product::with('creator')` sub-query in `allReports()` with `transaction_type = 'Create Product'`, `warehouse = '—'`, `status = 'Active'`, `date_accomplished = created_at`. Date filters (`date_from`/`date_to`) applied on `created_at`.
+- Transfer Request filter in `allReports()` fixed: now uses `OR (destination_warehouse_id = warehouseId)` in addition to `source_warehouse_id`, so both source and destination managers see their TRFs in All Reports.
+- Temporary Warehouse filter in `allReports()` added: scopes by creator's `warehouse_id` (via `whereHas('creator')`).
+
+#### ReportsHistoryPage — Create Product Row Click Opens ProductDetailInline
+
+- `ProductDetailInline` component added inline in `ReportsHistoryPage.jsx` — fetches `GET /api/products/{id}` and renders Name, Unit, Category, Shelf Life in a 2-column grid.
+- `selectedProductId` state added. `handleRowClick` branches on `transaction_type === 'Create Product'` to set `selectedProductId` (opens `ProductDetailInline` overlay) instead of `selectedId` (which expects audit pages).
+- `ProductDetailInline` overlay uses the same dark green sticky header + backdrop pattern as all other overlays on reports pages.
+
+#### QASeeder (New)
+
+- `ruriims-backend/database/seeders/QASeeder.php` — new QA test data seeder. Creates 20+ products across all 5 categories (Fruits, Vegetables, Poultry, Herbs & Spices, Processed Goods) with `StockInUse` batches across the 3 permanent warehouses using varied harvest dates (including some expired batches for testing). Run with `php artisan db:seed --class=QASeeder`.
+
+---
+
+### Post-Deployment Bug Fixes & UI/UX Improvements — Part 4 — 2026-06-08/09
+
+#### Form Validation — Submit Button Disabled Until All Required Fields Are Filled
+
+Applied across 5 form pages — submit/action buttons (COMPLETE / CREATE / ACCOMPLISH / CLOSE) are now disabled until required fields are filled:
+
+- **`CreateProductPage`** — CREATE disabled when `name`, `category`, `unit`, or `shelf_life` is empty.
+- **`ReceiveOrderFormPage`** — CREATE disabled when warehouse, supplier name, delivery fee, date ordered, or any product row field (qty ordered, product cost, harvest date) is missing (`hasInvalidCreateFields`). ACCOMPLISH disabled when any `quantity_arrived` is blank (`''`).
+- **`TransferRequestFormPage`** — CREATE disabled when source/destination warehouse, product rows, or batch codes/quantities are missing (`hasInvalidCreateFields`). ACCOMPLISH disabled when any `quantity_received` is blank.
+- **`IssueProductFormPage`** — COMPLETE disabled when no items, or any item is missing `quantity_issued` or `stock_in_use_id` (`hasEmptyQty`).
+- **`TemporaryWarehouseFormPage`** — CLOSE disabled when `canCreate` is false (existing guard extended to also disable the button, not just show inline error).
+
+---
+
+### Post-Deployment Bug Fixes & UI/UX Improvements — Part 5 — 2026-06-08/09
+
+#### DashboardPage — Search Bar + FIFO/FEFO Sort Fix
+
+- **Search bar added** to the inventory table. Rendered in a dark green toolbar row above the table header (same `#1A381E` background). Filters `displayedProducts` by `product.name` (case-insensitive). Includes a clear (✕) button when a term is entered. `searchTerm` state clears automatically when `activeWarehouse` changes.
+- **FIFO/FEFO sort fix:** The previous sort used `getOldestActiveHarvestDate()` which relied on `harvest_date_per_warehouse` (MAX per warehouse). This caused FIFO/FEFO to sort by the newest batch date at a warehouse rather than the oldest.
+  - New `getEarliestActiveHarvestDate()` helper reads `min_harvest_date_per_warehouse` (the new MIN field from the API) to find the globally oldest active batch across all in-stock warehouses.
+  - New `getWarehouseCodeForMinDate()` helper matches the warehouse with the earliest date.
+  - Branch C (single warehouse FEFO): `getDaysUntilExpiry` now uses `min_harvest_date_per_warehouse[activeWarehouse.id]` instead of `harvest_date_per_warehouse[activeWarehouse.id]`.
+  - Branch C (single warehouse FIFO): Harvest Date cell now shows `min_harvest_date_per_warehouse[activeWarehouse.id]` (oldest batch date, not newest).
+  - LIFO sort and LIFO harvest date cell continue to use `harvest_date_per_warehouse` (MAX = newest batch).
+
+#### ProductController@index — New Fields + Filter
+
+- `earliestHarvestPerWarehouse` map added: `MIN(harvest_date)` grouped by `product_id + warehouse_id` among active batches (`quantity > 0`).
+- `min_harvest_date_per_warehouse` now returned in every product row (alongside existing `harvest_date_per_warehouse` which remains MAX).
+- New optional query param `?has_stock_in_warehouse={warehouse_id}`: filters the returned product list to only products that have at least one `StockInUse` row with `quantity > 0` at the given warehouse. Used by `AddProductsModal` to show only relevant products when a warehouse context is available.
+- `index()` now accepts `Request $request`.
+
+#### AddProductsModal — Search Bar + Stock Filter + Expired Batch Highlighting
+
+- **Search bar added** inside the modal (filters by product name or SKU code, case-insensitive). Clears when modal closes.
+- New `warehouseId` prop (optional): when provided, passes `?has_stock_in_warehouse={warehouseId}` to `GET /api/products` so only products with stock in the relevant warehouse are shown. `IssueProductFormPage` and `TransferRequestFormPage` pass `effectiveWarehouseId`/`sourceWarehouseId` respectively.
+- `isExpired(harvestDate, shelfLifeDays)` helper added. Expired product rows are visually distinguishable (highlighting implementation uses the `shelf_life` field from the API response — see StockInUseModal for details).
+
+#### StockInUseController@index — shelf_life Added to Response
+
+- `shelf_life` field now included in the response payload (`$product->shelf_life`). Needed by `StockInUseModal` for expired batch detection.
+
+#### StockInUseModal — Expired Batch Highlighting
+
+- `shelfLife` state added; populated from `res.data.shelf_life` on fetch.
+- `isExpired(harvestDate, shelfLifeDays)` helper added.
+- Expired batch rows: Code and Harvest Date cells rendered in red (`#DC2626`). Non-expired rows unchanged.
+- Provides visual warning to users before they select a batch past its shelf life.
+
+---
+
+### Post-Deployment Bug Fixes & UI/UX Improvements — Part 6 — 2026-06-09
+
+#### WarehouseContext — Manager Sees Active Temporary Warehouses
+
+- **Root cause:** After Step 13.75, `WarehouseContext.warehouses` for managers was filtered to a single-entry list (their permanent warehouse only). Managers could not see or switch to a Temporary Warehouse even if one had been created and assigned to their branch.
+- **Fix (initial login load):** Manager warehouse list now built as `[permanent, ...twhs]` where `twhs` = all active temporary warehouses from `/api/temporary-warehouses?status=active`. If the manager's assigned permanent warehouse is not found (edge case), the list contains only active TWH entries.
+- **Fix (refreshWarehouses):** Same `[permanent, ...twhs]` logic applied. `setActiveWarehouse` now preserves the previously-active warehouse by matching `id + isTemporary` pair rather than always defaulting to `list[0]`. `selectWarehouseId` for TWH auto-select after creation correctly targets the matching TWH entry.
+
+#### WarehouseTabs — Visible for Managers With Multiple Warehouses
+
+- **Root cause:** `WarehouseTabs` used `if (user?.role === 'manager') return null` unconditionally. When a manager had an active TWH in their list, no tab switcher appeared, making it impossible to navigate between their permanent warehouse and the TWH.
+- **Fix:** Guard changed to `if (!isAdmin && warehouses.length <= 1) return null`. Managers now see the tab switcher when they have more than one warehouse entry (e.g., permanent warehouse + active TWH). The "All Warehouses" tab is still admin-only.
+
+---
+
 ## Completion Tracker
 
 - [x] Step 13 — `UserManagementPage` + `UserController` — COMPLETE (see ✅ Step 13 COMPLETE above)
@@ -1415,6 +1571,12 @@ All create-mode form overlays received a visual redesign to match the audit page
 - [x] Fifth Polishing Session — Form overlay dark green sticky headers (all create forms), .date-input CSS class, field styling harmonization — COMPLETE
 - [x] Pre-Deployment Polish — IssueProductAuditPage section labels + table polish, TemporaryWarehouseDetailPage sticky dark green header — COMPLETE
 - [x] Bug Fix — TRF destination warehouse dropdown empty for managers — COMPLETE
+- [x] Post-Deployment Session 1 — CustomSelect component, IssueProductFormPage admin warehouse selection, UserFormPage UI redesign — COMPLETE
+- [x] Post-Deployment Session 2 — Favicon + logo assets, LoginPage cleanup, Navbar logo reset button, RO/TRF form validation, ISS input handling — COMPLETE
+- [x] Post-Deployment Session 3 — AllReports Create Product type, TRF/TWH filter fixes, ReportsHistoryPage ProductDetailInline, QASeeder — COMPLETE
+- [x] Post-Deployment Session 4 — Form submit button disabled-until-valid on 5 form pages — COMPLETE
+- [x] Post-Deployment Session 5 — DashboardPage search bar, FIFO/FEFO sort fix, ProductController min_harvest + has_stock_in_warehouse, AddProductsModal search + stock filter + expired highlighting, StockInUseModal expired batch highlighting, StockInUseController shelf_life — COMPLETE
+- [x] Post-Deployment Session 6 — WarehouseContext manager TWH visibility, WarehouseTabs visible for managers with multiple warehouses — COMPLETE
 
 ---
 

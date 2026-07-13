@@ -194,8 +194,8 @@ Rural Rising Inventory Management System/   ← project root
 │   │   │   └── axios.js                   ← axios client + getCsrfCookie()
 │   │   ├── components/
 │   │   │   ├── layout/
-│   │   │   │   ├── Navbar.jsx             ← two-row nav; UIContext for overlay buttons; UIContext + WarehouseContext + AuthContext
-│   │   │   │   └── WarehouseTabs.jsx      ← warehouse tab switcher; wired to WarehouseContext
+│   │   │   │   ├── Navbar.jsx             ← two-row nav; UIContext for overlay buttons; UIContext + WarehouseContext + AuthContext; "RURAL RISING" text is a reset button (admin→null/All Warehouses; manager→warehouses[0])
+│   │   │   │   └── WarehouseTabs.jsx      ← warehouse tab switcher; hidden when !isAdmin && warehouses.length <= 1 (managers see tabs only when an active TWH exists in their list)
 │   │   │   ├── modals/
 │   │   │   │   ├── ProfileModal.jsx       ← profile overlay (change password + change PIN)
 │   │   │   │   └── AvatarCropModal.jsx    ← interactive 280×280 canvas crop tool; drag-to-reposition + scroll/pinch-to-zoom; exports 400×400 JPEG via onConfirm
@@ -203,24 +203,25 @@ Rural Rising Inventory Management System/   ← project root
 │   │   │   │   └── ProductDetailOverlay.jsx ← product batch detail overlay; triggered by DashboardPage row click; reads productDetailOverlayProductId from UIContext; calls GET /api/products/{id}/batches with optional ?warehouse_id for admin (elseif branch in ProductController@batches()); expired batch codes highlighted red via isExpired() helper; manager-scoped by backend unconditionally
 │   │   │   ├── shared/
 │   │   │   │   ├── PinVerificationModal.jsx ← 6-digit PIN entry modal (z-[60])
-│   │   │   │   ├── AddProductsModal.jsx   ← multi-select master SKU picker (z-[70])
-│   │   │   │   ├── StockInUseModal.jsx    ← single-select batch picker (z-[70])
+│   │   │   │   ├── AddProductsModal.jsx   ← multi-select master SKU picker (z-[70]); search bar filters by name/SKU; optional warehouseId prop filters to products with stock at that warehouse (?has_stock_in_warehouse)
+│   │   │   │   ├── StockInUseModal.jsx    ← single-select batch picker (z-[70]); expired batches highlighted red via isExpired() helper; reads shelf_life from GET /stock-in-use response
 │   │   │   │   ├── CascadePreviewModal.jsx ← per-batch draw breakdown modal (z-[80]); mirrors planBatchCascade output
 │   │   │   │   └── ReportsFilterBar.jsx   ← shared filter bar (all reports pages); report-type, warehouse (admin-only), date-range, search, PDF export; exportLabel prop (default 'Export as PDF') enables dynamic "Export Selected (N)" label from report pages
 │   │   │   └── ui/
-│   │   │       └── StatusBadge.jsx        ← colored pill: green for In Stock/Accomplished/Complete/Active/Reviewed; amber for Pending Review; red for Out of Stock/Incomplete/Closed and fallback
+│   │   │       ├── StatusBadge.jsx        ← colored pill: green for In Stock/Accomplished/Complete/Active/Reviewed; amber for Pending Review; red for Out of Stock/Incomplete/Closed and fallback
+│   │   │       └── CustomSelect.jsx       ← portal-based dropdown (createPortal); avoids clipping in overflow-y:auto overlays; onChange({ target: { value } }) drop-in for native <select>; compact prop; used by 6 form pages
 │   │   ├── context/
 │   │   │   ├── AuthContext.jsx            ← user session state (user, login, logout)
-│   │   │   ├── WarehouseContext.jsx       ← active warehouse; fetches /api/warehouses on user change (auth-safe)
+│   │   │   ├── WarehouseContext.jsx       ← active warehouse; fetches /api/warehouses on user change (auth-safe); manager list includes active TWH entries ([permanent, ...twhs]); refreshWarehouses preserves active by id+isTemporary pair
 │   │   │   └── UIContext.jsx              ← overlay flags (createProduct/receiveOrder/transferRequest/issueProduct/temporaryWarehouse/reconciliation/userForm); ID-carrying overlay state (closeTemporaryWarehouseOverlayTwhId, temporaryWarehouseDetailOverlayTwhId, userDetailOverlayUserId, productDetailOverlayProductId — null=closed, number=open); productRefreshKey, receiveOrderRefreshKey, transferRequestRefreshKey, reconciliationRefreshKey, userRefreshKey + matching refresh() functions
 │   │   ├── pages/
 │   │   │   ├── admin/
 │   │   │   │   ├── UserManagementPage.jsx ← admin-only; 7-column user list; client-side search; filter stubs; row click → userDetailOverlayUserId; + New User → userFormOpen
-│   │   │   │   └── UserFormPage.jsx       ← dual-mode overlay (create + edit + read-only); self-guards on UIContext flags; Reset Password + Reset PIN inline sub-flows; Delete + inline confirm (hidden for self); Restore button in read-only mode
+│   │   │   │   └── UserFormPage.jsx       ← dual-mode overlay (create + edit + read-only); dark green sticky header; CustomSelect for Role + Warehouse; self-guards on UIContext flags; Reset Password + Reset PIN inline sub-flows; Delete + inline confirm (hidden for self); Restore button in read-only mode
 │   │   │   ├── auth/
-│   │   │   │   └── LoginPage.jsx          ← sign in form
+│   │   │   │   └── LoginPage.jsx          ← sign in form; uses /ruriicon.png logo; no Remember Me or Forgot Password
 │   │   │   ├── dashboard/
-│   │   │   │   └── DashboardPage.jsx      ← real-time inventory; stock from StockInUse per warehouse; re-fetches on location.key and productRefreshKey
+│   │   │   │   └── DashboardPage.jsx      ← real-time inventory; stock from StockInUse per warehouse; re-fetches on location.key and productRefreshKey; search bar above table (client-side name filter); FIFO/FEFO sort uses min_harvest_date_per_warehouse (MIN); LIFO uses harvest_date_per_warehouse (MAX)
 │   │   │   ├── products/
 │   │   │   │   └── CreateProductPage.jsx  ← overlay card; PIN-verified product creation; opened via UIContext
 │   │   │   ├── receiveOrder/
@@ -236,14 +237,14 @@ Rural Rising Inventory Management System/   ← project root
 │   │   │       ├── ReconciliationFormPage.jsx ← UIContext overlay (no route); create flow; auto-populates from expectedStock endpoint; three-state discrepancy encoding; same-manager PIN
 │   │   │       └── ReconciliationReviewPage.jsx ← overlay over ReconciliationListPage (/reconciliation/:id/review); backdrop + card with sticky dark-green header; read-only review + confirm; status-branched (pending_review shows CONFIRM + PIN modal; reviewed is fully read-only); post-confirm refreshes reconciliations + products, navigates to list after 1.5s
 │   │   │   ├── issueProduct/
-│   │   │   │   ├── IssueProductFormPage.jsx   ← UIContext overlay (no route); single-stage issue + StockInUse deduction; same-manager PIN
+│   │   │   │   ├── IssueProductFormPage.jsx   ← UIContext overlay (no route); single-stage issue + StockInUse deduction; same-manager PIN; admin on All Warehouses view gets CustomSelect warehouse dropdown (effectiveWarehouseId); hasEmptyQty + hasRowErrors disable COMPLETE
 │   │   │   │   └── IssueProductAuditPage.jsx  ← read-only audit overlay; /issue-products/:id/audit
 │   │   │   ├── temporaryWarehouse/
 │   │   │   │   ├── TemporaryWarehouseFormPage.jsx ← UIContext overlay (no route); creates TWH + warehouses row; same-manager PIN; calls refreshWarehouses(warehouse_id) to auto-select new tab
 │   │   │   │   ├── CloseTemporaryWarehousePage.jsx ← UIContext overlay (no route); reads id from closeTemporaryWarehouseOverlayTwhId; fetches remaining stock via stock-in-use API; per-row Return To dropdown; PIN-verified close; closes overlay on success
 │   │   │   │   └── TemporaryWarehouseDetailPage.jsx ← UIContext overlay (no route); reads id from temporaryWarehouseDetailOverlayTwhId; metadata block + three sub-tables with enriched columns; header includes "Export as PDF" button (exportDetailPdf type 'twh')
 │   │   │   └── reports/
-│   │   │       ├── ReportsHistoryPage.jsx          ← /reports; "All Reports" union view; row click → inline overlay by transaction_type (RO/TRF/ISS/RC) or UIContext (TWH)
+│   │   │       ├── ReportsHistoryPage.jsx          ← /reports; "All Reports" union view; row click → inline overlay by transaction_type (RO/TRF/ISS/RC/Create Product) or UIContext (TWH); ProductDetailInline component defined inline for Create Product rows
 │   │   │       ├── ProductReportsPage.jsx          ← /reports/products; row click → ProductDetailInline overlay
 │   │   │       ├── ReceiveOrderReportsPage.jsx     ← /reports/receive-orders; checkbox selectedIds + context-aware PDF export (detail via exportDetailPdf when rows selected, summary via exportTablePdf otherwise); dynamic exportLabel; row click → ReceiveOrderAuditPage overlay (with "Export as PDF" button in header)
 │   │   │       ├── TransferRequestReportsPage.jsx  ← /reports/transfer-requests; same checkbox + PDF pattern; type 'trf'; row click → TransferRequestAuditPage overlay
@@ -272,14 +273,15 @@ Rural Rising Inventory Management System/   ← project root
     │   │       ├── AuthController.php          ← login, logout, user, updateProfile (avatar upload + name), changePassword, changePin
     │   │       ├── UserController.php          ← index, store, show, update, destroy, restore, resetPassword, resetPin (admin-only; SoftDeletes; role-conditional warehouse_id validation)
     │   │       ├── WarehouseController.php     ← index (returns all warehouses including TWH; is_temporary serialized via model cast)
-    │   │       ├── ProductController.php       ← index (with warehouse_stock + harvest_date), store (PIN-verified), show, batches (active StockInUse per product; manager-scoped to own warehouse)
+    │   │       ├── ProductController.php       ← index (warehouse_stock + harvest_date_per_warehouse [MAX] + min_harvest_date_per_warehouse [MIN]; optional ?has_stock_in_warehouse filter returns only products with active stock at a warehouse), store (PIN-verified), show, batches (active StockInUse per product; manager-scoped)
     │   │       ├── PinController.php           ← verify (standalone PIN check endpoint)
-    │   │       ├── StockInUseController.php    ← index (batches by sku_code + warehouse_id, FEFO; includes id in response)
+    │   │       ├── StockInUseController.php    ← index (batches by sku_code + warehouse_id, FEFO; includes id + shelf_life in response)
     │   │       ├── ReceiveOrderController.php  ← index, store (per-warehouse RO code via trait), show, complete
     │   │       ├── TransferRequestController.php ← index, store (per-source-warehouse TRF code via trait), show, accomplish
     │   │       ├── IssueProductController.php  ← index, store (same-manager PIN + ISS code via trait + StockInUse decrement), show
     │   │       ├── TemporaryWarehouseController.php ← index (?status filter), store (same-manager PIN + inline TWH code gen + creates warehouses row + TWH row), show (products_transferred_in/issued/returned), close (same-manager PIN + lockForUpdate+refresh+re-check + per-batch deduction + dest StockInUse creation)
-    │   │       └── ReconciliationController.php    ← index (warehouse-scoped for managers; ?status filter; products_with_discrepancy count), expectedStock, store (same-manager PIN + RC code + one-per-day guard + manager-warehouse guard + snapshot items), show (403 guard for managers accessing other warehouses), confirm (self-auth PIN + self-exclusion + warehouse guard + lockForUpdate+refresh+re-check + FIFO deduction + RCB surplus batch creation)
+    │   │       ├── ReconciliationController.php    ← index (warehouse-scoped for managers; ?status filter; products_with_discrepancy count), expectedStock, store (same-manager PIN + RC code + one-per-day guard + manager-warehouse guard + snapshot items), show (403 guard for managers accessing other warehouses), confirm (self-auth PIN + self-exclusion + warehouse guard + lockForUpdate+refresh+re-check + FIFO deduction + RCB surplus batch creation)
+    │   │       └── ReportController.php            ← allReports (union of RO/TRF/ISS/RC sub-queries + Create Product sub-query with transaction_type='Create Product'; TRF sub-query OR's source_warehouse_id|destination_warehouse_id; TWH filter scopes by creator's warehouse_id via whereHas), products, receiveOrders, transferRequests, issueProducts, temporaryWarehouses, reconciliation, inventorySummary
     │   ├── Traits/
     │   │   ├── GeneratesTransactionCode.php    ← per-warehouse scoped code generator; used by RO, TRF, ISS controllers
     │   │   └── PlansBatchCascade.php           ← nearest-harvest-date batch cascade planner with FIFO tiebreak and fallback; used by TRF and ISS controllers
@@ -333,9 +335,10 @@ Rural Rising Inventory Management System/   ← project root
     │   │   ├── add_soft_deletes_to_users_table
     │   │   └── add_avatar_to_users_table
     │   └── seeders/
-    │       └── UserSeeder.php                 ← seeds 3 warehouses + 2 accounts:
-    │                                              admin@ruriims.com (role=admin, PIN=123456)
-    │                                              manager@ruriims.com (role=manager, PIN=123456)
+    │       ├── UserSeeder.php                 ← seeds 3 warehouses + 2 accounts:
+    │       │                                      admin@ruriims.com (role=admin, PIN=123456)
+    │       │                                      manager@ruriims.com (role=manager, PIN=123456)
+    │       └── QASeeder.php                   ← QA test data: 20+ products across all 5 categories + StockInUse batches spanning 3 warehouses; run with: php artisan db:seed --class=QASeeder
     ├── routes/
     │   └── api.php                            ← all API routes (see §5 above)
     ├── .env                                   ← environment config (gitignored)

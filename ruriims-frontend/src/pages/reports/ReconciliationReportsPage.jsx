@@ -6,6 +6,8 @@ import { formatDate } from '../../utils/formatDate';
 import Navbar from '../../components/layout/Navbar';
 import ReportsFilterBar from '../../components/shared/ReportsFilterBar';
 import StatusBadge from '../../components/ui/StatusBadge';
+import Pagination, { FillerRows } from '../../components/ui/Pagination';
+import { usePagination, REPORTS_PAGE_SIZE } from '../../utils/usePagination';
 import { useWarehouse } from '../../context/WarehouseContext';
 import ReconciliationReviewPage from '../reconciliation/ReconciliationReviewPage';
 
@@ -47,15 +49,22 @@ export default function ReconciliationReportsPage() {
     return () => { isCancelled = true; };
   }, [warehouseId, dateFrom, dateTo, search, location.key]);
 
-  const allVisibleIds = reconciliations.map(r => r.id);
-  const allChecked = allVisibleIds.length > 0 && allVisibleIds.every(id => selectedIds.has(id));
+  const { page, setPage, totalPages, pageItems, fillerCount } = usePagination(reconciliations, {
+    pageSize: REPORTS_PAGE_SIZE,
+    resetKey: `${warehouseId}-${dateFrom}-${dateTo}-${search}`,
+  });
 
+  const pageIds = pageItems.map(r => r.id);
+  const allChecked = pageIds.length > 0 && pageIds.every(id => selectedIds.has(id));
+
+  // Header "select all" scopes to the current page; ticks on other pages are preserved.
   const toggleAll = () => {
-    if (allChecked) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(allVisibleIds));
-    }
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (allChecked) pageIds.forEach(id => next.delete(id));
+      else pageIds.forEach(id => next.add(id));
+      return next;
+    });
   };
 
   const toggleOne = (id) => {
@@ -160,7 +169,7 @@ export default function ReconciliationReportsPage() {
                     <td colSpan={8} className="px-4 py-6 text-center text-gray-400">No reconciliation records found.</td>
                   </tr>
                 )}
-                {!loading && !error && reconciliations.map((row, idx) => (
+                {!loading && !error && pageItems.map((row, idx) => (
                   <tr
                     key={row.id}
                     onClick={() => setSelectedId(row.id)}
@@ -185,9 +194,12 @@ export default function ReconciliationReportsPage() {
                     <td className="px-4 py-3"><StatusBadge status={row.status} /></td>
                   </tr>
                 ))}
+                <FillerRows count={fillerCount} colSpan={8} lines={1} />
               </tbody>
             </table>
           </div>
+
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </div>
       </div>
 

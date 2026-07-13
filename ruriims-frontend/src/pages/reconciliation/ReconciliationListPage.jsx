@@ -4,8 +4,10 @@ import api from '../../api/axios';
 import Navbar from '../../components/layout/Navbar';
 import WarehouseTabs from '../../components/layout/WarehouseTabs';
 import StatusBadge from '../../components/ui/StatusBadge';
+import Pagination, { FillerRows } from '../../components/ui/Pagination';
 import { useUI } from '../../context/UIContext';
 import { useWarehouse } from '../../context/WarehouseContext';
+import { usePagination } from '../../utils/usePagination';
 
 const ChevronDown = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -59,6 +61,10 @@ export default function ReconciliationListPage() {
   const filteredReconciliations = statusFilter === 'all'
     ? reconciliations
     : reconciliations.filter((r) => r.status === statusFilter);
+
+  const { page, setPage, totalPages, pageItems, fillerCount } = usePagination(filteredReconciliations, {
+    resetKey: `${activeWarehouse?.id ?? 'all'}-${statusFilter}`,
+  });
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
@@ -142,7 +148,7 @@ export default function ReconciliationListPage() {
               {!loading && !error && filteredReconciliations.length === 0 && (
                 <tr><td colSpan={7} className="px-5 py-6 text-center text-gray-400">No reconciliations yet.</td></tr>
               )}
-              {!loading && !error && filteredReconciliations.map((rec) => {
+              {!loading && !error && pageItems.map((rec) => {
                 const selected = selectedId === rec.id;
                 return (
                   <tr
@@ -169,8 +175,11 @@ export default function ReconciliationListPage() {
                   </tr>
                 );
               })}
+              <FillerRows count={fillerCount} colSpan={7} lines={1} />
             </tbody>
           </table>
+
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
 
           <WarehouseTabs />
         </div>

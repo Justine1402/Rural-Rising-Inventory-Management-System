@@ -4,8 +4,10 @@ import api from '../../api/axios';
 import Navbar from '../../components/layout/Navbar';
 import ReportsFilterBar from '../../components/shared/ReportsFilterBar';
 import StatusBadge from '../../components/ui/StatusBadge';
+import Pagination, { FillerRows } from '../../components/ui/Pagination';
 import { useWarehouse } from '../../context/WarehouseContext';
 import { formatDate } from '../../utils/formatDate';
+import { usePagination, REPORTS_PAGE_SIZE } from '../../utils/usePagination';
 
 function ProductDetailInline({ productId }) {
   const [product, setProduct] = useState(null);
@@ -79,6 +81,11 @@ export default function ProductReportsPage() {
     return () => { isCancelled = true; };
   }, [warehouseId, dateFrom, dateTo, search, location.key]);
 
+  const { page, setPage, totalPages, pageItems, fillerCount } = usePagination(products, {
+    pageSize: REPORTS_PAGE_SIZE,
+    resetKey: `${warehouseId}-${dateFrom}-${dateTo}-${search}`,
+  });
+
   return (
     <div className="min-h-screen bg-gray-100">
       <Navbar />
@@ -125,7 +132,7 @@ export default function ProductReportsPage() {
                     <td colSpan={6} className="px-4 py-6 text-center text-gray-400">No products found.</td>
                   </tr>
                 )}
-                {!loading && !error && products.map((row, idx) => (
+                {!loading && !error && pageItems.map((row, idx) => (
                   <tr
                     key={row.id}
                     onClick={() => setSelectedProductId(row.id)}
@@ -139,9 +146,12 @@ export default function ProductReportsPage() {
                     <td className="px-4 py-3"><StatusBadge status={row.status} /></td>
                   </tr>
                 ))}
+                <FillerRows count={fillerCount} colSpan={6} lines={1} />
               </tbody>
             </table>
           </div>
+
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </div>
       </div>
 

@@ -3,12 +3,13 @@ import { useEffect, useRef, useState } from 'react';
 const CANVAS_SIZE = 280;
 const OUTPUT_SIZE = 400;
 
-export default function AvatarCropModal({ imageSrc, onConfirm, onCancel }) {
+export default function AvatarCropModal({ imageSrc, onConfirm, onCancel, onError }) {
   const canvasRef = useRef(null);
   const imgRef = useRef(null);
   const fillScaleRef = useRef(1);
   const dragRef = useRef({ active: false, lastX: 0, lastY: 0 });
 
+  const [loadedImg, setLoadedImg] = useState(null);
   const [crop, setCrop] = useState({ scale: 1, x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
 
@@ -30,31 +31,36 @@ export default function AvatarCropModal({ imageSrc, onConfirm, onCancel }) {
 
   // Load image, compute fill scale, set initial state
   useEffect(() => {
+    setLoadedImg(null);
     const img = new Image();
     img.onload = () => {
       imgRef.current = img;
       const fs = Math.max(CANVAS_SIZE / img.width, CANVAS_SIZE / img.height);
       fillScaleRef.current = fs;
+      setLoadedImg(img);
       setCrop({ scale: fs, x: 0, y: 0 });
+    };
+    img.onerror = () => {
+      onError?.();
     };
     img.src = imageSrc;
   }, [imageSrc]);
 
-  // Redraw canvas whenever crop state changes
+  // Redraw canvas whenever crop state or loaded image changes
   useEffect(() => {
     const canvas = canvasRef.current;
-    const img = imgRef.current;
-    if (!canvas || !img) return;
+    if (!canvas || !loadedImg) return;
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
     ctx.drawImage(
-      img,
-      crop.x - (img.width * crop.scale) / 2 + CANVAS_SIZE / 2,
-      crop.y - (img.height * crop.scale) / 2 + CANVAS_SIZE / 2,
-      img.width * crop.scale,
-      img.height * crop.scale
+      loadedImg,
+      crop.x - (loadedImg.width * crop.scale) / 2 + CANVAS_SIZE / 2,
+      crop.y - (loadedImg.height * crop.scale) / 2 + CANVAS_SIZE / 2,
+      loadedImg.width * crop.scale,
+      loadedImg.height * crop.scale
     );
-  }, [crop]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [crop, loadedImg]);
 
   // Wheel zoom — non-passive so preventDefault works
   useEffect(() => {
@@ -139,19 +145,18 @@ export default function AvatarCropModal({ imageSrc, onConfirm, onCancel }) {
   };
 
   const handleApply = () => {
-    const img = imgRef.current;
-    if (!img) return;
+    if (!loadedImg) return;
     const out = document.createElement('canvas');
     out.width = OUTPUT_SIZE;
     out.height = OUTPUT_SIZE;
     const ctx = out.getContext('2d');
     const r = OUTPUT_SIZE / CANVAS_SIZE;
     ctx.drawImage(
-      img,
-      crop.x * r - (img.width * crop.scale * r) / 2 + OUTPUT_SIZE / 2,
-      crop.y * r - (img.height * crop.scale * r) / 2 + OUTPUT_SIZE / 2,
-      img.width * crop.scale * r,
-      img.height * crop.scale * r
+      loadedImg,
+      crop.x * r - (loadedImg.width * crop.scale * r) / 2 + OUTPUT_SIZE / 2,
+      crop.y * r - (loadedImg.height * crop.scale * r) / 2 + OUTPUT_SIZE / 2,
+      loadedImg.width * crop.scale * r,
+      loadedImg.height * crop.scale * r
     );
     out.toBlob((blob) => { if (blob) onConfirm(blob); }, 'image/jpeg', 0.9);
   };

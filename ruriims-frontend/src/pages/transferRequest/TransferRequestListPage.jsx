@@ -4,8 +4,10 @@ import api from '../../api/axios';
 import Navbar from '../../components/layout/Navbar';
 import WarehouseTabs from '../../components/layout/WarehouseTabs';
 import StatusBadge from '../../components/ui/StatusBadge';
+import Pagination, { FillerRows } from '../../components/ui/Pagination';
 import { useUI } from '../../context/UIContext';
 import { useWarehouse } from '../../context/WarehouseContext';
+import { usePagination } from '../../utils/usePagination';
 
 export default function TransferRequestListPage() {
   const navigate = useNavigate();
@@ -42,6 +44,10 @@ export default function TransferRequestListPage() {
   };
 
   const statusLabel = (s) => s === 'complete' ? 'Complete' : 'Incomplete';
+
+  const { page, setPage, totalPages, pageItems, fillerCount } = usePagination(transfers, {
+    resetKey: `${activeWarehouse?.id ?? 'all'}`,
+  });
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
@@ -90,7 +96,7 @@ export default function TransferRequestListPage() {
               {!loading && !error && transfers.length === 0 && (
                 <tr><td colSpan={8} className="px-5 py-6 text-center text-gray-400">No transfer requests yet.</td></tr>
               )}
-              {!loading && !error && transfers.map((transfer) => {
+              {!loading && !error && pageItems.map((transfer) => {
                 const isSelected = selectedRow?.id === transfer.id;
                 return (
                   <tr
@@ -116,8 +122,11 @@ export default function TransferRequestListPage() {
                   </tr>
                 );
               })}
+              <FillerRows count={fillerCount} colSpan={8} lines={1} />
             </tbody>
           </table>
+
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
 
           <WarehouseTabs />
         </div>

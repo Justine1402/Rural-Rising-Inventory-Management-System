@@ -4,9 +4,11 @@ import api from '../../api/axios';
 import Navbar from '../../components/layout/Navbar';
 import ReportsFilterBar from '../../components/shared/ReportsFilterBar';
 import StatusBadge from '../../components/ui/StatusBadge';
+import Pagination, { FillerRows } from '../../components/ui/Pagination';
 import { useWarehouse } from '../../context/WarehouseContext';
 import { useUI } from '../../context/UIContext';
 import { formatDate } from '../../utils/formatDate';
+import { usePagination, REPORTS_PAGE_SIZE } from '../../utils/usePagination';
 import ReceiveOrderAuditPage from '../receiveOrder/ReceiveOrderAuditPage';
 import TransferRequestAuditPage from '../transferRequest/TransferRequestAuditPage';
 import IssueProductAuditPage from '../issueProduct/IssueProductAuditPage';
@@ -93,6 +95,11 @@ export default function ReportsHistoryPage() {
     return () => { isCancelled = true; };
   }, [warehouseId, dateFrom, dateTo, search, location.key]);
 
+  const { page, setPage, totalPages, pageItems, fillerCount } = usePagination(reports, {
+    pageSize: REPORTS_PAGE_SIZE,
+    resetKey: `${warehouseId}-${dateFrom}-${dateTo}-${search}`,
+  });
+
   const handleRowClick = (r) => {
     if (r.transaction_type === 'Temporary Warehouse') {
       setTemporaryWarehouseDetailOverlayTwhId(r.id);
@@ -153,7 +160,7 @@ export default function ReportsHistoryPage() {
                     <td colSpan={6} className="px-4 py-6 text-center text-gray-400">No reports found.</td>
                   </tr>
                 )}
-                {!loading && !error && reports.map((r, idx) => (
+                {!loading && !error && pageItems.map((r, idx) => (
                   <tr
                     key={`${r.transaction_type}-${r.transaction_code}-${idx}`}
                     onClick={() => handleRowClick(r)}
@@ -167,9 +174,12 @@ export default function ReportsHistoryPage() {
                     <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
                   </tr>
                 ))}
+                <FillerRows count={fillerCount} colSpan={6} lines={1} />
               </tbody>
             </table>
           </div>
+
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </div>
       </div>
 

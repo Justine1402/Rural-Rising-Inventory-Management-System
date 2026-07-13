@@ -4,10 +4,21 @@ import { useUI } from '../../context/UIContext';
 import api from '../../api/axios';
 import CustomSelect from '../../components/ui/CustomSelect';
 
+const BRAND_GREEN = '#409645';
+const ERROR_RED = '#DC2626';
+
+const fieldBase =
+  'w-full border rounded-lg px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none bg-white transition';
+const neutralFieldClass = `${fieldBase} border-gray-300 focus:border-[#409645]`;
+// Kept for the Reset Password / Reset PIN sub-forms (no inline validation there).
 const fieldClass =
   'w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#409645] bg-white transition';
 const labelClass = 'text-xs text-gray-500 mb-1 block';
+const mainLabelClass = 'text-sm text-gray-700 mb-1.5 block';
 const errorClass = 'text-red-600 text-xs mt-1';
+const sectionLabelClass = 'text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4';
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const EMPTY_FORM = {
   name: '', email: '', password: '', role: 'manager',
@@ -32,6 +43,8 @@ export default function UserFormPage() {
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
   const [successLabel, setSuccessLabel] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [touched, setTouched] = useState({});
   const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
   const [resetPinOpen, setResetPinOpen] = useState(false);
   const [resetPasswordValue, setResetPasswordValue] = useState('');
@@ -91,6 +104,8 @@ export default function UserFormPage() {
     setSubmitting(false);
     setErrors({});
     setSuccessLabel('');
+    setShowPassword(false);
+    setTouched({});
     setResetPasswordOpen(false);
     setResetPinOpen(false);
     setResetPasswordValue('');
@@ -102,8 +117,13 @@ export default function UserFormPage() {
     setDeleteConfirmOpen(false);
   }
 
+  const markTouched = (field) => setTouched(prev => (prev[field] ? prev : { ...prev, [field]: true }));
+
   function setField(field) {
-    return (e) => setFormData(prev => ({ ...prev, [field]: e.target.value }));
+    return (e) => {
+      setFormData(prev => ({ ...prev, [field]: e.target.value }));
+      markTouched(field);
+    };
   }
 
   async function handleSubmit(e) {
@@ -192,13 +212,61 @@ export default function UserFormPage() {
     }
   }
 
+  // ---- Client-side validation (front-end only; backend remains authoritative) ----
+  const nameValid = formData.name.trim().length > 0;
+  const emailValid = EMAIL_REGEX.test(formData.email);
+  const passwordValid = formData.password.length >= 8;
+  const warehouseRequired = formData.role === 'manager';
+  const warehouseValid = !warehouseRequired || !!formData.warehouse_id;
+  const pinValid = /^\d{6}$/.test(formData.pin);
+
+  const validity = {
+    name: nameValid, email: emailValid, password: passwordValid,
+    warehouse_id: warehouseValid, pin: pinValid,
+  };
+  const hasValue = {
+    name: formData.name.trim().length > 0,
+    email: formData.email.length > 0,
+    password: formData.password.length > 0,
+    warehouse_id: !!formData.warehouse_id,
+    pin: formData.pin.length > 0,
+  };
+  const stateFor = (field) => {
+    if (hasValue[field] && validity[field]) return 'valid';
+    if (touched[field] && !validity[field]) return 'invalid';
+    return 'neutral';
+  };
+  const borderColorFor = (field) => {
+    const s = stateFor(field);
+    return s === 'valid' ? BRAND_GREEN : s === 'invalid' ? ERROR_RED : undefined;
+  };
+  const inputClass = (field, extra = '') =>
+    `${fieldBase} ${stateFor(field) === 'neutral' ? 'border-gray-300 focus:border-[#409645]' : ''} ${extra}`
+      .replace(/\s+/g, ' ').trim();
+  const inputStyle = (field) => {
+    const c = borderColorFor(field);
+    return c ? { borderColor: c } : undefined;
+  };
+
+  // Password strength (advisory only): uppercase, number, length >= 8, special char
+  const pw = formData.password;
+  const pwScore = [/[A-Z]/.test(pw), /[0-9]/.test(pw), pw.length >= 8, /[^A-Za-z0-9]/.test(pw)]
+    .filter(Boolean).length;
+  const pwLabel = pwScore <= 1 ? 'Weak' : pwScore === 2 ? 'Fair' : pwScore === 3 ? 'Good' : 'Strong';
+  const pwColor = pwScore <= 1 ? ERROR_RED : pwScore === 2 ? '#F59E0B' : pwScore === 3 ? '#489F46' : BRAND_GREEN;
+  const pwSegments = pwScore <= 1 ? 1 : pwScore;
+
+  const isFormValid = isCreateMode
+    ? (nameValid && emailValid && passwordValid && warehouseValid && pinValid)
+    : (nameValid && emailValid && warehouseValid);
+
   return (
     <>
       {/* Backdrop */}
       <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40" onClick={handleClose} />
 
       {/* Card */}
-      <div className="fixed top-[105px] left-1/2 -translate-x-1/2 w-[700px] max-h-[85vh] bg-white rounded-2xl shadow-2xl z-50 overflow-y-auto">
+      <div className="fixed top-[115px] left-1/2 -translate-x-1/2 w-[900px] max-h-[85vh] bg-white rounded-2xl shadow-2xl z-50 overflow-y-auto">
 
         {/* Dark green sticky header */}
         <div
@@ -217,7 +285,7 @@ export default function UserFormPage() {
         </div>
 
         {/* Body */}
-        <div className="px-8 py-6">
+        <div className="p-6">
 
           {/* Deactivated notice */}
           {isReadOnly && (
@@ -241,25 +309,35 @@ export default function UserFormPage() {
           {/* Form */}
           {(isCreateMode || editingUser) && (
             <>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">
-                User Details
-              </p>
-
               <form onSubmit={handleSubmit}>
-                <div className="space-y-4 mb-6">
 
-                  {/* Name */}
+                {/* ===== ACCOUNT DETAILS ===== */}
+                <p className={sectionLabelClass}>Account Details</p>
+
+                <div className="grid grid-cols-2 gap-x-16 gap-y-7">
+
+                  {/* Full Name */}
                   <div>
                     {isReadOnly ? (
                       <>
-                        <p className="text-xs text-gray-500 mb-0.5">Name</p>
+                        <p className="text-xs text-gray-500 mb-0.5">Full Name</p>
                         <p className="font-semibold text-gray-800">{formData.name || '—'}</p>
                       </>
                     ) : (
                       <>
-                        <label className={labelClass}>Name <span className="text-red-500">*</span></label>
-                        <input type="text" value={formData.name} onChange={setField('name')} className={fieldClass} />
-                        {errors.name && <p className={errorClass}>{errors.name[0]}</p>}
+                        <label className={mainLabelClass}>Full Name <span className="text-red-500">*</span></label>
+                        <input
+                          type="text"
+                          value={formData.name}
+                          onChange={setField('name')}
+                          onBlur={() => markTouched('name')}
+                          placeholder="e.g. Maria Santos"
+                          className={inputClass('name')}
+                          style={inputStyle('name')}
+                        />
+                        {stateFor('name') === 'invalid'
+                          ? <p className={errorClass}>Full name is required</p>
+                          : errors.name && <p className={errorClass}>{errors.name[0]}</p>}
                       </>
                     )}
                   </div>
@@ -273,9 +351,19 @@ export default function UserFormPage() {
                       </>
                     ) : (
                       <>
-                        <label className={labelClass}>Email <span className="text-red-500">*</span></label>
-                        <input type="email" value={formData.email} onChange={setField('email')} className={fieldClass} />
-                        {errors.email && <p className={errorClass}>{errors.email[0]}</p>}
+                        <label className={mainLabelClass}>Email <span className="text-red-500">*</span></label>
+                        <input
+                          type="email"
+                          value={formData.email}
+                          onChange={setField('email')}
+                          onBlur={() => markTouched('email')}
+                          placeholder="name@company.com"
+                          className={inputClass('email')}
+                          style={inputStyle('email')}
+                        />
+                        {stateFor('email') === 'invalid'
+                          ? <p className={errorClass}>Enter a valid email address</p>
+                          : errors.email && <p className={errorClass}>{errors.email[0]}</p>}
                       </>
                     )}
                   </div>
@@ -283,9 +371,47 @@ export default function UserFormPage() {
                   {/* Password — create mode only */}
                   {isCreateMode && (
                     <div>
-                      <label className={labelClass}>Password <span className="text-red-500">*</span></label>
-                      <input type="password" value={formData.password} onChange={setField('password')} className={fieldClass} autoComplete="new-password" />
-                      {errors.password && <p className={errorClass}>{errors.password[0]}</p>}
+                      <label className={mainLabelClass}>Password <span className="text-red-500">*</span></label>
+                      <div className="relative">
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          value={formData.password}
+                          onChange={setField('password')}
+                          onBlur={() => markTouched('password')}
+                          placeholder="At least 8 characters"
+                          autoComplete="new-password"
+                          className={inputClass('password', 'pr-16')}
+                          style={inputStyle('password')}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(v => !v)}
+                          className="absolute inset-y-0 right-3 flex items-center text-xs font-bold tracking-wide"
+                          style={{ color: BRAND_GREEN }}
+                        >
+                          {showPassword ? 'HIDE' : 'SHOW'}
+                        </button>
+                      </div>
+
+                      {/* Strength meter — advisory */}
+                      {formData.password && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <div className="flex-1 flex gap-1">
+                            {[0, 1, 2, 3].map(i => (
+                              <div
+                                key={i}
+                                className="h-1.5 flex-1 rounded-full"
+                                style={{ backgroundColor: i < pwSegments ? pwColor : '#e5e7eb' }}
+                              />
+                            ))}
+                          </div>
+                          <span className="text-xs font-bold" style={{ color: pwColor }}>{pwLabel}</span>
+                        </div>
+                      )}
+
+                      {touched.password && !formData.password
+                        ? <p className={errorClass}>Password is required</p>
+                        : errors.password && <p className={errorClass}>{errors.password[0]}</p>}
                     </div>
                   )}
 
@@ -299,7 +425,7 @@ export default function UserFormPage() {
                         </>
                       ) : (
                         <>
-                          <label className={labelClass}>Role <span className="text-red-500">*</span></label>
+                          <label className={mainLabelClass}>Role <span className="text-red-500">*</span></label>
                           <CustomSelect
                             value={formData.role}
                             onChange={setField('role')}
@@ -313,6 +439,15 @@ export default function UserFormPage() {
                       )}
                     </div>
                   )}
+                </div>
+
+                {/* Divider */}
+                <div className="border-t border-gray-100 my-7" />
+
+                {/* ===== ROLE & ASSIGNMENT ===== */}
+                <p className={sectionLabelClass}>Role &amp; Assignment</p>
+
+                <div className="grid grid-cols-2 gap-x-16 gap-y-7">
 
                   {/* Warehouse */}
                   <div>
@@ -325,18 +460,21 @@ export default function UserFormPage() {
                       </>
                     ) : (
                       <>
-                        <label className={labelClass}>
-                          Warehouse{formData.role === 'manager' && <span className="text-red-500"> *</span>}
+                        <label className={mainLabelClass}>
+                          Warehouse{warehouseRequired && <span className="text-red-500"> *</span>}
                         </label>
                         <CustomSelect
                           value={formData.warehouse_id}
                           onChange={setField('warehouse_id')}
+                          borderColor={borderColorFor('warehouse_id')}
                           options={[
                             { value: '', label: '— None —' },
                             ...warehouses.map((w) => ({ value: w.id, label: w.name })),
                           ]}
                         />
-                        {errors.warehouse_id && <p className={errorClass}>{errors.warehouse_id[0]}</p>}
+                        {stateFor('warehouse_id') === 'invalid'
+                          ? <p className={errorClass}>Warehouse is required for managers</p>
+                          : errors.warehouse_id && <p className={errorClass}>{errors.warehouse_id[0]}</p>}
                       </>
                     )}
                   </div>
@@ -350,8 +488,14 @@ export default function UserFormPage() {
                       </>
                     ) : (
                       <>
-                        <label className={labelClass}>Position Title</label>
-                        <input type="text" value={formData.position_title} onChange={setField('position_title')} className={fieldClass} />
+                        <label className={mainLabelClass}>Position Title</label>
+                        <input
+                          type="text"
+                          value={formData.position_title}
+                          onChange={setField('position_title')}
+                          placeholder="e.g. Inventory Supervisor"
+                          className={neutralFieldClass}
+                        />
                         {errors.position_title && <p className={errorClass}>{errors.position_title[0]}</p>}
                       </>
                     )}
@@ -360,25 +504,36 @@ export default function UserFormPage() {
                   {/* PIN — create mode only */}
                   {isCreateMode && (
                     <div>
-                      <label className={labelClass}>PIN <span className="text-red-500">*</span></label>
-                      <input type="text" inputMode="numeric" maxLength={6} value={formData.pin} onChange={setField('pin')} className={fieldClass} placeholder="6 digits" />
-                      {errors.pin && <p className={errorClass}>{errors.pin[0]}</p>}
+                      <label className={mainLabelClass}>PIN <span className="text-red-500">*</span></label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={6}
+                        value={formData.pin}
+                        onChange={setField('pin')}
+                        onBlur={() => markTouched('pin')}
+                        placeholder="6 digits"
+                        className={inputClass('pin', 'tracking-widest')}
+                        style={inputStyle('pin')}
+                      />
+                      {stateFor('pin') === 'invalid'
+                        ? <p className={errorClass}>PIN must be 6 digits</p>
+                        : errors.pin && <p className={errorClass}>{errors.pin[0]}</p>}
                     </div>
                   )}
-
                 </div>
 
                 {/* Submit — not shown in read-only mode */}
                 {!isReadOnly && (
-                  <div className="flex items-center justify-end gap-3">
+                  <div className="flex items-center justify-end gap-3 mt-8">
                     {successLabel && (
                       <span className="text-sm text-green-700 font-medium">{successLabel}</span>
                     )}
                     <button
                       type="submit"
-                      disabled={submitting || !!successLabel}
+                      disabled={submitting || !!successLabel || !isFormValid}
                       className="px-8 py-2.5 text-sm font-bold text-white rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
-                      style={{ backgroundColor: '#409645' }}
+                      style={{ backgroundColor: BRAND_GREEN }}
                     >
                       {submitting ? 'Saving…' : isCreateMode ? 'CREATE' : 'UPDATE'}
                     </button>
@@ -394,7 +549,7 @@ export default function UserFormPage() {
                     onClick={handleRestore}
                     disabled={submitting}
                     className="px-8 py-2.5 text-sm font-bold text-white rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
-                    style={{ backgroundColor: '#409645' }}
+                    style={{ backgroundColor: BRAND_GREEN }}
                   >
                     {submitting ? 'Restoring…' : 'Restore User'}
                   </button>

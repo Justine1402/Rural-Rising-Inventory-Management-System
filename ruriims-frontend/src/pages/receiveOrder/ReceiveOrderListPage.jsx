@@ -4,8 +4,10 @@ import api from '../../api/axios';
 import Navbar from '../../components/layout/Navbar';
 import WarehouseTabs from '../../components/layout/WarehouseTabs';
 import StatusBadge from '../../components/ui/StatusBadge';
+import Pagination, { FillerRows } from '../../components/ui/Pagination';
 import { useUI } from '../../context/UIContext';
 import { useWarehouse } from '../../context/WarehouseContext';
+import { usePagination } from '../../utils/usePagination';
 
 export default function ReceiveOrderListPage() {
   const navigate = useNavigate();
@@ -42,6 +44,10 @@ export default function ReceiveOrderListPage() {
   };
 
   const statusLabel = (s) => s === 'accomplished' ? 'Accomplished' : 'Incomplete';
+
+  const { page, setPage, totalPages, pageItems, fillerCount } = usePagination(orders, {
+    resetKey: `${activeWarehouse?.id ?? 'all'}`,
+  });
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
@@ -89,7 +95,7 @@ export default function ReceiveOrderListPage() {
               {!loading && !error && orders.length === 0 && (
                 <tr><td colSpan={7} className="px-5 py-6 text-center text-gray-400">No receive orders yet.</td></tr>
               )}
-              {!loading && !error && orders.map((order) => {
+              {!loading && !error && pageItems.map((order) => {
                 const isSelected = selectedRow?.id === order.id;
                 return (
                   <tr
@@ -114,8 +120,11 @@ export default function ReceiveOrderListPage() {
                   </tr>
                 );
               })}
+              <FillerRows count={fillerCount} colSpan={7} lines={1} />
             </tbody>
           </table>
+
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
 
           <WarehouseTabs />
         </div>

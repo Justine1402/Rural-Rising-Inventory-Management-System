@@ -146,7 +146,7 @@ export default function ProfileModal({ isOpen, onClose }) {
       const fd = new FormData();
       fd.append('avatar', blob, 'avatar.jpg');
       const res = await api.patch('/user/profile', fd, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+        headers: { 'Content-Type': null },
       });
       updateUser({ name: res.data.user.name, avatar_url: res.data.user.avatar_url });
     } catch (err) {
@@ -291,7 +291,7 @@ export default function ProfileModal({ isOpen, onClose }) {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp"
                   className="hidden"
                   onChange={handleAvatarFileChange}
                 />
@@ -475,6 +475,12 @@ export default function ProfileModal({ isOpen, onClose }) {
           URL.revokeObjectURL(cropSrc);
           setCropSrc(null);
           setPendingFile(null);
+        }}
+        onError={() => {
+          URL.revokeObjectURL(cropSrc);
+          setCropSrc(null);
+          setPendingFile(null);
+          setAvatarError('This image format is not supported. Please use JPEG, PNG, or WebP.');
         }}
       />
     )}

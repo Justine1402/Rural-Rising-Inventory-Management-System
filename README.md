@@ -6,13 +6,13 @@ A full-stack inventory management system built for Rural Rising Philippines. Tra
 
 ## Features
 
-- **Dashboard** — Real-time inventory view across all warehouses; click any product row for batch-level detail
+- **Dashboard** — Real-time inventory view across all warehouses with client-side product name search; click any product row for batch-level detail; sortable by FIFO/FEFO/LIFO
 - **Receive Orders** — Record incoming stock with per-item quantities, harvest dates, and cost tracking; PIN-verified completion generates Stock-In-Use batch codes
 - **Transfer Requests** — Move stock between warehouses at the batch level; two-step flow (create → accomplish)
-- **Issue Products** — Decrement stock for field distribution; FEFO (First Expired, First Out) batch selection
+- **Issue Products** — Decrement stock for field distribution; FIFO/FEFO/LIFO sort modes; admins can select the source warehouse when in the "All Warehouses" view
 - **Temporary Warehouses** — Create, track, and close short-term field warehouses; closing returns remaining stock to a selected destination warehouse
 - **Inventory Reconciliation** — Snapshot-based physical count with discrepancy detection; two-manager PIN confirmation applies adjustments to live stock
-- **Reports** — Per-module report pages with two PDF export modes: (1) full summary table export via "Export as PDF"; (2) per-transaction detail PDF via checkbox row selection + "Export Selected (N)" — exports one full-page detail record per selected transaction. All 5 transaction report pages (Receive Orders, Transfer Requests, Issue Products, Temporary Warehouses, Reconciliation) support both modes. Each audit overlay also has a standalone "Export as PDF" button to print the currently-viewed record.
+- **Reports** — Per-module report pages with two PDF export modes: (1) full summary table export via "Export as PDF"; (2) per-transaction detail PDF via checkbox row selection + "Export Selected (N)" — exports one full-page detail record per selected transaction. All 5 transaction report pages (Receive Orders, Transfer Requests, Issue Products, Temporary Warehouses, Reconciliation) support both modes. Each audit overlay also has a standalone "Export as PDF" button to print the currently-viewed record. The "All Reports" union view additionally includes Create Product entries.
 - **User Management** — Admin-only CRUD with role assignment, soft deletes, password and PIN reset
 - **Role-based access** — Admin, Manager (warehouse-scoped), and Staff roles; PIN verification gates all stock-mutating actions
 
@@ -171,29 +171,52 @@ All routes below are prefixed with `/api` and require authentication via Sanctum
 | POST | `/login` | Authenticate and start session |
 | POST | `/logout` | End session |
 | GET | `/user` | Current authenticated user |
+| PATCH | `/user/password` | Change current user's password |
+| PATCH | `/user/pin` | Change current user's PIN |
+| PATCH | `/user/profile` | Update current user's name and avatar |
 | GET | `/warehouses` | All warehouses (permanent + temporary) |
-| GET | `/products` | Product list with live warehouse stock |
+| GET | `/products` | Product list with live warehouse stock; optional `?has_stock_in_warehouse={id}` filter |
 | POST | `/products` | Create product (PIN-verified) |
+| GET | `/products/{product}` | Single product detail |
 | GET | `/products/{product}/batches` | Active Stock-In-Use batches for a product |
+| POST | `/pin/verify` | Standalone PIN verification |
+| GET | `/stock-in-use` | Batch list by product SKU + warehouse (FEFO order; includes id and shelf_life) |
 | GET | `/receive-orders` | Receive order list |
 | POST | `/receive-orders` | Create receive order (PIN-verified) |
+| GET | `/receive-orders/{id}` | Single receive order detail |
 | POST | `/receive-orders/{id}/complete` | Complete order — generates batch codes |
 | GET | `/transfer-requests` | Transfer request list |
 | POST | `/transfer-requests` | Create transfer request (PIN-verified) |
+| GET | `/transfer-requests/{id}` | Single transfer request detail |
 | POST | `/transfer-requests/{id}/accomplish` | Move stock between warehouses |
 | GET | `/issue-products` | Issue product list |
-| POST | `/issue-products` | Issue stock (PIN-verified, FEFO) |
+| POST | `/issue-products` | Issue stock (PIN-verified) |
+| GET | `/issue-products/{id}` | Single issue product detail |
 | GET | `/temporary-warehouses` | Temporary warehouse list |
 | POST | `/temporary-warehouses` | Open a temporary warehouse (PIN-verified) |
+| GET | `/temporary-warehouses/{id}` | Single temporary warehouse detail |
 | POST | `/temporary-warehouses/{id}/close` | Close and return remaining stock |
 | GET | `/reconciliations` | Reconciliation list |
+| GET | `/reconciliations/expected-stock` | Expected stock snapshot for reconciliation form |
 | POST | `/reconciliations` | Create reconciliation (PIN-verified snapshot) |
+| GET | `/reconciliations/{id}` | Single reconciliation detail |
 | POST | `/reconciliations/{id}/confirm` | Confirm and apply adjustments (two-manager PIN) |
+| GET | `/reports` | All reports union (RO + TRF + ISS + RC + Create Product) |
+| GET | `/reports/products` | Product creation report |
+| GET | `/reports/receive-orders` | Receive orders report |
+| GET | `/reports/transfer-requests` | Transfer requests report |
+| GET | `/reports/issue-products` | Issue products report |
+| GET | `/reports/temporary-warehouses` | Temporary warehouses report |
+| GET | `/reports/reconciliation` | Reconciliation report |
 | GET | `/reports/inventory-summary` | Inventory summary across all warehouses |
 | GET | `/users` | User list (admin only) |
 | POST | `/users` | Create user (admin only) |
+| GET | `/users/{user}` | Single user detail (admin only) |
 | PUT | `/users/{user}` | Update user (admin only) |
 | DELETE | `/users/{user}` | Soft delete user (admin only) |
+| POST | `/users/{user}/reset-password` | Reset user's password (admin only) |
+| POST | `/users/{user}/reset-pin` | Reset user's PIN (admin only) |
+| POST | `/users/{user}/restore` | Restore soft-deleted user (admin only) |
 
 ---
 

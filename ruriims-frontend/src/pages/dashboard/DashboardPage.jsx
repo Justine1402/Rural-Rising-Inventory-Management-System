@@ -3,10 +3,12 @@ import { useLocation } from 'react-router-dom';
 import Navbar from '../../components/layout/Navbar';
 import WarehouseTabs from '../../components/layout/WarehouseTabs';
 import StatusBadge from '../../components/ui/StatusBadge';
+import Pagination, { FillerRows } from '../../components/ui/Pagination';
 import api from '../../api/axios';
 import { useUI } from '../../context/UIContext';
 import { useWarehouse } from '../../context/WarehouseContext';
 import { formatDate } from '../../utils/formatDate';
+import { usePagination } from '../../utils/usePagination';
 
 export default function DashboardPage() {
   const location = useLocation();
@@ -129,6 +131,10 @@ export default function DashboardPage() {
       return 0;
     });
 
+  const { page, setPage, totalPages, pageItems, fillerCount } = usePagination(displayedProducts, {
+    resetKey: `${activeWarehouse?.id ?? 'all'}-${activeWarehouse?.isTemporary ?? false}-${selectedCategory}-${sortMode}-${searchTerm}`,
+  });
+
   useEffect(() => {
     setSearchTerm('');
   }, [activeWarehouse]);
@@ -146,6 +152,22 @@ export default function DashboardPage() {
 
   const isTwh = activeWarehouse?.isTemporary === true;
   const isAllWarehouses = activeWarehouse === null;
+
+  // Single-warehouse harvest cell: an invisible two-line clone reserves the same height
+  // the All-Warehouses view uses (date + green warehouse code), while the visible value
+  // stays vertically centered like the Quantity cell — so rows are a consistent height
+  // across every view and the date lines up with the other columns.
+  const harvestCellWrap = (content) => (
+    <td className="px-5 py-3 text-gray-600">
+      <div className="grid items-center">
+        <span aria-hidden="true" className="invisible col-start-1 row-start-1 flex flex-col">
+          <span>&nbsp;</span>
+          <span className="text-xs mt-0.5">&nbsp;</span>
+        </span>
+        <span className="col-start-1 row-start-1">{content}</span>
+      </div>
+    </td>
+  );
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
@@ -227,7 +249,7 @@ export default function DashboardPage() {
                     </td>
                   </tr>
                 )}
-                {!loading && !error && displayedProducts.map((product) => {
+                {!loading && !error && pageItems.map((product) => {
                   const qty = product.warehouse_stock?.[activeWarehouse.id] ?? 0;
                   const twhStatus = qty > 0 ? 'In Stock' : 'Out of Stock';
                   const twhHarvestDate = product.harvest_date_per_warehouse?.[activeWarehouse.id] ?? null;
@@ -236,14 +258,16 @@ export default function DashboardPage() {
                   if (sortMode === 'FEFO') {
                     const days = getDaysUntilExpiry(twhHarvestDate, product.shelf_life);
                     if (days === null || qty === 0) {
-                      harvestCell = <td className="px-5 py-3 text-gray-600">—</td>;
+                      harvestCell = harvestCellWrap('—');
                     } else if (days >= 0) {
-                      harvestCell = <td className="px-5 py-3 text-gray-600">{days} days</td>;
+                      harvestCell = harvestCellWrap(`${days} days`);
                     } else {
-                      harvestCell = <td className="px-5 py-3 font-medium" style={{ color: '#DC2626' }}>Expired for {Math.abs(days)} days</td>;
+                      harvestCell = harvestCellWrap(
+                        <span className="font-medium" style={{ color: '#DC2626' }}>Expired for {Math.abs(days)} days</span>
+                      );
                     }
                   } else {
-                    harvestCell = <td className="px-5 py-3 text-gray-600">{qty > 0 ? (twhHarvestDate ?? '—') : '—'}</td>;
+                    harvestCell = harvestCellWrap(qty > 0 ? formatDate(twhHarvestDate) : '—');
                   }
 
                   return (
@@ -259,6 +283,7 @@ export default function DashboardPage() {
                     </tr>
                   );
                 })}
+                <FillerRows count={fillerCount} colSpan={4} lines={2} />
               </tbody>
             </table>
           ) : isAllWarehouses ? (
@@ -299,7 +324,7 @@ export default function DashboardPage() {
                     </td>
                   </tr>
                 )}
-                {!loading && !error && displayedProducts.map((product) => {
+                {!loading && !error && pageItems.map((product) => {
                   let harvestCell;
                   if (sortMode === 'FIFO') {
                     const fifoDate = getEarliestActiveHarvestDate(product);
@@ -374,6 +399,7 @@ export default function DashboardPage() {
                     </tr>
                   );
                 })}
+                <FillerRows count={fillerCount} colSpan={permanentWarehouses.length + 4} lines={2} />
               </tbody>
             </table>
           ) : (
@@ -411,7 +437,7 @@ export default function DashboardPage() {
                     </td>
                   </tr>
                 )}
-                {!loading && !error && displayedProducts.map((product) => {
+                {!loading && !error && pageItems.map((product) => {
                   const qty = product.warehouse_stock?.[activeWarehouse.id] ?? 0;
                   const warehouseStatus = qty > 0 ? 'In Stock' : 'Out of Stock';
                   const whHarvestDate = product.harvest_date_per_warehouse?.[activeWarehouse.id] ?? null;
@@ -421,16 +447,18 @@ export default function DashboardPage() {
                   if (sortMode === 'FEFO') {
                     const days = getDaysUntilExpiry(whMinHarvestDate, product.shelf_life);
                     if (days === null || qty === 0) {
-                      harvestCell = <td className="px-5 py-3 text-gray-600">—</td>;
+                      harvestCell = harvestCellWrap('—');
                     } else if (days >= 0) {
-                      harvestCell = <td className="px-5 py-3 text-gray-600">{days} days</td>;
+                      harvestCell = harvestCellWrap(`${days} days`);
                     } else {
-                      harvestCell = <td className="px-5 py-3 font-medium" style={{ color: '#DC2626' }}>Expired for {Math.abs(days)} days</td>;
+                      harvestCell = harvestCellWrap(
+                        <span className="font-medium" style={{ color: '#DC2626' }}>Expired for {Math.abs(days)} days</span>
+                      );
                     }
                   } else if (sortMode === 'FIFO') {
-                    harvestCell = <td className="px-5 py-3 text-gray-600">{(qty === 0 || !whMinHarvestDate) ? '—' : whMinHarvestDate}</td>;
+                    harvestCell = harvestCellWrap(qty === 0 ? '—' : formatDate(whMinHarvestDate));
                   } else {
-                    harvestCell = <td className="px-5 py-3 text-gray-600">{(qty === 0 || !whHarvestDate) ? '—' : whHarvestDate}</td>;
+                    harvestCell = harvestCellWrap(qty === 0 ? '—' : formatDate(whHarvestDate));
                   }
 
                   return (
@@ -446,9 +474,12 @@ export default function DashboardPage() {
                     </tr>
                   );
                 })}
+                <FillerRows count={fillerCount} colSpan={4} lines={2} />
               </tbody>
             </table>
           )}
+
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
 
           <WarehouseTabs />
         </div>
