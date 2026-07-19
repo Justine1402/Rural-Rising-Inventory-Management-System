@@ -5,9 +5,10 @@ import Navbar from '../../components/layout/Navbar';
 import WarehouseTabs from '../../components/layout/WarehouseTabs';
 import StatusBadge from '../../components/ui/StatusBadge';
 import Pagination, { FillerRows } from '../../components/ui/Pagination';
+import EmptyState from '../../components/ui/EmptyState';
 import { useUI } from '../../context/UIContext';
 import { useWarehouse } from '../../context/WarehouseContext';
-import { usePagination } from '../../utils/usePagination';
+import { usePagination, LIST_PAGE_SIZE } from '../../utils/usePagination';
 
 const ChevronDown = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -63,6 +64,7 @@ export default function ReconciliationListPage() {
     : reconciliations.filter((r) => r.status === statusFilter);
 
   const { page, setPage, totalPages, pageItems, fillerCount } = usePagination(filteredReconciliations, {
+    pageSize: LIST_PAGE_SIZE,
     resetKey: `${activeWarehouse?.id ?? 'all'}-${statusFilter}`,
   });
 
@@ -146,7 +148,7 @@ export default function ReconciliationListPage() {
                 <tr><td colSpan={7} className="px-5 py-6 text-center text-red-500">{error}</td></tr>
               )}
               {!loading && !error && filteredReconciliations.length === 0 && (
-                <tr><td colSpan={7} className="px-5 py-6 text-center text-gray-400">No reconciliations yet.</td></tr>
+                <EmptyState colSpan={7} message="No reconciliations yet." />
               )}
               {!loading && !error && pageItems.map((rec) => {
                 const selected = selectedId === rec.id;

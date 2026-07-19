@@ -5,9 +5,10 @@ import Navbar from '../../components/layout/Navbar';
 import WarehouseTabs from '../../components/layout/WarehouseTabs';
 import StatusBadge from '../../components/ui/StatusBadge';
 import Pagination, { FillerRows } from '../../components/ui/Pagination';
+import EmptyState from '../../components/ui/EmptyState';
 import { useUI } from '../../context/UIContext';
 import { useWarehouse } from '../../context/WarehouseContext';
-import { usePagination } from '../../utils/usePagination';
+import { usePagination, LIST_PAGE_SIZE } from '../../utils/usePagination';
 
 export default function TransferRequestListPage() {
   const navigate = useNavigate();
@@ -46,6 +47,7 @@ export default function TransferRequestListPage() {
   const statusLabel = (s) => s === 'complete' ? 'Complete' : 'Incomplete';
 
   const { page, setPage, totalPages, pageItems, fillerCount } = usePagination(transfers, {
+    pageSize: LIST_PAGE_SIZE,
     resetKey: `${activeWarehouse?.id ?? 'all'}`,
   });
 
@@ -94,7 +96,7 @@ export default function TransferRequestListPage() {
                 <tr><td colSpan={8} className="px-5 py-6 text-center text-red-500">{error}</td></tr>
               )}
               {!loading && !error && transfers.length === 0 && (
-                <tr><td colSpan={8} className="px-5 py-6 text-center text-gray-400">No transfer requests yet.</td></tr>
+                <EmptyState colSpan={8} message="No transfer requests yet." />
               )}
               {!loading && !error && pageItems.map((transfer) => {
                 const isSelected = selectedRow?.id === transfer.id;

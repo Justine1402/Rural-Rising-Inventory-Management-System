@@ -4,6 +4,7 @@ import Navbar from '../../components/layout/Navbar';
 import WarehouseTabs from '../../components/layout/WarehouseTabs';
 import StatusBadge from '../../components/ui/StatusBadge';
 import Pagination, { FillerRows } from '../../components/ui/Pagination';
+import EmptyState from '../../components/ui/EmptyState';
 import api from '../../api/axios';
 import { useUI } from '../../context/UIContext';
 import { useWarehouse } from '../../context/WarehouseContext';
@@ -243,11 +244,7 @@ export default function DashboardPage() {
                   </tr>
                 )}
                 {!loading && !error && products.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="px-5 py-6 text-center text-gray-400">
-                      No products yet. Use &quot;+ Create Product&quot; to add one.
-                    </td>
-                  </tr>
+                  <EmptyState colSpan={4} message={<>No products yet. Use &quot;+ Create Product&quot; to add one.</>} />
                 )}
                 {!loading && !error && pageItems.map((product) => {
                   const qty = product.warehouse_stock?.[activeWarehouse.id] ?? 0;
@@ -318,11 +315,7 @@ export default function DashboardPage() {
                   </tr>
                 )}
                 {!loading && !error && products.length === 0 && (
-                  <tr>
-                    <td colSpan={permanentWarehouses.length + 4} className="px-5 py-6 text-center text-gray-400">
-                      No products yet. Use &quot;+ Create Product&quot; to add one.
-                    </td>
-                  </tr>
+                  <EmptyState colSpan={permanentWarehouses.length + 4} message={<>No products yet. Use &quot;+ Create Product&quot; to add one.</>} />
                 )}
                 {!loading && !error && pageItems.map((product) => {
                   let harvestCell;
@@ -333,11 +326,9 @@ export default function DashboardPage() {
                       <td className="px-5 py-3 text-gray-600">
                         <div className="flex flex-col">
                           <span>{fifoDate ? formatDate(fifoDate) : '—'}</span>
-                          {fifoWhCode && (
-                            <span className="text-xs font-medium mt-0.5" style={{ color: '#409645' }}>
-                              {fifoWhCode}
-                            </span>
-                          )}
+                          <span className="text-xs font-medium mt-0.5" style={{ color: '#409645' }}>
+                            {fifoWhCode || ' '}
+                          </span>
                         </div>
                       </td>
                     );
@@ -348,11 +339,9 @@ export default function DashboardPage() {
                       <td className="px-5 py-3 text-gray-600">
                         <div className="flex flex-col">
                           <span>{lifoDate ? formatDate(lifoDate) : '—'}</span>
-                          {lifoWhCode && (
-                            <span className="text-xs font-medium mt-0.5" style={{ color: '#409645' }}>
-                              {lifoWhCode}
-                            </span>
-                          )}
+                          <span className="text-xs font-medium mt-0.5" style={{ color: '#409645' }}>
+                            {lifoWhCode || ' '}
+                          </span>
                         </div>
                       </td>
                     );
@@ -369,11 +358,9 @@ export default function DashboardPage() {
                               ? <span>{days} days</span>
                               : <span className="font-medium" style={{ color: '#DC2626' }}>Expired for {Math.abs(days)} days</span>
                           }
-                          {fefoWhCode && (
-                            <span className="text-xs font-medium mt-0.5" style={{ color: '#409645' }}>
-                              {fefoWhCode}
-                            </span>
-                          )}
+                          <span className="text-xs font-medium mt-0.5" style={{ color: '#409645' }}>
+                            {fefoWhCode || ' '}
+                          </span>
                         </div>
                       </td>
                     );
@@ -431,11 +418,7 @@ export default function DashboardPage() {
                   </tr>
                 )}
                 {!loading && !error && products.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="px-5 py-6 text-center text-gray-400">
-                      No products in stock at this warehouse.
-                    </td>
-                  </tr>
+                  <EmptyState colSpan={4} message="No products in stock at this warehouse." />
                 )}
                 {!loading && !error && pageItems.map((product) => {
                   const qty = product.warehouse_stock?.[activeWarehouse.id] ?? 0;

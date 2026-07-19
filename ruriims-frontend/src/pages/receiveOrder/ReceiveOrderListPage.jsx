@@ -5,9 +5,10 @@ import Navbar from '../../components/layout/Navbar';
 import WarehouseTabs from '../../components/layout/WarehouseTabs';
 import StatusBadge from '../../components/ui/StatusBadge';
 import Pagination, { FillerRows } from '../../components/ui/Pagination';
+import EmptyState from '../../components/ui/EmptyState';
 import { useUI } from '../../context/UIContext';
 import { useWarehouse } from '../../context/WarehouseContext';
-import { usePagination } from '../../utils/usePagination';
+import { usePagination, LIST_PAGE_SIZE } from '../../utils/usePagination';
 
 export default function ReceiveOrderListPage() {
   const navigate = useNavigate();
@@ -46,6 +47,7 @@ export default function ReceiveOrderListPage() {
   const statusLabel = (s) => s === 'accomplished' ? 'Accomplished' : 'Incomplete';
 
   const { page, setPage, totalPages, pageItems, fillerCount } = usePagination(orders, {
+    pageSize: LIST_PAGE_SIZE,
     resetKey: `${activeWarehouse?.id ?? 'all'}`,
   });
 
@@ -93,7 +95,7 @@ export default function ReceiveOrderListPage() {
                 <tr><td colSpan={7} className="px-5 py-6 text-center text-red-500">{error}</td></tr>
               )}
               {!loading && !error && orders.length === 0 && (
-                <tr><td colSpan={7} className="px-5 py-6 text-center text-gray-400">No receive orders yet.</td></tr>
+                <EmptyState colSpan={7} message="No receive orders yet." />
               )}
               {!loading && !error && pageItems.map((order) => {
                 const isSelected = selectedRow?.id === order.id;
