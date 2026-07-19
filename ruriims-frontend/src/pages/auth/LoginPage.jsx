@@ -117,8 +117,9 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="flex justify-center mt-8">
+        <div className="flex flex-col items-center mt-8">
           <img src="/ruriicon.png" alt="Rural Rising Philippines" className="h-32 w-auto" />
+          <p className="text-xs italic text-gray-400 mt-2">Version 1.00</p>
         </div>
 
       </div>
