@@ -1597,3 +1597,79 @@ Discrepancies found and resolved during documentation sync pass:
 6. **TECHSTACK.md — GET /api/receive-orders**: Missing CASE WHEN sort order. **Added**: sorted Incomplete-first (by `created_at` DESC), Accomplished-second (by `date_arrived` DESC).
 
 Non-issue confirmed: `ProductController@index` correctly uses `MAX(harvest_date)` for both `harvest_date` (global) and `harvest_date_per_warehouse` (per-warehouse). No "MIN fix" was made or needed — audit prompt listed this as a question, not a bug.
+
+---
+
+### Post-Defense Session — Table Pagination + Constant-Height Tables — 2026-07-13 (commit `b1cacfb`)
+
+Introduced a shared client-side pagination system so long tables no longer scroll the whole
+page, and so a table's card / footer / pager keep a **constant vertical position** regardless
+of how many rows are on the current page.
+
+- [x] `src/utils/usePagination.js` (new) — `usePagination(items, { pageSize, resetKey })` hook
+      returning `{ page, setPage, totalPages, pageItems, fillerCount }`. Resets to page 1 during
+      render when `resetKey` changes. Exported constants `DEFAULT_PAGE_SIZE = 9` and
+      `REPORTS_PAGE_SIZE = 14`.
+- [x] `src/components/ui/Pagination.jsx` (new) — default export `Pagination` (windowed
+      page-number bar with `…` gaps, `‹ Prev` / `Next ›`, styled to match WarehouseTabs; renders
+      `null` when `totalPages <= 1`) + named export `FillerRows` (invisible `&nbsp;` spacer rows
+      padding a short page to a constant height; `lines={1|2}` matches row height).
+- [x] Wired into `DashboardPage` (all 3 branches, `lines={2}` for the two-line harvest-date rows),
+      `ReceiveOrderListPage`, `TransferRequestListPage`, `ReconciliationListPage`,
+      `UserManagementPage`, and all 7 reports pages (`REPORTS_PAGE_SIZE`).
+- [x] `DashboardPage` — added `harvestCellWrap` invisible-two-line-clone helper so single-warehouse
+      and TWH views reserve the same harvest-cell height as the All-Warehouses view (date + green
+      warehouse code), keeping row heights consistent across every dashboard view.
+- Also included manager-UI improvements bundled in the same commit.
+
+### Login Version Tracker — 2026-07-19 (commit `831cb69`)
+
+- [x] `LoginPage.jsx` — added a centered gray italic **"Version 1.00"** label directly beneath the
+      Rural Rising logo, ahead of client hand-off. Logo block changed from a plain centered `<img>`
+      to a `flex flex-col items-center` wrapper so the version label sits below it.
+
+### Post-Defense Session — Empty-State Component + List-Page Height Polish — 2026-07-19 (commit `9c5ac22`)
+
+Fixed the remaining table-spacing/collapse issues reported after the pagination rollout, and gave
+empty tables a proper visual treatment.
+
+- [x] `usePagination.js` — `fillerCount` no longer gated on `totalPages > 1`; it now always pads a
+      page with data up to `pageSize`, and pads a **truly empty** list to a smaller fixed
+      `EMPTY_STATE_FILLER_ROWS` count (so the "No X yet" message isn't followed by an oversized
+      blank gap). Added constants `LIST_PAGE_SIZE = 15` (RO/TRF/RC list pages — single-line rows,
+      no search bar, so more rows are needed to match the Dashboard card height) and
+      `EMPTY_STATE_FILLER_ROWS = 11`. Both are visual-tuning knobs.
+- [x] `ReceiveOrderListPage`, `TransferRequestListPage`, `ReconciliationListPage` — now pass
+      `{ pageSize: LIST_PAGE_SIZE }` to `usePagination`.
+- [x] `DashboardPage` Branch B (All Warehouses) — the green FIFO/LIFO/FEFO warehouse-code line is
+      now **always rendered** (blank-space fallback when no code applies) instead of being
+      conditionally omitted, so every row is a consistent two lines tall.
+- [x] `src/components/ui/EmptyState.jsx` (new) — shared empty-state `<tr>`: centered gray message
+      + outline "empty tray" icon below it (inline-SVG convention, neutral gray per DESIGN.md).
+      Props `colSpan`, `message`. Replaced the plain-text "No X yet" `<td>` on all 6 empty-state
+      sites: `DashboardPage` (3 branches), `ReceiveOrderListPage`, `TransferRequestListPage`,
+      `ReconciliationListPage`.
+- **Root cause (documented):** the pagination system was applied uniformly, but its original
+  `fillerCount` only reserved height when `totalPages > 1`. The Dashboard's product list almost
+  always exceeds one page so it never showed the bug; the transaction-list pages (typically ≤ 9
+  rows) collapsed. The fix lives entirely in the shared hook + one component, so every consumer
+  inherits it.
+
+### Documentation Sync — Pagination + Empty-State + Version Tracker — 2026-07-19
+
+- **TECHSTACK.md** — added `Pagination.jsx`, `EmptyState.jsx` to the `components/ui/` tree and
+  `usePagination.js` (with all four page-size constants) to the `utils/` tree.
+- **STRUCTURE.md** — added `Pagination.jsx` + `EmptyState.jsx` to the ui/ tree and
+  `usePagination.js` to the utils/ tree; added a "Pagination System" spec and an `EmptyState.jsx`
+  spec under Shared Components; noted the Version 1.00 label in the LoginPage spec; documented the
+  always-rendered warehouse-code line / `harvestCellWrap` row-height consistency in DashboardPage
+  Branch B. (These three commits — `b1cacfb`, `831cb69`, `9c5ac22` — had not previously been
+  reflected in any md file.)
+
+---
+
+## Completion Tracker (cont.)
+
+- [x] Post-Defense Session — Table pagination system (`usePagination` + `Pagination`/`FillerRows`), constant-height tables, manager UI (commit `b1cacfb`) — COMPLETE
+- [x] Login Version Tracker — "Version 1.00" label on LoginPage (commit `831cb69`) — COMPLETE
+- [x] Post-Defense Session — `EmptyState` component, `LIST_PAGE_SIZE`/`EMPTY_STATE_FILLER_ROWS`, empty-state collapse fix, Dashboard row-height consistency (commit `9c5ac22`) — COMPLETE

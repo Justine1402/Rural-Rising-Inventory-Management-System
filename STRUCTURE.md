@@ -135,7 +135,9 @@ ruriims-frontend/
     │   │
     │   └── ui/
     │       ├── StatusBadge.jsx          ← Colored pill badge for all statuses
-    │       └── CustomSelect.jsx         ← Portal-based dropdown (createPortal to document.body); avoids option panel clipping inside overflow-y:auto overlays; onChange({ target: { value } }) drop-in replaces native <select>; compact prop for table/inline use; used by CreateProductPage, ReceiveOrderFormPage, TransferRequestFormPage, IssueProductFormPage, CloseTemporaryWarehousePage, UserFormPage
+    │       ├── CustomSelect.jsx         ← Portal-based dropdown (createPortal to document.body); avoids option panel clipping inside overflow-y:auto overlays; onChange({ target: { value } }) drop-in replaces native <select>; compact prop for table/inline use; used by CreateProductPage, ReceiveOrderFormPage, TransferRequestFormPage, IssueProductFormPage, CloseTemporaryWarehousePage, UserFormPage
+    │       ├── Pagination.jsx           ← Shared table pagination: default export Pagination (windowed page-number bar) + named export FillerRows (invisible spacer rows). Pairs with the usePagination hook. Used by every paginated table (dashboard, 3 list pages, 7 reports pages, UserManagementPage)
+    │       └── EmptyState.jsx           ← Empty-state table row: centered gray message + outline icon below, for "No X yet" states. Props: colSpan, message
     │
     ├── pages/
     │   ├── auth/
@@ -190,6 +192,7 @@ ruriims-frontend/
     │   ├── planBatchCascade.js          ← Frontend mirror of PlansBatchCascade trait; cascade planner for Transfer and Issue validation
     │   ├── reconciliationFormat.js      ← Shared discrepancy formatter (formatDiscrepancy, formatAdjustmentArrow, EPSILON)
     │   ├── formatDate.js                ← Shared date formatter (MMM D, YYYY en-US locale; '—' fallback for null/empty input); 10 consumers including all report pages, ReconciliationReviewPage, CascadePreviewModal, TemporaryWarehouseDetailPage, and CloseTemporaryWarehousePage
+    │   ├── usePagination.js             ← Client-side pagination hook + page-size constants (DEFAULT_PAGE_SIZE=9, LIST_PAGE_SIZE=15, REPORTS_PAGE_SIZE=14, EMPTY_STATE_FILLER_ROWS=11). See "Pagination System" under Shared Components
     │   └── exportPdf.js                 ← Shared PDF export utility (jsPDF v4); exports exportTablePdf (summary table PDFs, optional columnWidths for proportional layout, splitTextToSize truncation) and exportDetailPdf (per-transaction detail PDFs for types ro/trf/iss/twh/rc, one page per record); fmtNum helper strips trailing decimal zeros; safeCell handles null→'—', ₱→PHP, and fmtNum
     │
     ├── routes/
@@ -557,6 +560,69 @@ status   string
 
 ---
 
+### Pagination System (`utils/usePagination.js` + `components/ui/Pagination.jsx`)
+
+Every long table in the app is paginated client-side so its card, footer (WarehouseTabs
+or filter bar), and pager stay at a **constant vertical position** regardless of row count.
+Three pieces work together:
+
+**`usePagination(items, { pageSize, resetKey })` hook** — slices an already
+filtered/sorted array into pages. Returns `{ page, setPage, totalPages, pageItems, fillerCount }`.
+- Resets to page 1 **during render** (React's recommended state-adjustment-over-effect
+  pattern) whenever `resetKey` changes — pass a string of the active filter/search/warehouse
+  values so switching context returns to page 1 without a flicker.
+- `pageItems` is the current page's slice; the caller `.map()`s over this, not the raw array.
+- `fillerCount` = blank rows needed to pad the page to `pageSize`. On a page **with data** it
+  pads the (short) last page up to `pageSize`. On a **truly empty** list it returns
+  `EMPTY_STATE_FILLER_ROWS` instead — a smaller fixed count so the "No X yet" message isn't
+  followed by an oversized blank gap.
+
+**Page-size constants** (exported from `usePagination.js`):
+
+| Constant | Value | Used by |
+|---|---|---|
+| `DEFAULT_PAGE_SIZE` | 9 | Dashboard/Inventory (taller two-line harvest-date rows + search bar) |
+| `LIST_PAGE_SIZE` | 15 | Receive Order / Transfer Request / Reconciliation list pages (single-line rows, no search bar — need more rows to match the Dashboard card height) |
+| `REPORTS_PAGE_SIZE` | 14 | Reports pages (no WarehouseTabs footer / search-bar row) |
+| `EMPTY_STATE_FILLER_ROWS` | 11 | Blank filler rows shown beneath a "No X yet" empty-state message |
+
+> `LIST_PAGE_SIZE` and `EMPTY_STATE_FILLER_ROWS` are visual-tuning knobs — adjust them to
+> resize the transaction-list card / empty-state gap without touching any page component.
+
+**`Pagination.jsx`** exports two things:
+- **`Pagination`** (default) — the windowed page-number bar (`‹ Prev  1 … 4 5 6 … 12  Next ›`),
+  styled to match WarehouseTabs (active = `btn-brand`, inactive = white/dark-green outline).
+  **Renders `null` when `totalPages <= 1`.** Props: `page`, `totalPages`, `onPageChange`.
+- **`FillerRows`** (named) — the invisible `&nbsp;` spacer `<tr>`s. Props: `count` (= `fillerCount`),
+  `colSpan`, `lines` (`1` default; `2` for the Dashboard's date + warehouse-code rows so filler
+  rows match real-row height). Renders nothing when `count <= 0`.
+
+**Standard wiring inside a `<tbody>`:** loading/error/empty conditional rows → `pageItems.map(...)`
+→ `<FillerRows count={fillerCount} colSpan={N} lines={1|2} />`, then `<Pagination ... />` immediately
+after `</table>`. Consumers: `DashboardPage` (all 3 branches), `ReceiveOrderListPage`,
+`TransferRequestListPage`, `ReconciliationListPage`, `UserManagementPage`, and all 7 reports pages.
+
+---
+
+### `EmptyState.jsx`
+
+Empty-state table row rendered in place of the plain "No X yet" `<td>` when a paginated list
+has zero rows. Shows the message centered in gray with a small outline "empty tray" icon below
+it for readability. Follows the app's inline-SVG icon convention (`fill="none"`,
+`stroke="currentColor"`, neutral `text-gray-300`/`text-gray-400` — not brand hex, per DESIGN.md).
+
+Props:
+```js
+colSpan   number              // spans the full table width
+message   string | ReactNode  // exact per-page wording (ReactNode allows embedded quotes/markup)
+```
+
+Used by: `DashboardPage` (all 3 branches — "No products yet…" / "No products in stock at this
+warehouse."), `ReceiveOrderListPage` ("No receive orders yet."), `TransferRequestListPage`
+("No transfer requests yet."), `ReconciliationListPage` ("No reconciliations yet.").
+
+---
+
 ### `ProfileModal.jsx`
 
 Opened by clicking the user avatar in the Navbar.
@@ -591,7 +657,7 @@ onClose  function
 Centered card titled "Rural Rising IMS". Fields: Email (placeholder: "Enter your
 email"), Password (show/hide toggle, placeholder: "Enter your password"). Button:
 "Sign in" (green, full-width). Rural Rising PH logo (`/ruriicon.png`) at bottom of
-the card.
+the card, with a centered gray italic **"Version 1.00"** version label directly beneath it.
 
 > **Note:** "Remember me" checkbox and "Forgot password?" link have been removed. The checkbox was local-only state with no persistence effect. The forgot-password link had no backend endpoint.
 
@@ -796,6 +862,14 @@ The column before Status changes header based on sort mode. Sorting behavior:
 `All Products` dropdown filters rows by category. Table is read-only. Warehouse
 columns are driven by `permanentWarehouses` from `WarehouseContext` (filtered to
 `!isTemporary`) — not from the products API response — to prevent spurious TWH columns.
+
+**Row-height consistency:** the green warehouse-code label beneath the Harvest Date is
+**always rendered** — falling back to a non-breaking space when no code applies — so every
+row is a consistent two lines tall even when a product has no matching active-stock code.
+Branch C reserves the same two-line height via the `harvestCellWrap` invisible-clone helper,
+so row heights line up across all three views. `FillerRows` is called with `lines={2}` in all
+three branches to match this height. (Pagination for all three branches uses `DEFAULT_PAGE_SIZE`
+= 9; empty state renders via `EmptyState`.)
 
 ---
 
