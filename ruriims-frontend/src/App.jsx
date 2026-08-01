@@ -31,7 +31,6 @@ import IssueProductAuditPage from './pages/issueProduct/IssueProductAuditPage';
 import IssueProductReportsPage from './pages/reports/IssueProductReportsPage';
 import ReconciliationReportsPage from './pages/reports/ReconciliationReportsPage';
 import InventorySummaryPage from './pages/reports/InventorySummaryPage';
-import ProductDetailOverlay from './components/overlays/ProductDetailOverlay';
 
 function GuestRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -75,7 +74,6 @@ function GlobalOverlays() {
       <CloseTemporaryWarehousePage />
       <TemporaryWarehouseDetailPage />
       <UserFormPage />
-      <ProductDetailOverlay />
     </>
   );
 }
@@ -108,11 +106,7 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
       <Route path="/reconciliation" element={<ProtectedRoute><ReconciliationListPage /></ProtectedRoute>} />
-      <Route path="/reconciliation/:id/review" element={
-        <ProtectedRoute>
-          <><ReconciliationListPage /><ReconciliationReviewPage /></>
-        </ProtectedRoute>
-      } />
+      <Route path="/reconciliation/:id/review" element={<ProtectedRoute><ReconciliationReviewPage /></ProtectedRoute>} />
       <Route path="/issue-products/:id/audit" element={<ProtectedRoute><IssueProductAuditPage /></ProtectedRoute>} />
       <Route path="/reports/products" element={<ProtectedRoute><ProductReportsPage /></ProtectedRoute>} />
       <Route path="/reports/receive-orders" element={<ProtectedRoute><ReceiveOrderReportsPage /></ProtectedRoute>} />

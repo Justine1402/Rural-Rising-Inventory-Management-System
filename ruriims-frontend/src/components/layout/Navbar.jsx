@@ -1,16 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useWarehouse } from '../../context/WarehouseContext';
-import { useUI } from '../../context/UIContext';
-import ProfileModal from '../modals/ProfileModal';
 
 const ChevronDown = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
   </svg>
 );
-
 
 const GearIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -19,56 +16,31 @@ const GearIcon = () => (
   </svg>
 );
 
-const BUTTON_ORDER = ['+ Create Product', '+ Receive Order', '+ Transfer Request', '+ Issue Product', '+ Create Temporary Warehouse'];
+const ACTION_BUTTONS = [
+  '+ Create Product',
+  '+ Receive Order',
+  '+ Issue Product',
+  '+ Transfer Request',
+  '+ Create Temporary Warehouse',
+];
 
-export default function Navbar({ selectedCategory = '', onCategoryChange = () => {}, sortMode = 'LIFO', onSortModeChange = () => {} }) {
+export default function Navbar() {
   const { user, logout } = useAuth();
-  const { activeWarehouse, warehouses, setActiveWarehouse } = useWarehouse();
-  const { setReceiveOrderFormOpen, setCreateProductFormOpen, setTransferRequestFormOpen, setIssueProductFormOpen, setTemporaryWarehouseFormOpen, setCloseTemporaryWarehouseOverlayTwhId } = useUI();
+  const { activeWarehouse } = useWarehouse();
   const navigate = useNavigate();
-  const location = useLocation();
-  const isReportsPage = location.pathname.startsWith('/reports');
-  const isListPage =
-    location.pathname.startsWith('/receive-orders') ||
-    location.pathname.startsWith('/transfer-requests') ||
-    location.pathname.startsWith('/reconciliation');
-
-  const inventoryLabel = location.pathname.startsWith('/reconciliation')
-    ? 'Inventory Reconciliation'
-    : location.pathname.startsWith('/transfer-requests')
-      ? 'Transfer Requests'
-      : location.pathname.startsWith('/receive-orders')
-        ? 'Receive Orders'
-        : 'Inventory';
   const [menuOpen, setMenuOpen] = useState(false);
-  const [gearOpen, setGearOpen] = useState(false);
-  const [inventoryOpen, setInventoryOpen] = useState(false);
-  const [categoryOpen, setCategoryOpen] = useState(false);
-  const [sortOpen, setSortOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
   const menuRef = useRef(null);
-  const gearRef = useRef(null);
-  const inventoryRef = useRef(null);
-  const categoryRef = useRef(null);
-  const sortRef = useRef(null);
 
+  // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(e) {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
-      if (gearRef.current && !gearRef.current.contains(e.target)) setGearOpen(false);
-      if (inventoryRef.current && !inventoryRef.current.contains(e.target)) setInventoryOpen(false);
-      if (categoryRef.current && !categoryRef.current.contains(e.target)) setCategoryOpen(false);
-      if (sortRef.current && !sortRef.current.contains(e.target)) setSortOpen(false);
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false);
+      }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const handleLogoReset = () => {
-    // Reset activeWarehouse to role-appropriate default, then navigate to /
-    setActiveWarehouse(user?.role === 'manager' ? (warehouses[0] ?? null) : null);
-    navigate('/');
-  };
 
   const handleLogout = async () => {
     setMenuOpen(false);
@@ -77,57 +49,25 @@ export default function Navbar({ selectedCategory = '', onCategoryChange = () =>
   };
 
   return (
-    <>
-    <nav className="w-full" style={{ backgroundColor: '#1A381E' }}>
+    <nav className="bg-[#1A381E] w-full">
 
       {/* Row 1 — Brand + Warehouse + Icons */}
       <div className="flex items-center justify-between px-6 py-3">
-        <button
-          type="button"
-          onClick={handleLogoReset}
-          className="font-bold text-base tracking-widest uppercase hover:opacity-80 transition-opacity"
-          style={{ color: '#FAA31A', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
-        >
+        <span className="font-bold text-base tracking-widest uppercase" style={{ color: '#FAA31A' }}>
           RURAL RISING
-        </button>
+        </span>
         <div className="flex items-center gap-3">
-          <span className="text-white font-semibold text-sm">{activeWarehouse?.name ?? 'All Warehouses'}</span>
-          {user?.role === 'admin' && (
-            <div className="relative" ref={gearRef}>
-              <button
-                onClick={() => setGearOpen((v) => !v)}
-                className="text-white hover:text-green-300 transition-colors"
-              >
-                <GearIcon />
-              </button>
-              {gearOpen && (
-                <div className="absolute right-0 top-8 w-48 bg-white rounded-lg shadow-lg z-50 overflow-hidden">
-                  <button
-                    onClick={() => { setGearOpen(false); navigate('/admin/users'); }}
-                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    Manage Accounts
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+          <span className="text-white font-semibold text-sm">{activeWarehouse?.name ?? 'Loading…'}</span>
+          <button className="text-white hover:text-green-300 transition-colors">
+            <GearIcon />
+          </button>
 
           {/* Avatar + dropdown */}
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setMenuOpen((v) => !v)}
-              className="w-8 h-8 rounded-full flex-shrink-0 hover:ring-2 hover:ring-white transition-all overflow-hidden flex items-center justify-center"
-              style={!user?.avatar_url ? { backgroundColor: '#1A381E' } : {}}
-            >
-              {user?.avatar_url ? (
-                <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-white text-xs font-bold">
-                  {user?.name?.[0]?.toUpperCase() ?? '?'}
-                </span>
-              )}
-            </button>
+              className="w-8 h-8 rounded-full bg-gray-400 flex-shrink-0 hover:ring-2 hover:ring-white transition-all"
+            />
 
             {menuOpen && (
               <div className="absolute right-0 top-10 w-48 bg-white rounded-lg shadow-lg z-50 overflow-hidden">
@@ -138,14 +78,8 @@ export default function Navbar({ selectedCategory = '', onCategoryChange = () =>
                   <p className="text-xs text-gray-500 truncate">{user?.email ?? ''}</p>
                 </div>
                 <button
-                  onClick={() => { setMenuOpen(false); setProfileOpen(true); }}
-                  className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                >
-                  View Profile
-                </button>
-                <button
                   onClick={handleLogout}
-                  className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors border-t border-gray-100"
+                  className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
                 >
                   Log out
                 </button>
@@ -156,181 +90,37 @@ export default function Navbar({ selectedCategory = '', onCategoryChange = () =>
       </div>
 
       {/* Row 2 — Action buttons + Controls */}
-      <div className={`flex items-center ${isReportsPage ? 'justify-end' : 'justify-between'} px-6 pb-3 gap-4`}>
+      <div className="flex items-center justify-between px-6 pb-3 gap-4">
 
-        {!isReportsPage && (
+        {/* Action buttons */}
         <div className="flex items-center gap-2 flex-wrap">
-          {activeWarehouse?.isTemporary ? (
-            <>
-              <button onClick={() => setIssueProductFormOpen(true)}
-                className="btn-brand text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
-                + Issue Product
-              </button>
-              <button onClick={() => setTransferRequestFormOpen(true)}
-                className="btn-brand text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
-                + Transfer Request
-              </button>
-              <button
-                onClick={() => setCloseTemporaryWarehouseOverlayTwhId(activeWarehouse.temporaryWarehouseId)}
-                className="btn-brand text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
-                + Close Temporary Warehouse
-              </button>
-            </>
-          ) : (
-            BUTTON_ORDER.map((label) => {
-              if (label === '+ Create Product') {
-                return (
-                  <button key={label} onClick={() => setCreateProductFormOpen(true)}
-                    className="btn-brand text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
-                    {label}
-                  </button>
-                );
-              }
-              if (label === '+ Receive Order') {
-                return (
-                  <button key={label} onClick={() => setReceiveOrderFormOpen(true)}
-                    className="btn-brand text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
-                    {label}
-                  </button>
-                );
-              }
-              if (label === '+ Transfer Request') {
-                return (
-                  <button key={label} onClick={() => setTransferRequestFormOpen(true)}
-                    className="btn-brand text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
-                    {label}
-                  </button>
-                );
-              }
-              if (label === '+ Issue Product') {
-                return (
-                  <button key={label} onClick={() => setIssueProductFormOpen(true)}
-                    className="btn-brand text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
-                    {label}
-                  </button>
-                );
-              }
-              if (label === '+ Create Temporary Warehouse') {
-                return (
-                  <button key={label} onClick={() => setTemporaryWarehouseFormOpen(true)}
-                    className="btn-brand text-white text-xs font-medium px-3 py-1.5 rounded transition-colors">
-                    {label}
-                  </button>
-                );
-              }
-              return null;
-            })
-          )}
+          {ACTION_BUTTONS.map((label) => (
+            <button
+              key={label}
+              className="bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounresded transition-colors"
+            >
+              {label}
+            </button>
+          ))}
         </div>
-        )}
 
         {/* Center-right controls */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          {!isReportsPage && !isListPage && (
-          <div className="relative" ref={categoryRef}>
-            <button
-              onClick={() => setCategoryOpen((v) => !v)}
-              className="flex items-center gap-1 btn-brand text-white text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
-            >
-              {selectedCategory || 'All Products'} <ChevronDown />
-            </button>
-            {categoryOpen && (
-              <div className="absolute left-0 top-8 w-48 bg-white rounded-lg shadow-lg z-50 overflow-hidden">
-                {[
-                  { value: '', label: 'All Products' },
-                  { value: 'Fruits', label: 'Fruits' },
-                  { value: 'Vegetables', label: 'Vegetables' },
-                  { value: 'Poultry', label: 'Poultry' },
-                  { value: 'Herbs & Spices', label: 'Herbs & Spices' },
-                  { value: 'Processed Goods', label: 'Processed Goods' },
-                ].map(({ value, label }) => (
-                  <button
-                    key={value}
-                    onClick={() => { onCategoryChange(value); setCategoryOpen(false); }}
-                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          )}
-          <div className="relative" ref={inventoryRef}>
-            <button
-              onClick={() => setInventoryOpen((v) => !v)}
-              className="flex items-center gap-1 btn-brand text-white text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
-            >
-              {inventoryLabel} <ChevronDown />
-            </button>
-            {inventoryOpen && (
-              <div className="absolute left-0 top-8 w-48 bg-white rounded-lg shadow-lg z-50 overflow-hidden">
-                <button
-                  onClick={() => { setInventoryOpen(false); navigate('/'); }}
-                  className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                >
-                  Inventory
-                </button>
-                {!activeWarehouse?.isTemporary && (
-                <button
-                  onClick={() => { setInventoryOpen(false); navigate('/receive-orders'); }}
-                  className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                >
-                  Receive Orders
-                </button>
-                )}
-                <button
-                  onClick={() => { setInventoryOpen(false); navigate('/transfer-requests'); }}
-                  className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                >
-                  Transfer Requests
-                </button>
-                {!activeWarehouse?.isTemporary && (
-                <button
-                  onClick={() => { setInventoryOpen(false); navigate('/reconciliation'); }}
-                  className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                >
-                  Inventory Reconciliation
-                </button>
-                )}
-              </div>
-            )}
-          </div>
-          {!isReportsPage && !isListPage && (
-          <div className="relative" ref={sortRef}>
-            <button
-              onClick={() => setSortOpen((v) => !v)}
-              className="flex items-center gap-1 btn-brand text-white text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
-            >
-              {sortMode} <ChevronDown />
-            </button>
-            {sortOpen && (
-              <div className="absolute left-0 top-8 w-32 bg-white rounded-lg shadow-lg z-50 overflow-hidden">
-                {['FIFO', 'LIFO', 'FEFO'].map((mode) => (
-                  <button
-                    key={mode}
-                    onClick={() => { onSortModeChange(mode); setSortOpen(false); }}
-                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    {mode}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          )}
-          <button
-            onClick={() => navigate('/reports')}
-            className="btn-brand text-white text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
-          >
+          <button className="flex items-center gap-1 bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded-full transition-colors">
+            All Products <ChevronDown />
+          </button>
+          <button className="flex items-center gap-1 bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded-full transition-colors">
+            Inventory <ChevronDown />
+          </button>
+          <button className="flex items-center gap-1 bg-[#409645] hover:bg-[#367a38] text-white text-xs font-medium px-3 py-1.5 rounded-full transition-colors">
+            LIFO <ChevronDown />
+          </button>
+          <button className="text-white text-xs font-medium px-3 py-1.5 rounded border border-white hover:bg-[#409645] transition-colors">
             Reports History
           </button>
         </div>
 
       </div>
     </nav>
-
-    <ProfileModal isOpen={profileOpen} onClose={() => setProfileOpen(false)} />
-    </>
   );
 }
